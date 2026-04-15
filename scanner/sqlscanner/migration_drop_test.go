@@ -145,7 +145,7 @@ func TestApplyMigrationDropDowngrade(t *testing.T) {
 		{
 			name: "case4_non_timestamp_aborts_dir",
 			files: map[string]string{
-				"init.sql":       "CREATE TABLE t (pan TEXT);",
+				"init.sql":        "CREATE TABLE t (pan TEXT);",
 				"001_add_pan.sql": "ALTER TABLE t DROP COLUMN pan;",
 			},
 			findings: []scanner.Finding{
