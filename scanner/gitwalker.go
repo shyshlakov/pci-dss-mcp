@@ -138,8 +138,13 @@ func (f gitWalkFilter) accepts(absRoot, absPath string) bool {
 		return false
 	}
 	base := filepath.Base(absPath)
-	if !f.includeTests && strings.HasSuffix(base, "_test.go") {
-		return false
+	if !f.includeTests {
+		if strings.HasSuffix(base, "_test.go") {
+			return false
+		}
+		if hasTestDirSegment(absRoot, absPath) {
+			return false
+		}
 	}
 	if f.matchesExcludeGlob(base) {
 		return false

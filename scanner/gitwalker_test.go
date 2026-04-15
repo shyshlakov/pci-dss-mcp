@@ -170,13 +170,14 @@ func TestGitTrackedFilesSkipTestSegmentAtIncludeTestsFalse(t *testing.T) {
 		t.Fatalf("git add failed: %v\n%s", err, out)
 	}
 
+	resolvedDir, _ := filepath.EvalSymlinks(dir)
 	cfg := WalkConfig{Extensions: []string{".go"}, IncludeTests: false}
 	got := make(map[string]bool)
 	for path, err := range GitTrackedFiles(dir, cfg) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		rel, _ := filepath.Rel(dir, path)
+		rel, _ := filepath.Rel(resolvedDir, path)
 		got[filepath.ToSlash(rel)] = true
 	}
 
@@ -207,13 +208,14 @@ func TestGitTrackedFilesIncludeTestSegmentAtIncludeTestsTrue(t *testing.T) {
 		t.Fatalf("git add failed: %v\n%s", err, out)
 	}
 
+	resolvedDir, _ := filepath.EvalSymlinks(dir)
 	cfg := WalkConfig{Extensions: []string{".go"}, IncludeTests: true}
 	got := make(map[string]bool)
 	for path, err := range GitTrackedFiles(dir, cfg) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		rel, _ := filepath.Rel(dir, path)
+		rel, _ := filepath.Rel(resolvedDir, path)
 		got[filepath.ToSlash(rel)] = true
 	}
 

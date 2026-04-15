@@ -7,13 +7,13 @@ total_intentional_violations: 130
 total_clean_patterns: 12
 total_rules_covered: 54
 expected_summary:
- critical: 42
+ critical: 41
  high: 80
- medium: 26
+ medium: 25
  low: 0
- info: 35
-expected_active: 151
-expected_total_findings: 185
+ info: 36
+expected_active: 150
+expected_total_findings: 184
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -172,7 +172,7 @@ fixture files change.
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/requests/tokenize.go | 4 | json-only DTO transit-only |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/requests/tokenize.go | 5 | json-only DTO transit-only |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/responses/exchange_token.go | 6 | response DTO transit-only |
-| PAN-KEYWORD | CRITICAL | internal/integration/stripe_client.go | 5 | F-28 D-03 adversarial guard: integration segment NOT excluded, production integration code stays walked |
+| PAN-KEYWORD | INFO | internal/integration/stripe_client.go | 5 | F-28 D-03 adversarial guard: integration segment NOT excluded, transit-only struct downgraded by taint engine |
 | PAN-KEYWORD | HIGH | internal/retention/entry.go | 10 | RED: incidental tagless Expiry field on Z9-Z12 scoring helper |
 | PAN-KEYWORD | INFO | internal/service/tokens/model/model.go | 5 | negative evidence — tagless field |
 | PAN-KEYWORD | HIGH | internal/service/tokens/model/model.go | 7 | tagless CVV escalated by struct sibling |
@@ -191,7 +191,6 @@ fixture files change.
 | PAN-LOGGER | CRITICAL | internal/service/tokens/logging.go | 11 | slog.Info with cardNumber ident arg |
 | PAN-TYPE | MEDIUM | internal/cache/keep_ttl.go | 9 | CVV declared as string |
 | PAN-TYPE | MEDIUM | internal/cache/no_expire_hset.go | 9 | cardNumber declared as string |
-| PAN-TYPE | MEDIUM | internal/integration/stripe_client.go | 5 | F-28 D-03 adversarial guard: CardNumber string field in production integration stays walked |
 | PAN-TYPE | MEDIUM | internal/retention/entry.go | 10 | RED: incidental Expiry string declared on Z9-Z12 scoring helper |
 | PAN-TYPE | MEDIUM | internal/service/tokens/model/model.go | 7 | CVV declared as string |
 | PAN-TYPE | MEDIUM | internal/service/tokens/store.go | 5 | CVV declared as string |
