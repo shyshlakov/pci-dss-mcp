@@ -2,7 +2,7 @@
 
 > **Narrow-and-deep PCI DSS v4.0.1 compliance scanner for Go payment services, delivered as an MCP server.**
 >
-> Every finding maps to a specific PCI DSS requirement ID. Taint-aware cardholder data flow analysis with PCI SSC FAQ semantics. Runs inside Claude Desktop, Claude Code, and Cursor via the Model Context Protocol. Designed to complement broad security tools like Claude Code Security, Semgrep, and CodeQL — not replace them.
+> Every finding maps to a specific PCI DSS requirement ID. Taint-aware cardholder data flow analysis with PCI SSC FAQ semantics. Runs inside Claude Desktop, Claude Code, and Cursor via the Model Context Protocol. Designed to complement broad security tools like Semgrep, CodeQL, and LLM-based agentic code review — not replace them.
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/shyshlakov/pci-dss-mcp?v=2)](https://goreportcard.com/report/github.com/shyshlakov/pci-dss-mcp)
 [![License: MIT](https://img.shields.io/github/license/shyshlakov/pci-dss-mcp)](LICENSE)
@@ -40,24 +40,42 @@ pci-dss-mcp is a **static compliance scanner** for Go payment service codebases 
 "Here's a list of 894 security issues, good luck prioritizing them"
 ```
 
-**You get:**
+**You get** (real output on the bundled `testdata/vulnerable-payment-service/` fixture, trimmed):
 
 ```
-Status: FAIL — 2 CRITICAL / 4 HIGH / 3 MEDIUM actionable findings
-Per-requirement breakdown:
-  3.3.1  FAIL — PAN stored without encryption (2 findings)
-  3.5.1  FAIL — PAN stored without encryption (3 findings)
-  6.3.3  FAIL — 2 vulnerable dependencies (CVE-YYYY-NNNNN, CVE-YYYY-NNNNN)
-  8.4.2  REVIEW — 4 payment routes without MFA (confirm gateway enforcement)
-  ...
-  10.2.1 PASS — audit logging coverage verified on all handlers
-  ...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PCI DSS v4.0.1 Compliance Report
+Target: testdata/vulnerable-payment-service
+Duration: 1957ms | Files: 615 | Lines: 9142
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Recommended actions (in priority order):
-  1. go get go.opentelemetry.io/otel/sdk@v1.43.0  (closes 6.3.3, 5 min)
-  2. Add gorm Encrypt hook to PaymentMethod.CardNumber (closes 3.5.1, 1h)
-  3. Confirm MFA enforcement at API gateway for /refund routes (8.4.2)
+40 CRITICAL, 80 HIGH, 25 MEDIUM findings
+(0 LOW, 35 INFO informational findings not shown)
+
+--- Requirement 3: Protect Stored Account Data ---
+
+[CRITICAL] 3.3.1 -- SAD Not Retained After Authorization
+  internal/service/tokens/logging.go:11
+  Sensitive cardholder data 'cardNumber' passed to logging function slog.Info
+  Fix: Remove sensitive data from log output. Log a masked or tokenized reference instead.
+
+[CRITICAL] 3.2.1 -- Data Retention and Disposal
+  internal/cache/sensitive_redis.go:10
+  Redis Set with TTL=0 on sensitive data -- data persists indefinitely. PCI DSS 3.2.1
+  prohibits storing SAD after authorization.
+  Fix: Set an explicit TTL (e.g., 5*time.Minute) for sensitive data.
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  internal/storage/postgres/model/leaked.go:5
+  Struct field 'CVV' may expose cardholder data, requires manual review (LOW confidence)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+--- Requirement 4: Protect Cardholder Data with Strong Cryptography ---
+...
 ```
+
+Findings are grouped by PCI DSS requirement category and sorted CRITICAL → HIGH → MEDIUM within each group. The real output uses absolute file paths (shortened to repo-relative form above for readability). Every finding carries a line number, the rule description, and a concrete `Fix:` suggestion. The full report continues through Requirements 4, 6, 8, 10, and 11 followed by a `Requirements Summary` and a `Suppression Audit` section when any findings are suppressed.
 
 Every finding carries `requirement_id`, `severity`, `file_path`, `line`, and a triage hint so your AI editor can **verify the finding against the real code** using its own `Read`/`Grep` tools — and flag false positives automatically.
 
@@ -75,21 +93,29 @@ Run generate_compliance_report on testdata/vulnerable-payment-service
 and show me the per-requirement breakdown.
 ```
 
-Claude will invoke the tool and return a structured report. Example shape
-of a finding (fields trimmed):
+Claude will invoke the tool and return a structured report. A single finding
+in the `findings` array looks like this (real output from `panscanner`,
+optional fields omitted when empty):
 
 ```json
 {
   "rule_id": "PAN-KEYWORD",
   "severity": "CRITICAL",
   "requirement_id": "3.3.1",
-  "file_path": "internal/storage/card_model.go",
+  "file_path": "/abs/path/to/internal/storage/card_model.go",
   "line": 14,
+  "column": 2,
   "description": "Struct field 'CardNumber' exposes cardholder data in payment context (HIGH confidence)",
-  "suggestion": "Encrypt at rest via GORM BeforeSave/AfterFind hook or tokenize before persist.",
-  "confidence": "high"
+  "suggestion": "Use tokenized or encrypted references instead of raw cardholder data.",
+  "related_requirements": ["3.3.1.2"]
 }
 ```
+
+The full `scanner.Finding` type also carries optional fields
+(`confidence`, `dev_context`, `code_snippet`, `triage_hint`, `fix_hint`,
+`middleware_detected`, `sql_pattern_matched`) that scanners populate
+when they have that context — see `scanner/scanner.go` for the
+authoritative schema.
 
 To see the recommended AI-verified workflow, use [Use Case #2](#2-full-compliance-scan--ai-verified-triage-recommended-workflow)
 below: Claude chains `generate_compliance_report` → `triage_findings` →
@@ -104,7 +130,7 @@ verification loop into the server.
 
 ## Why pci-dss-mcp?
 
-pci-dss-mcp is **narrow and deep**. It only scans Go, it only checks PCI DSS v4.0.1, and it ships with compliance mapping baked in. It exists because broad SAST tools (Semgrep, CodeQL, gosec, Snyk Code) and LLM-based scanners (Claude Code Security) do not produce QSA-ready compliance output for Go payment services.
+pci-dss-mcp is **narrow and deep**. It only scans Go, it only checks PCI DSS v4.0.1, and it ships with compliance mapping baked in. It exists because broad SAST tools (Semgrep, CodeQL, gosec, Snyk Code) and LLM-based agentic code reviewers do not produce QSA-ready compliance output for Go payment services.
 
 ### What pci-dss-mcp does that other tools don't
 
@@ -112,16 +138,16 @@ pci-dss-mcp is **narrow and deep**. It only scans Go, it only checks PCI DSS v4.
 
 pci-dss-mcp emits `requirement_id: "3.4.1"` on every finding and produces a per-requirement `PASS` / `FAIL` / `NOT_CHECKED` status table suitable for a QSA audit deliverable. For comparison:
 
-- **[Semgrep's PCI DSS automation guide](https://semgrep.dev/blog/2025/from-gatekeepers-to-guardrails-automating-your-pci-v401-strategy/)** covers requirements 6.2.4, 6.3.1, 6.3.2, and 8.6.2, and explicitly states that **protecting cardholder data (requirements 3.x) requires writing custom rules**. It does not map individual findings to requirement IDs automatically.
+- **[Semgrep's PCI DSS automation guide](https://semgrep.dev/blog/2025/from-gatekeepers-to-guardrails-automating-your-pci-v401-strategy/)** demonstrates rule examples for requirements 3.2-3.4, 6.2.4, 6.3.1, 6.3.2, 6.3.3, 8.6.2, and 10.2, but most of the 3.x examples rely on the user **writing a custom Semgrep rule** rather than a maintained ruleset. It does not map individual findings to requirement IDs automatically.
 - **CodeQL** has no dedicated PCI DSS query suite. The default query suite is OWASP-style and customization requires writing QL queries.
-- **gosec** maps its 50+ rules to **CWE identifiers, not PCI DSS requirements**.
-- **Snyk Code**'s PCI positioning is marketing around SAST usefulness for PCI in general; individual findings are mapped to CWE/OWASP, not PCI DSS requirement numbers.
+- **gosec** maps its **59 rules** to CWE identifiers; there is **no PCI DSS mapping** in the upstream project.
+- **Snyk Code** rules are tagged with CWE, OWASP Top 10, and SANS 25. Snyk offers a separate PCI DSS v4.0.1 Report (Early Access, Enterprise plans only) that aggregates findings against requirement 6.2.4, but **individual Snyk Code findings are not labeled with PCI DSS requirement numbers** in the default SAST output.
 
 pci-dss-mcp is the only scanner on this list where you can call `generate_compliance_report` and get back a requirement-keyed report without writing a single custom rule.
 
 **2. Taint analysis that knows the PCI SSC FAQ on non-persistent memory.**
 
-Generic taint engines — **Semgrep**, **Snyk Code** ([contextual dataflow](https://snyk.io/blog/analyze-taint-analysis-contextual-dataflow-snyk-code/)), **CodeQL** — correctly track cardholder data flow source → sink. But they do not know that the PCI Security Standards Council explicitly allows transit CHD in non-persistent memory without byte-level encryption requirements. This FAQ ruling is domain knowledge, not something a generic tool implements.
+Generic taint engines — **Semgrep**, **Snyk Code** ([contextual dataflow](https://snyk.io/blog/analyze-taint-analysis-contextual-dataflow-snyk-code/)), **CodeQL** — correctly track cardholder data flow source → sink. But they do not know that the PCI Security Standards Council FAQ ["Should cardholder data be encrypted while in memory?"](https://www.pcisecuritystandards.org/faq/articles/Frequently_Asked_Question/Should-cardholder-data-be-encrypted-while-in-memory/) explicitly allows cardholder data in non-persistent memory without byte-level encryption requirements. This ruling is domain knowledge, not something a generic tool implements.
 
 pci-dss-mcp's taint engine implements the severity rule table derived from that FAQ:
 
@@ -135,40 +161,44 @@ The downgrade annotation on every affected finding literally says `(taint: trans
 
 **3. MCP-native from the start.**
 
-pci-dss-mcp runs as an [MCP](https://modelcontextprotocol.io) server inside Claude Desktop, Claude Code, and Cursor. There is no separate CLI to install, no dashboard to log into, no CI plugin to configure. The moment your editor agent sees a PCI DSS question, it calls the tool. Combined with filter parameters (`min_severity`, `rule_filter`, `limit`) and the MCP spec 2025-06-18 `resource_link` content type, it fits cleanly into LLM-driven review workflows.
+pci-dss-mcp runs as an [MCP](https://modelcontextprotocol.io) server inside Claude Desktop, Claude Code, and Cursor. There is no separate CLI to install, no dashboard to log into, no CI plugin to configure. The moment your editor agent sees a PCI DSS question, it calls the tool. Combined with filter parameters (`min_severity`, `rule_filter`, `limit`) and the [MCP spec 2025-06-18 `resource_link` content type](https://modelcontextprotocol.io/specification/2025-06-18/server/tools), it fits cleanly into LLM-driven review workflows.
 
-Other tools listed here — Semgrep, CodeQL, gosec, Snyk Code, Claude Code Security — are not MCP servers. The MCP-tagged security tools that do exist ([Snyk agent-scan](https://github.com/snyk/agent-scan), [Enkrypt MCP Scan](https://www.enkryptai.com/mcp-scan), [Proximity](https://www.helpnetsecurity.com/2025/10/29/proximity-open-source-mcp-security-scanner/)) scan MCP servers for security risks — they are not MCP servers that scan code for compliance.
+Other tools listed here — Semgrep, CodeQL, gosec, Snyk Code — are not MCP servers, and Claude Code is an MCP client, not a server. The MCP-tagged security tools that do exist ([Snyk agent-scan](https://github.com/snyk/agent-scan), [Enkrypt MCP Scan](https://www.enkryptai.com/mcp-scan), [Proximity](https://www.helpnetsecurity.com/2025/10/29/proximity-open-source-mcp-security-scanner/)) scan MCP servers for security risks — they are not MCP servers that scan code for compliance.
 
-**4. Offline-capable with no LLM API dependency.**
+**4. Air-gap capable with no LLM API dependency.**
 
-[Claude Code Security](https://code.claude.com/docs/en/security) requires Claude API connectivity and cannot run fully air-gapped. pci-dss-mcp is a plain Go binary with no network runtime dependencies; `check_dependencies` has an optional offline mode backed by a local OSV vulnerability cache (refresh via `update_vulnerability_db`). Works in fintech CI/CD, bank networks, and isolated compliance environments.
+pci-dss-mcp is a plain Go binary that can run fully air-gapped. Twelve of the thirteen scanners are pure static analysis with zero network I/O. The one exception is `check_dependencies`, which defaults to `auto` mode (online OSV fetch with offline fallback); set `dep_scan_mode=offline` to force the local OSV cache path — refreshable on a connected host via `update_vulnerability_db`, then carried into the isolated environment. This makes pci-dss-mcp usable in fintech CI/CD, bank networks, and isolated compliance environments where LLM-driven agents that call a hosted model cannot reach a backend.
 
-(Note: Semgrep CLI, CodeQL CLI, and gosec also run offline — this is table stakes for non-LLM SAST tools. The differentiator is specifically against Claude Code Security and other LLM-based scanners that require an API.)
+(Semgrep CLI, CodeQL CLI, and gosec also run offline — this is table stakes for non-LLM SAST tools. The differentiator is specifically against LLM-based code-review agents that require a hosted model API at runtime.)
 
 ### What pci-dss-mcp is NOT
 
 - **Not a replacement for broad SAST.** Use Semgrep, CodeQL, or gosec for OWASP Top-10, generic injection flaws, and language-agnostic vulnerabilities. pci-dss-mcp deliberately covers a narrow slice (PCI DSS v4.0.1 on Go) that those tools don't map to compliance-ready output.
-- **Not a replacement for Claude Code Security.** Use Claude Code Security for LLM-reasoned vulnerability review across any language with adversarial verification. pci-dss-mcp runs alongside it: Claude Code Security catches broad bugs, pci-dss-mcp maps payment-specific issues to PCI DSS requirement IDs for your QSA deliverable.
+- **Not a replacement for LLM-based code review.** Tools like Claude Code's agentic review loop give you broad, context-aware vulnerability triage across any language with adversarial verification. pci-dss-mcp runs alongside them: the LLM agent catches broad bugs via its own reasoning, and pci-dss-mcp maps payment-specific issues to PCI DSS requirement IDs for your QSA deliverable. The two layers compose — one reasoning, one deterministic.
 - **Not a Go-agnostic scanner.** If your payment code is Python, Java, or .NET, pci-dss-mcp cannot help — and this is intentional. The Go-specific AST patterns, taint flow tracing, and payment-context scoring are what make the precision possible.
-- **Not a QSA replacement.** Static analysis covers approximately 6% of PCI DSS v4.0.1 requirements (14 of 249). The remaining 94% require organizational policy review, network architecture audit, physical security verification, and operational procedure assessment — a Qualified Security Assessor must sign off on those.
+- **Not a QSA replacement.** Static analysis covers approximately 6% of PCI DSS v4.0.1 requirements (14 of ~251 defined-approach sub-requirements). The remaining 94% require organizational policy review, network architecture audit, physical security verification, and operational procedure assessment — a Qualified Security Assessor must sign off on those.
 
 ### Feature comparison (verified against public sources)
 
-| | pci-dss-mcp | Claude Code Security | Semgrep | CodeQL | gosec | Snyk Code |
+| | pci-dss-mcp | Claude Code | Semgrep | CodeQL | gosec | Snyk Code |
 |---|---|---|---|---|---|---|
-| **Finding → PCI DSS req ID** | ✓ built-in | — | partial, custom rules for 3.x | — (no PCI suite) | CWE only | CWE/OWASP |
+| **Finding → PCI DSS req ID** | ✓ built-in | — (LLM reasoning) | partial, examples require custom rules | — (no PCI suite) | CWE only | CWE / OWASP / SANS 25 (PCI report aggregated, Enterprise only) |
 | **PCI SSC FAQ transit-CHD downgrade** | ✓ | — | — | — | — | — |
 | **Go taint analysis** | ✓ | via LLM reasoning | ✓ (free + pro) | ✓ | — | ✓ |
-| **Offline / air-gapped** | ✓ | ✗ (Claude API) | ✓ CLI | ✓ CLI | ✓ | partial |
-| **MCP server** | ✓ | partial (GitHub Action + `/security-review`) | — | — | — | — |
+| **Offline / air-gapped** | ✓ | ✗ (Claude API) | ✓ CLI | ✓ CLI | ✓ | ✗ (SaaS) |
+| **MCP server** | ✓ | ✗ (MCP client, not server) | — | — | — | — |
 | **Determinism** | ✓ | LLM non-determinism | ✓ | ✓ | ✓ | ✓ |
-| **Open-source core** | ✓ MIT | ✓ Apache-2 | ✓ LGPL + pro tier | — (proprietary) | ✓ Apache-2 | — (proprietary) |
+| **License** | MIT | source-available ¹ | LGPL 2.1 (OSS core) ² | source-available ³ | Apache-2 | proprietary (SaaS) |
 | **Multi-language** | ✗ Go only | ✓ | ✓ 30+ | ✓ ~10 | ✗ Go only | ✓ |
 | **QSA audit-ready report** | ✓ | — | — | — | — | — |
 
+¹ Claude Code source is published on GitHub but under Anthropic Commercial Terms of Service, not an OSI-approved open-source license.
+² Since 2024 Semgrep's maintained rule packs have shifted from LGPL 2.1 to the non-OSI "Semgrep Rules License v1.0"; the core Semgrep CE engine remains LGPL 2.1.
+³ CodeQL queries are MIT-licensed; the CLI binary is free for public/OSS/academic/CI use per the GitHub CodeQL Terms, but private codebases require GitHub Advanced Security.
+
 ## Install
 
-pci-dss-mcp requires **Go 1.26+**. Two install paths:
+pci-dss-mcp requires **Go 1.25+**. Two install paths:
 
 ### Quick install (released version)
 
@@ -214,11 +244,19 @@ You will need this path in every Setup step below. Replace occurrences of
 ### macOS provenance fix (required if you see SIGKILL)
 
 macOS tags unsigned binaries with a `com.apple.provenance` attribute that can
-cause `SIGKILL` when launched from an MCP client. Clear it after install:
+cause `SIGKILL` when launched from a GUI-spawned MCP client (Claude Desktop,
+Cursor). On macOS 15 Sequoia and later, `com.apple.provenance` is system-
+protected and **`xattr -d`/`xattr -c` silently no-op on it** — the tag is
+not actually removed. The reliable workaround is an ad-hoc code signature:
 
 ```bash
-xattr -c "$(which pci-dss-mcp)"
+codesign --force --sign - "$(which pci-dss-mcp)"
 ```
+
+This replaces the provenance marker with an ad-hoc signature and is enough
+to satisfy Gatekeeper for GUI-spawned processes. Terminal-launched runs
+(`pci-dss-mcp < /dev/null`) usually work without the fix, so test through
+your MCP client if you want to confirm it is needed.
 
 ### Verify
 
@@ -334,7 +372,7 @@ or NEEDS MANUAL REVIEW. For each CONFIRMED finding, explain the attack
 path and suggest a concrete fix.
 ```
 
-This is the two-step workflow from the [payment service example](#real-world-example-payment service) above. Claude will:
+This is the two-step workflow from the [bundled vulnerable test project example](#example-the-bundled-vulnerable-test-project) above. Claude will:
 
 1. Call `generate_compliance_report` (taint ON by default)
 2. Call `triage_findings` to enrich active findings with `ResourceLink` hints
@@ -503,7 +541,7 @@ See [docs/severity.md](docs/severity.md) for the severity model.
 
 ## Coverage
 
-pci-dss-mcp checks **14 PCI DSS v4.0.1 requirements** across 10 scanners covering Requirements 3, 4, 6, 8, 10, and 11. This is approximately 6% of all 249 PCI DSS requirements.
+pci-dss-mcp checks **14 PCI DSS v4.0.1 requirements** across 10 scanners covering Requirements 3, 4, 6, 8, 10, and 11. This is approximately 6% of the ~251 PCI DSS v4.0.1 defined-approach sub-requirements.
 
 **Important:** Static analysis cannot verify organizational policies, physical security, network architecture, or operational procedures. Requirements outside scanner scope are marked `NOT_CHECKED` in the compliance report. `NOT_CHECKED` does not mean non-compliant — a Qualified Security Assessor (QSA) must verify these controls.
 
@@ -533,7 +571,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the release history.
 ### Known limitations
 
 - **Go only** — no Python / Java / .NET support planned
-- **14 of 249 PCI DSS requirements** covered (6%) — the remaining 94% require manual QSA review
+- **14 of ~251 PCI DSS v4.0.1 defined-approach sub-requirements** covered (~6%) — the remaining 94% require manual QSA review
 - **Taint analysis needs module cache** — `go list` must be able to resolve imports; falls back to AST-only on failure
 
 ## Contributing
