@@ -177,10 +177,20 @@ func (s *SQLScanner) ScanFull(ctx context.Context, targetPath string, excludePat
 	}
 
 	// Pass 3: cross-reference SQL findings with Go encryption hooks.
+	// crossRefSQLWithGoEncryption may delete findings (suppression branch),
+	// so it returns updated findings, sqlMetas, and sqlFindingEnd to keep
+	// the parallel meta-finding alignment intact for Pass 4.
 	if len(goEncryptByTable) > 0 && len(sqlMetas) > 0 {
-		result.Findings = crossRefSQLWithGoEncryption(
+		result.Findings, sqlMetas, sqlFindingEnd = crossRefSQLWithGoEncryption(
 			result.Findings, sqlFindingStart, sqlFindingEnd,
 			sqlMetas, goEncryptByTable,
+		)
+	}
+
+	if sqlFindingEnd > sqlFindingStart && len(sqlMetas) > 0 {
+		result.Findings = applyMigrationDropDowngrade(
+			result.Findings, sqlMetas,
+			sqlFindingStart, sqlFindingEnd,
 		)
 	}
 
@@ -363,15 +373,17 @@ func (s *SQLScanner) scanGoFileWithStructs(path string) ([]scanner.Finding, []Go
 // encryption is detected ( + combined).
 //
 // It operates on result.Findings[sqlStart:sqlEnd] using parallel sqlMetas.
-// Returns the full findings slice with modifications applied in-place.
+// When the suppression branch deletes findings, sqlMetas and sqlEnd are
+// pruned in lockstep so subsequent passes (e.g. applyMigrationDropDowngrade)
+// see a coherent view of the SQL section.
 func crossRefSQLWithGoEncryption(
 	findings []scanner.Finding,
 	sqlStart, sqlEnd int,
 	sqlMetas []sqlFindingMeta,
 	goEncrypt map[string]goEncryptInfo,
-) []scanner.Finding {
+) ([]scanner.Finding, []sqlFindingMeta, int) {
 	if sqlStart >= sqlEnd || len(sqlMetas) == 0 {
-		return findings
+		return findings, sqlMetas, sqlEnd
 	}
 
 	// Build a set of tables with Go-level PAN encryption.
@@ -439,13 +451,21 @@ func crossRefSQLWithGoEncryption(
 		}
 	}
 
-	// Remove suppressed findings (iterate backwards to preserve indices).
+	// Remove suppressed findings AND their parallel sqlMetas entries
+	// (iterate backwards to preserve indices). The metaIdx corresponding
+	// to a finding at index `idx` is `idx - sqlStart` because the loop
+	// above advances metaIdx and i in lockstep starting from 0 / sqlStart.
 	if len(suppress) > 0 {
 		for i := len(suppress) - 1; i >= 0; i-- {
 			idx := suppress[i]
 			findings = append(findings[:idx], findings[idx+1:]...)
+			midx := idx - sqlStart
+			if midx >= 0 && midx < len(sqlMetas) {
+				sqlMetas = append(sqlMetas[:midx], sqlMetas[midx+1:]...)
+			}
 		}
+		sqlEnd -= len(suppress)
 	}
 
-	return findings
+	return findings, sqlMetas, sqlEnd
 }

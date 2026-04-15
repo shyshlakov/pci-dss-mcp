@@ -393,6 +393,63 @@ storage = "redis"
 	}
 }
 
+func TestDetectConfigMissingTTLDevPathDowngrade(t *testing.T) {
+	content := `card_processing:
+  card_data:
+    storage_key: "cards:active"
+`
+	tmpDir := t.TempDir()
+
+	devDir := filepath.Join(tmpDir, "dev")
+	if err := os.MkdirAll(devDir, 0o755); err != nil {
+		t.Fatalf("mkdir dev: %v", err)
+	}
+	devPath := filepath.Join(devDir, "cache.yaml")
+	if err := os.WriteFile(devPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write dev cache: %v", err)
+	}
+
+	prodDir := filepath.Join(tmpDir, "configs")
+	if err := os.MkdirAll(prodDir, 0o755); err != nil {
+		t.Fatalf("mkdir configs: %v", err)
+	}
+	prodPath := filepath.Join(prodDir, "cache.yaml")
+	if err := os.WriteFile(prodPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write prod cache: %v", err)
+	}
+
+	devFindings, _, err := detectConfigMissingTTL(devPath)
+	if err != nil {
+		t.Fatalf("detectConfigMissingTTL dev: %v", err)
+	}
+	if len(devFindings) != 1 {
+		t.Fatalf("dev findings: got %d want 1", len(devFindings))
+	}
+	if devFindings[0].Severity != "INFO" {
+		t.Errorf("dev severity: got %q want INFO", devFindings[0].Severity)
+	}
+	if devFindings[0].Confidence != "high" {
+		t.Errorf("dev confidence: got %q want high", devFindings[0].Confidence)
+	}
+	if !strings.HasPrefix(devFindings[0].TriageHint, "downgrade:dev_path_skipped") {
+		t.Errorf("dev triage hint: got %q want prefix downgrade:dev_path_skipped", devFindings[0].TriageHint)
+	}
+
+	prodFindings, _, err := detectConfigMissingTTL(prodPath)
+	if err != nil {
+		t.Fatalf("detectConfigMissingTTL prod: %v", err)
+	}
+	if len(prodFindings) != 1 {
+		t.Fatalf("prod findings: got %d want 1", len(prodFindings))
+	}
+	if prodFindings[0].Severity != "HIGH" {
+		t.Errorf("prod severity: got %q want HIGH", prodFindings[0].Severity)
+	}
+	if prodFindings[0].TriageHint != "" {
+		t.Errorf("prod triage hint: got %q want empty", prodFindings[0].TriageHint)
+	}
+}
+
 // --- Zeroing Tests (Z1-Z4) ---
 
 func TestDetectZeroingTimingIssues(t *testing.T) {

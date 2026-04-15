@@ -1,0 +1,1 @@
+ALTER TABLE legacy_card DROP COLUMN IF EXISTS pan;

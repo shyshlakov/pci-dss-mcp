@@ -3,17 +3,17 @@ fixture_version: 1.5
 last_updated: 2025-01-15
 phase: n/a
 plan: n/a
-total_intentional_violations: 125
-total_clean_patterns: 6
+total_intentional_violations: 130
+total_clean_patterns: 10
 total_rules_covered: 54
 expected_summary:
- critical: 39
- high: 77
- medium: 24
+ critical: 40
+ high: 80
+ medium: 25
  low: 0
- info: 30
-expected_active: 140
-expected_total_findings: 170
+ info: 34
+expected_active: 147
+expected_total_findings: 181
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -55,11 +55,11 @@ fixture files change.
 
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 39 |
-| HIGH | 77 |
-| MEDIUM | 24 |
+| CRITICAL | 40 |
+| HIGH | 80 |
+| MEDIUM | 25 |
 | LOW | 0 |
-| INFO | 30 |
+| INFO | 34 |
 
 ## Violations
 
@@ -90,7 +90,9 @@ fixture files change.
 | AUDIT-UNSTRUCTURED | HIGH | internal/exchange/handler.go | 10 | tier-2 HIGH after fixture-shortcut removal |
 | AUDIT-UNSTRUCTURED | HIGH | internal/payment/core.go | 19 | tier-2 HIGH after fixture-shortcut removal |
 | AUTH-BYTE-COUNT | MEDIUM | internal/auth/policy.go | 12 | len(password) byte count check |
+| AUTH-HARDCODED-PWD | INFO | clean/testutil/db_fixture.go | 3 | testutil helper hardcoded password testutil_exclusion downgrade |
 | AUTH-HARDCODED-PWD | CRITICAL | internal/auth/admin.go | 3 | const AdminPassword = "admin123" |
+| AUTH-HARDCODED-PWD | CRITICAL | internal/payment/hardcoded_admin.go | 3 | prod path hardcoded admin password stays CRITICAL adversarial |
 | AUTH-MISSING-MFA | HIGH | internal/auth/process.go | 5 | AuthorizeCharge handler no MFA |
 | AUTH-MISSING-MFA | HIGH | internal/billing/encode_map.go | 19 | EncodeHandler no MFA gate after fixture-shortcut removal |
 | AUTH-MISSING-MFA | HIGH | internal/billing/handler.go | 16 | abstract handler no MFA gate after fixture-shortcut removal |
@@ -196,6 +198,8 @@ fixture files change.
 | PAN-TYPE | MEDIUM | internal/storage/postgres/model/token.go | 9 | CVV declared as string |
 | PAN-ZEROING | MEDIUM | internal/util/cardops.go | 6 | local cardNumber []byte without zeroing loop |
 | RET-CONFIG-NO-TTL | HIGH | configs/cache.yaml | 5 | card_data block no ttl |
+| RET-CONFIG-NO-TTL | INFO | clean/dev_compose/docker-compose.yml | 3 | card_data block no ttl dev path downgrade tag dev_path_skipped |
+| RET-CONFIG-NO-TTL | HIGH | configs/docker-compose.yml | 3 | card_data block no ttl prod path stays HIGH adversarial |
 | RET-DB-SENSITIVE-STORE | CRITICAL | internal/service/tokens/store.go | 6 | INSERT INTO sensitive_data(cvv) |
 | RET-GORM-SENSITIVE-STORE | CRITICAL | internal/storage/postgres/tokens.go | 13 | gormDB.Create(cardToken) call site |
 | RET-REDIS-KEEP-TTL | HIGH | internal/cache/keep_ttl.go | 10 | KeepTTL on sensitive key |
@@ -217,10 +221,15 @@ fixture files change.
 | SEC-CREDENTIAL-KEY | CRITICAL | configs/service.yaml | 5 | api_key sk_live_... |
 | SEC-HIGH-ENTROPY | HIGH | configs/service.yaml | 5 | api_key high entropy literal |
 | SEC-PREFIX | CRITICAL | configs/service.yaml | 5 | sk_live prefix detected |
+| SQL-SENSITIVE-COLUMN | INFO | clean/migrations/20240101000000_add_legacy_card.sql | 3 | legacy_card.pan dropped in 20260101000000_drop_legacy_card tag column_dropped |
+| SQL-SENSITIVE-COLUMN | HIGH | clean/readd_cycle/migrations/20240101000000_add_legacy_card.sql | 3 | readded_card.pan re-added after drop no downgrade |
+| SQL-SENSITIVE-COLUMN | HIGH | clean/readd_cycle/migrations/20260301000000_readd_legacy_card.sql | 1 | ALTER TABLE ADD COLUMN pan — re-add column stays HIGH |
 | SQL-SENSITIVE-COLUMN | HIGH | internal/storage/postgres/migrations/0001_init.sql | 4 | tokens.number column |
 | SQL-SENSITIVE-COLUMN | HIGH | internal/storage/postgres/migrations/0001_init.sql | 5 | tokens.cvv column |
 | SQL-SENSITIVE-COLUMN | HIGH | internal/storage/postgres/migrations/0001_init.sql | 14 | leaked_cards.number column |
 | SQL-SENSITIVE-COLUMN | HIGH | internal/storage/postgres/migrations/0001_init.sql | 15 | leaked_cards.cvv column |
+| SQL-TEXT-TYPE | INFO | clean/migrations/20240101000000_add_legacy_card.sql | 3 | legacy_card.pan dropped in 20260101000000_drop_legacy_card tag column_dropped |
+| SQL-TEXT-TYPE | MEDIUM | clean/readd_cycle/migrations/20240101000000_add_legacy_card.sql | 3 | readded_card.pan re-added after drop no downgrade |
 | SQL-TEXT-TYPE | MEDIUM | internal/storage/postgres/migrations/0001_init.sql | 14 | leaked_cards.number TEXT not BYTEA |
 | SQL-TEXT-TYPE | MEDIUM | internal/storage/postgres/migrations/0001_init.sql | 15 | leaked_cards.cvv TEXT not BYTEA |
 | SRI-MISSING | HIGH | templates/non_payment.html | 8 | non-payment cdn script no integrity |
@@ -241,3 +250,7 @@ fixture files change.
 | configs/dev/local.env | DedicatedDev context marker downgrades secrets to INFO (D-03 #10) |
 | pkg/mastercard/models/card/card.go | json-only struct tag — transit downgrade (D-03 #12) |
 | internal/http/handler/tokens/models/responses/exchange_token.go | response DTO json tag, transit-only (D-03 #2) |
+| clean/dev_compose/docker-compose.yml | dev path prefix downgrades RET-CONFIG-NO-TTL to INFO (D-06) |
+| clean/migrations/20240101000000_add_legacy_card.sql | column dropped in later migration — SQL-SENSITIVE-COLUMN and SQL-TEXT-TYPE downgraded to INFO (D-11) |
+| clean/migrations/20260101000000_drop_legacy_card.sql | DROP COLUMN only, no sensitive column declared |
+| clean/testutil/db_fixture.go | testutil path segment downgrades AUTH-HARDCODED-PWD to INFO (D-14) |
