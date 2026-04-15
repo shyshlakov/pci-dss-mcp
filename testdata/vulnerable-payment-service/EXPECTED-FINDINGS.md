@@ -4,16 +4,16 @@ last_updated: 2025-01-15
 phase: n/a
 plan: n/a
 total_intentional_violations: 130
-total_clean_patterns: 10
+total_clean_patterns: 11
 total_rules_covered: 54
 expected_summary:
- critical: 40
+ critical: 41
  high: 80
  medium: 25
  low: 0
- info: 34
-expected_active: 147
-expected_total_findings: 181
+ info: 35
+expected_active: 149
+expected_total_findings: 183
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -55,11 +55,11 @@ fixture files change.
 
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 40 |
+| CRITICAL | 41 |
 | HIGH | 80 |
 | MEDIUM | 25 |
 | LOW | 0 |
-| INFO | 34 |
+| INFO | 35 |
 
 ## Violations
 
@@ -214,9 +214,11 @@ fixture files change.
 | RET-ZERO-BEFORE-AUTH | CRITICAL | internal/payment/zeroing_init.go | 20 | if-init zeroing ( fixture) |
 | RET-ZERO-DEFER-ONLY | HIGH | internal/util/cardproc.go | 5 | defer clearCard only, no explicit clear |
 | SEC-CONNSTR | CRITICAL | configs/database.yaml | 2 | postgres://admin:secret123@db.local |
+| SEC-CREDENTIAL-KEY | INFO | clean/examples/api-example.env.json | 0 | F-24 examples dir credential downgrades to INFO with TriageHint dev_path_examples_skipped |
 | SEC-CREDENTIAL-KEY | CRITICAL | configs/auth.toml | 0 | credential = "live_secret_xyz" |
 | SEC-CREDENTIAL-KEY | INFO | configs/dev/local.env | 2 | DedicatedDev context downgrade |
 | SEC-CREDENTIAL-KEY | INFO | configs/dev/local.env | 3 | DedicatedDev context downgrade |
+| SEC-CREDENTIAL-KEY | CRITICAL | configs/prod-api-key.json | 0 | F-24 adversarial production configs path stays CRITICAL |
 | SEC-CREDENTIAL-KEY | CRITICAL | configs/service.env | 1 | DATABASE_PASSWORD=supersecret |
 | SEC-CREDENTIAL-KEY | CRITICAL | configs/service.yaml | 5 | api_key sk_live_... |
 | SEC-HIGH-ENTROPY | HIGH | configs/service.yaml | 5 | api_key high entropy literal |
