@@ -1,0 +1,17 @@
+# Planning (local only)
+.planning/
+
+# Binary
+pci-dss-mcp
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+# OS
+.DS_Store
+# Vulnerability cache (runtime data)
+.pci-dss-mcp/
+# Claude Code personal
+CLAUDE.md
+.claude/

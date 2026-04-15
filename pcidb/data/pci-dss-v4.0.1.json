@@ -1,0 +1,2383 @@
+[
+  {
+    "requirement_id": "1.1.1",
+    "title": "Network Security Policies and Procedures",
+    "description": "Processes and mechanisms for managing network security controls are defined and understood by all affected parties.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.1.2",
+    "title": "Network Security Control Roles and Responsibilities",
+    "description": "Roles and responsibilities for performing activities related to network security controls are documented, assigned, and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.2.1",
+    "title": "Network Security Control Configuration Standards",
+    "description": "Configuration standards for network security controls are defined, implemented, and maintained.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.2.2",
+    "title": "Network Security Control Change Approval",
+    "description": "All changes to network connections and to configurations of network security controls are approved and managed in accordance with the change control process.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.2.3",
+    "title": "Network Diagram Accuracy",
+    "description": "An accurate network diagram is maintained that shows all connections between the cardholder data environment and other networks.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.2.4",
+    "title": "Data Flow Diagram Accuracy",
+    "description": "An accurate data-flow diagram is maintained that shows all account data flows across systems and networks.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.2.5",
+    "title": "Allowed Services and Protocols",
+    "description": "All services, protocols, and ports allowed are identified, approved, and have a defined business need.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.2.6",
+    "title": "Security Features for Insecure Services",
+    "description": "Security features are defined and implemented for all services, protocols, and ports that are in use and considered to be insecure.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.2.7",
+    "title": "NSC Configuration Review",
+    "description": "Configurations of network security controls are reviewed at least once every six months to confirm they are relevant and effective.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.2.8",
+    "title": "NSC Configuration Files Security",
+    "description": "Configuration files for network security controls are secured from unauthorized access and kept consistent with active network configurations.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.3.1",
+    "title": "Inbound Traffic Restriction to CDE",
+    "description": "Inbound traffic to the cardholder data environment is restricted to only necessary traffic, and all other traffic is specifically denied.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.3.2",
+    "title": "Outbound Traffic Restriction from CDE",
+    "description": "Outbound traffic from the cardholder data environment is restricted to only necessary traffic, and all other traffic is specifically denied.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.3.3",
+    "title": "NSC Between Wireless and CDE",
+    "description": "Network security controls are installed between all wireless networks and the cardholder data environment, and configured to deny or control only authorized traffic.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.4.1",
+    "title": "NSC Between Trusted and Untrusted Networks",
+    "description": "Network security controls are implemented between trusted and untrusted networks.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.4.2",
+    "title": "Inbound Traffic from Untrusted to Trusted",
+    "description": "Inbound traffic from untrusted networks to trusted networks is restricted to communications with system components that are authorized to provide publicly accessible services.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.4.3",
+    "title": "Anti-Spoofing Measures",
+    "description": "Anti-spoofing measures are implemented to detect and block forged source IP addresses from entering the trusted network.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.4.4",
+    "title": "System Component Isolation",
+    "description": "System components that store cardholder data are not directly accessible from untrusted networks.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.4.5",
+    "title": "Disclosure of Internal IPs",
+    "description": "Disclosure of internal IP addresses and routing information is limited to only authorized parties.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "1.5.1",
+    "title": "Security Controls on Computing Devices",
+    "description": "Security controls are implemented on any computing devices that connect to both untrusted networks and the CDE to prevent threats from being introduced into the entity's network.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "2.1.1",
+    "title": "Secure Configuration Policies and Procedures",
+    "description": "Processes and mechanisms for applying secure configurations to all system components are defined and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "2.1.2",
+    "title": "Secure Configuration Roles and Responsibilities",
+    "description": "Roles and responsibilities for performing activities related to secure configurations are documented, assigned, and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "2.2.1",
+    "title": "Secure Configuration Standards",
+    "description": "Configuration standards are developed, implemented, and maintained to cover all system components and address all known security vulnerabilities.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "2.2.2",
+    "title": "Vendor Default Accounts",
+    "description": "Vendor default accounts are managed by changing default passwords, disabling default accounts, or removing them if not needed.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "2.2.3",
+    "title": "Primary Function Security",
+    "description": "Primary functions requiring different security levels are managed to ensure that only one primary function exists on each system component.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "2.2.4",
+    "title": "Necessary Services Only",
+    "description": "Only necessary services, protocols, daemons, and functions are enabled, and all unnecessary functionality is removed or disabled.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "2.2.5",
+    "title": "Insecure Services Security",
+    "description": "If any insecure services, protocols, or daemons are present, business justification is documented and additional security features are implemented to reduce the risk.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "2.2.6",
+    "title": "System Security Parameters",
+    "description": "System security parameters are configured to prevent misuse.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "2.2.7",
+    "title": "Encrypted Non-Console Administrative Access",
+    "description": "All non-console administrative access is encrypted using strong cryptography.",
+    "testing_procedure": "Examine system configurations and observe administrator login processes to verify that non-console administrative access uses strong encryption such as TLS 1.2 or later.",
+    "severity": "HIGH",
+    "detectable": false,
+    "new_in_v4": false,
+    "covered_by": "4.2.1",
+    "not_detectable_reason": "Partially overlaps TLS checks but no admin-access-specific detection",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "2.3.1",
+    "title": "Wireless Environment Management",
+    "description": "For wireless environments connected to the CDE or transmitting account data, all wireless vendor defaults are changed at installation or are confirmed to be secure.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "2.3.2",
+    "title": "Wireless Encryption Keys Changed",
+    "description": "For wireless environments connected to the CDE, wireless encryption keys are changed at installation and whenever personnel with knowledge of the key leave the company.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.1.1",
+    "title": "Stored Account Data Policies and Procedures",
+    "description": "Processes and mechanisms for protecting stored account data are defined and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.1.2",
+    "title": "Stored Account Data Roles and Responsibilities",
+    "description": "Roles and responsibilities for performing activities related to protecting stored account data are documented, assigned, and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.2.1",
+    "title": "Data Retention and Disposal",
+    "description": "Account data storage is kept to a minimum through data retention and disposal policies, procedures, and processes that include coverage for all stored account data, defined maximum retention period, processes for secure deletion, and a quarterly review process.",
+    "testing_procedure": "Review data retention policies, examine data stores, and verify that stored data does not exceed defined retention periods. Confirm automated or manual processes exist for timely deletion.",
+    "severity": "HIGH",
+    "detectable": true,
+    "new_in_v4": false,
+    "coverage_scope": "Detects Redis/DB storage of sensitive data without TTL",
+    "limitations": [
+      "Does not verify data retention policy existence",
+      "Config TTL detection limited to sibling key heuristic"
+    ],
+    "not_covered": "Policy-level retention rules and secure disposal processes"
+  },
+  {
+    "requirement_id": "3.3.1",
+    "title": "SAD Not Retained After Authorization",
+    "description": "Sensitive authentication data (SAD) is not retained after authorization, even if encrypted. All sensitive authentication data received is rendered unrecoverable upon completion of the authorization process.",
+    "testing_procedure": "Examine data sources and verify that sensitive authentication data (full track data, card verification codes, PINs) is not stored after authorization. Check code for variables storing SAD beyond the authorization lifecycle.",
+    "severity": "CRITICAL",
+    "detectable": true,
+    "new_in_v4": false,
+    "coverage_scope": "Flags sensitive data variable/field names (CVV, PAN, card_number) in Go source",
+    "limitations": [
+      "No authorization lifecycle awareness",
+      "Pattern-based: relies on naming conventions"
+    ],
+    "not_covered": "Runtime verification that SAD is actually deleted post-authorization"
+  },
+  {
+    "requirement_id": "3.3.1.1",
+    "title": "Full Track Data Not Retained",
+    "description": "Full contents of any track from the magnetic stripe, chip, or equivalent data are not retained after authorization.",
+    "testing_procedure": "Examine source code to verify that full magnetic stripe track data is not retained in variables, logs, databases, or files after the authorization process completes.",
+    "severity": "CRITICAL",
+    "detectable": false,
+    "new_in_v4": false,
+    "covered_by": "3.3.1",
+    "not_detectable_reason": "No track-data-specific keywords in scanner; parent 3.3.1 covers SAD names broadly",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "3.3.1.2",
+    "title": "Card Verification Code Not Retained",
+    "description": "The card verification code or value (three or four-digit number printed on card) is not retained after authorization.",
+    "testing_procedure": "Examine source code to verify that card verification codes (CVV/CVC/CID) are not retained in variables, logs, databases, or files after the authorization process completes.",
+    "severity": "CRITICAL",
+    "detectable": false,
+    "new_in_v4": false,
+    "covered_by": "3.3.1",
+    "not_detectable_reason": "CVV detection uses parent 3.3.1 requirement ID; no sub-requirement-specific finding emitted",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "3.3.1.3",
+    "title": "PIN and PIN Block Not Retained",
+    "description": "The personal identification number (PIN) and PIN block are not retained after authorization.",
+    "testing_procedure": "Examine source code to verify that PIN and PIN block values are not retained in variables, logs, databases, or files after the authorization process completes.",
+    "severity": "CRITICAL",
+    "detectable": false,
+    "new_in_v4": false,
+    "covered_by": "3.3.1",
+    "not_detectable_reason": "No PIN/PIN-block-specific detection implemented",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "3.3.2",
+    "title": "SAD Not Stored Before Authorization Completion",
+    "description": "Sensitive authentication data stored electronically prior to completion of authorization is encrypted using strong cryptography.",
+    "testing_procedure": "Examine code and data stores to verify that any SAD stored before authorization completion is encrypted with strong algorithms, and that it is securely deleted immediately after authorization.",
+    "severity": "CRITICAL",
+    "detectable": false,
+    "new_in_v4": false,
+    "not_detectable_reason": "Cannot determine before/after authorization lifecycle statically",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "3.3.3",
+    "title": "SAD Stored by Issuers Encrypted",
+    "description": "If sensitive authentication data is stored by issuers, it is protected with strong cryptography and there is a documented business justification.",
+    "testing_procedure": "Examine code to verify issuer SAD storage uses strong cryptography and confirm that business justification is documented and that SAD storage is limited to the minimum necessary.",
+    "severity": "HIGH",
+    "detectable": false,
+    "new_in_v4": false,
+    "not_detectable_reason": "Issuer context unknown to static analysis",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "3.4.1",
+    "title": "PAN Masked When Displayed",
+    "description": "PAN is masked when displayed so that only personnel with a legitimate business need can see more than the first six and last four digits of the PAN.",
+    "testing_procedure": "Examine source code for PAN display functions and verify that PAN is masked by default, showing at most first six and last four digits. Check for improper logging or display of full PAN values.",
+    "severity": "CRITICAL",
+    "detectable": true,
+    "new_in_v4": false,
+    "coverage_scope": "Detects PAN literals via Luhn+IIN validation in Go source and .env files",
+    "limitations": [
+      "Cannot verify display masking behavior",
+      "Only detects literal PANs, not PAN variables displayed unmasked"
+    ],
+    "not_covered": "Display masking implementation and PAN rendering controls"
+  },
+  {
+    "requirement_id": "3.4.2",
+    "title": "PAN Copy/Relocation Prevention for Remote Access",
+    "description": "When using remote-access technologies, technical controls prevent copy and/or relocation of PAN for all personnel, except for those with documented, explicit authorization and a legitimate, defined business need.",
+    "testing_procedure": "Examine remote-access configurations and verify that technical controls prevent unauthorized copy or relocation of PAN data.",
+    "severity": "HIGH",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "3.5.1",
+    "title": "PAN Rendered Unreadable in Storage",
+    "description": "PAN is rendered unreadable anywhere it is stored by using one-way hashes, truncation, index tokens, or strong cryptography.",
+    "testing_procedure": "Examine source code and data repositories to verify PAN is not stored in cleartext. Check that one of the approved methods (hashing, truncation, tokenization, or encryption) is used for stored PAN.",
+    "severity": "CRITICAL",
+    "detectable": true,
+    "new_in_v4": false,
+    "coverage_scope": "Checks PAN declared as string vs []byte and missing memory zeroing",
+    "limitations": [
+      "Cannot verify storage encryption at rest",
+      "Memory zeroing check is proximity-based heuristic"
+    ],
+    "not_covered": "Disk encryption, database encryption, and key management"
+  },
+  {
+    "requirement_id": "3.5.1.1",
+    "title": "Hashes for PAN Rendering",
+    "description": "If hashes are used to render PAN unreadable, they are keyed cryptographic hashes of the entire PAN using approved algorithms.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.5.1.2",
+    "title": "Disk-Level Encryption for PAN",
+    "description": "If disk-level or partition-level encryption is used to render PAN unreadable, it is implemented with additional controls beyond native operating system authentication.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.5.1.3",
+    "title": "Cryptographic Key Management for PAN",
+    "description": "If disk-level or partition-level encryption is used, it is managed independently of the operating system's native authentication and access control mechanisms.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.6.1",
+    "title": "Key Management Processes",
+    "description": "Procedures are defined and implemented to protect cryptographic keys used to protect stored account data against disclosure and misuse.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.6.1.1",
+    "title": "Cryptographic Architecture Documentation",
+    "description": "A current description of the cryptographic architecture is maintained that includes all algorithms and key strengths in use for protecting account data.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.6.1.2",
+    "title": "Secret Key Access Restriction",
+    "description": "Secret and private cryptographic keys used to encrypt/decrypt stored account data are restricted to the fewest custodians necessary.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.6.1.3",
+    "title": "Secret Key Encrypted Storage",
+    "description": "Secret and private keys used to encrypt/decrypt stored account data are stored in one or more specific secure forms at all times.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.6.1.4",
+    "title": "Key Storage Locations Minimized",
+    "description": "Cryptographic keys are stored in the fewest possible locations.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.7.1",
+    "title": "Key Management Policies",
+    "description": "Key-management policies and procedures are implemented to include generation of strong cryptographic keys.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.7.2",
+    "title": "Secure Key Distribution",
+    "description": "Key-management policies and procedures are implemented to include secure distribution of cryptographic keys.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.7.3",
+    "title": "Secure Key Storage",
+    "description": "Key-management policies and procedures are implemented to include secure storage of cryptographic keys.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.7.4",
+    "title": "Key Changes at Cryptoperiod End",
+    "description": "Key-management policies and procedures are implemented for cryptographic key changes when the key has reached the end of its defined cryptoperiod.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.7.5",
+    "title": "Retired Key Management",
+    "description": "Key-management policies and procedures are implemented to include retirement or replacement of keys when key integrity has been weakened or keys are suspected of being compromised.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.7.6",
+    "title": "Manual Key Management Split Knowledge",
+    "description": "Where manual cleartext cryptographic key-management operations are performed, they are managed using split knowledge and dual control.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.7.7",
+    "title": "Unauthorized Key Substitution Prevention",
+    "description": "Key-management policies and procedures are implemented to include prevention of unauthorized substitution of cryptographic keys.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.7.8",
+    "title": "Key Custodian Acknowledgment",
+    "description": "Cryptographic key custodians formally acknowledge their key-custodian responsibilities.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "3.7.9",
+    "title": "Service Provider Key Wrapping",
+    "description": "Where a service provider shares cryptographic keys with its customers for transmission or storage of account data, documentation is provided to customers with guidance on secure key transmission, storage, and updates.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "4.1.1",
+    "title": "Transmission Security Policies and Procedures",
+    "description": "Processes and mechanisms for protecting cardholder data with strong cryptography during transmission over open, public networks are defined and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "4.1.2",
+    "title": "Transmission Security Roles and Responsibilities",
+    "description": "Roles and responsibilities for performing activities related to protecting cardholder data during transmission are documented, assigned, and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "4.2.1",
+    "title": "Strong Cryptography for PAN Transmission",
+    "description": "PAN is protected with strong cryptography whenever it is sent over open, public networks. Security protocols that provide only authentication without encryption are not sufficient.",
+    "testing_procedure": "Examine source code for network transmission of PAN data and verify that strong cryptographic protocols (TLS 1.2 or later) are used. Check for any plain HTTP endpoints handling payment data.",
+    "severity": "CRITICAL",
+    "detectable": true,
+    "new_in_v4": false,
+    "coverage_scope": "Detects InsecureSkipVerify, weak TLS versions, weak cipher suites, plain HTTP URLs",
+    "limitations": [
+      "Cannot verify all network transmission paths",
+      "Only checks Go tls.Config and http.Transport"
+    ],
+    "not_covered": "Network-level encryption for non-Go components and infrastructure TLS"
+  },
+  {
+    "requirement_id": "4.2.1.1",
+    "title": "Trusted Certificates for PAN Transmission",
+    "description": "An inventory of the entity's trusted keys and certificates is maintained and the entity confirms or verifies that certificates used for PAN transmissions over open, public networks are valid and not expired or revoked.",
+    "testing_procedure": "Examine code to verify that certificate validation is enforced for all PAN transmission channels and that InsecureSkipVerify or equivalent certificate bypass settings are not used.",
+    "severity": "HIGH",
+    "detectable": false,
+    "new_in_v4": false,
+    "covered_by": "4.2.1",
+    "not_detectable_reason": "InsecureSkipVerify check covers parent; no trusted-certificate-specific verification",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "4.2.1.2",
+    "title": "Wireless Transmission Encryption",
+    "description": "Wireless networks transmitting PAN or connected to the CDE use industry best practices to implement strong encryption for authentication and transmission.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "4.2.2",
+    "title": "End-User Messaging PAN Protection",
+    "description": "PAN is secured with strong cryptography whenever it is sent via end-user messaging technologies.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "5.1.1",
+    "title": "Anti-Malware Policies and Procedures",
+    "description": "Processes and mechanisms for protecting all systems and networks from malicious software are defined and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "5.1.2",
+    "title": "Anti-Malware Roles and Responsibilities",
+    "description": "Roles and responsibilities for performing activities related to anti-malware are documented, assigned, and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "5.2.1",
+    "title": "Anti-Malware Solution Deployed",
+    "description": "An anti-malware solution is deployed on all system components, except for those system components identified in periodic evaluations that determines the component is not at risk from malware.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "5.2.2",
+    "title": "Anti-Malware Detection Capability",
+    "description": "The deployed anti-malware solution detects all known types of malware and removes, blocks, or contains all known types of malware.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "5.2.3",
+    "title": "Anti-Malware System Component Evaluation",
+    "description": "Any system components not protected by anti-malware are evaluated periodically to include an updated list of malware threats and confirmation that such components remain unaffected.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "5.2.3.1",
+    "title": "Anti-Malware Evaluation Frequency",
+    "description": "The frequency of periodic evaluations of system components not at risk for malware is defined in the entity's targeted risk analysis.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "5.3.1",
+    "title": "Anti-Malware Solution Current",
+    "description": "The anti-malware solution is kept current via automatic updates.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "5.3.2",
+    "title": "Anti-Malware Periodic Scans and Active Scanning",
+    "description": "The anti-malware solution performs periodic scans and active or real-time scans, or performs continuous behavioral analysis of systems or processes.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "5.3.2.1",
+    "title": "Anti-Malware Scan Frequency",
+    "description": "If periodic malware scans are performed, the frequency of scans is defined in the entity's targeted risk analysis.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "5.3.3",
+    "title": "Anti-Malware for Removable Media",
+    "description": "The anti-malware solution is deployed for any removable electronic media, performing automatic scans when media is inserted, connected, or logically mounted.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "5.3.4",
+    "title": "Anti-Malware Audit Logging",
+    "description": "Audit logs for the anti-malware solution are enabled and retained in accordance with Requirement 10.5.1.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "5.3.5",
+    "title": "Anti-Malware Cannot Be Disabled",
+    "description": "Anti-malware mechanisms cannot be disabled or altered by users, unless specifically documented and authorized by management on a case-by-case basis for a limited time period.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "5.4.1",
+    "title": "Phishing Attack Detection",
+    "description": "Processes and automated mechanisms are in place to detect and protect personnel against phishing attacks.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "6.1.1",
+    "title": "Secure Development Policies and Procedures",
+    "description": "Processes and mechanisms for developing and maintaining secure systems and software are defined and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "6.1.2",
+    "title": "Secure Development Roles and Responsibilities",
+    "description": "Roles and responsibilities for performing activities related to secure development are documented, assigned, and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "6.2.1",
+    "title": "Secure Development Practices",
+    "description": "Bespoke and custom software are developed securely following industry standards and/or best practices for secure development.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "6.2.2",
+    "title": "Developer Security Training",
+    "description": "Software development personnel working on bespoke and custom software are trained at least once every 12 months on software security relevant to their job function.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "6.2.3",
+    "title": "Software Review Before Release",
+    "description": "Bespoke and custom software is reviewed prior to being released into production or to customers, to identify and correct potential coding vulnerabilities.",
+    "testing_procedure": "Examine source code to verify that bespoke and custom software is reviewed for common coding vulnerabilities before release, including improper error handling that could expose sensitive data in HTTP responses.",
+    "severity": "HIGH",
+    "detectable": false,
+    "new_in_v4": false,
+    "not_detectable_reason": "Software review before release is a process requirement",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "6.2.3.1",
+    "title": "Manual Code Review Process",
+    "description": "If manual code reviews are performed for bespoke and custom software prior to release to production, code changes are reviewed by individuals other than the originating code author, and who are knowledgeable about code-review techniques and secure coding practices.",
+    "testing_procedure": "Examine documented software development procedures and interview responsible personnel to verify that processes are defined for manual code reviews to be conducted in accordance with all elements specified in this requirement.",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "6.2.4",
+    "title": "Software Engineering Techniques",
+    "description": "Software engineering techniques or other methods are defined and in use by software development personnel to prevent or mitigate common software attacks and related vulnerabilities.",
+    "testing_procedure": "Examine source code for use of common vulnerable patterns including SQL injection, cross-site scripting, improper error handling, insecure cryptographic usage, hardcoded credentials, and missing input validation.",
+    "severity": "HIGH",
+    "detectable": true,
+    "new_in_v4": false,
+    "coverage_scope": "Detects weak hash algorithms and error message disclosure in payment handlers",
+    "limitations": [
+      "Covers 2 of 5 secure engineering categories",
+      "Error handling limited to payment-context handlers"
+    ],
+    "not_covered": "Input validation, access controls, and other secure coding techniques"
+  },
+  {
+    "requirement_id": "6.3.1",
+    "title": "Known Vulnerability Identification",
+    "description": "Security vulnerabilities are identified and managed through established processes including monitoring industry sources for vulnerability information and assigning a risk ranking to all identified vulnerabilities.",
+    "testing_procedure": "Review dependency management processes and code to verify that known vulnerabilities in third-party components are identified. Check that vulnerability sources such as the OSV database are consulted.",
+    "severity": "HIGH",
+    "detectable": false,
+    "new_in_v4": false,
+    "not_detectable_reason": "Having a vulnerability identification process is not statically verifiable",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "6.3.2",
+    "title": "Software Inventory Maintained",
+    "description": "An inventory of bespoke and custom software, and third-party software components incorporated into bespoke and custom software, is maintained to facilitate vulnerability and patch management.",
+    "testing_procedure": "Examine go.mod or equivalent dependency manifest files to verify that a software inventory is maintained. Check that dependencies are tracked and can be audited for known vulnerabilities.",
+    "severity": "MEDIUM",
+    "detectable": false,
+    "new_in_v4": false,
+    "not_detectable_reason": "Software inventory maintenance is a process requirement",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "6.3.3",
+    "title": "Patching Known Vulnerabilities",
+    "description": "All system components are protected from known vulnerabilities by installing applicable security patches and updates within a defined timeframe.",
+    "testing_procedure": "Examine dependency files (go.mod, go.sum) and verify that known vulnerable dependencies are identified and patched within the defined timeframe by cross-referencing with vulnerability databases.",
+    "severity": "HIGH",
+    "detectable": true,
+    "new_in_v4": false,
+    "coverage_scope": "Queries OSV.dev for known vulnerabilities in go.mod dependencies",
+    "limitations": [
+      "Direct dependencies only from go.mod",
+      "Offline mode depends on cache freshness"
+    ],
+    "not_covered": "Vulnerability remediation process and timelines"
+  },
+  {
+    "requirement_id": "6.4.1",
+    "title": "Public-Facing Web Application Protection",
+    "description": "For public-facing web applications, new threats and vulnerabilities are addressed on an ongoing basis and these applications are protected against known attacks.",
+    "testing_procedure": "Examine code for public-facing web applications to verify that mechanisms are in place to protect against known attacks, such as input validation, output encoding, and security headers.",
+    "severity": "HIGH",
+    "detectable": false,
+    "new_in_v4": false,
+    "not_detectable_reason": "Web application protection method selection is a process/infrastructure requirement",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "6.4.2",
+    "title": "Automated Web Application Attack Detection",
+    "description": "For public-facing web applications, an automated technical solution is deployed that continually detects and prevents web-based attacks.",
+    "testing_procedure": "Examine application code to verify that web application firewall rules or equivalent detection mechanisms are configured and active for public-facing payment endpoints.",
+    "severity": "MEDIUM",
+    "detectable": false,
+    "new_in_v4": false,
+    "not_detectable_reason": "WAF/automated attack detection is infrastructure, not source code",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "6.4.3",
+    "title": "Payment Page Script Management",
+    "description": "All payment page scripts that are loaded and executed in the consumer's browser are managed to ensure script authorization, integrity verification, and an inventory of all scripts with written justification.",
+    "testing_procedure": "Examine payment page HTML templates and Go handlers for CSP headers, subresource integrity attributes on external scripts, and nonce attributes on inline scripts. Verify that unauthorized or unprotected scripts are flagged.",
+    "severity": "CRITICAL",
+    "detectable": true,
+    "new_in_v4": true,
+    "coverage_scope": "Checks CSP headers, SRI attributes, nonce usage in Go handlers and HTML templates",
+    "limitations": [
+      "HTML template analysis limited to tokenizer-level",
+      "CSP check scoped to payment handlers"
+    ],
+    "not_covered": "Runtime script authorization and dynamic script loading controls"
+  },
+  {
+    "requirement_id": "6.5.1",
+    "title": "Change Control for System Components",
+    "description": "Changes to all system components in the production environment are made according to established procedures that include documentation of impact, documented change approval, testing to verify the change does not adversely impact system security, and back-out procedures.",
+    "testing_procedure": "Examine code repositories and version control configuration to verify that change control processes are in place, including commit signing, branch protection, and review requirements for changes to sensitive components.",
+    "severity": "MEDIUM",
+    "detectable": false,
+    "new_in_v4": false,
+    "not_detectable_reason": "Change control processes cannot be verified by static code analysis",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "6.5.2",
+    "title": "Production Code Change Validation",
+    "description": "Upon completion of a significant change, all applicable PCI DSS requirements are confirmed to be in place on all new or changed systems and networks, and documentation is updated as applicable.",
+    "testing_procedure": "Review development workflow to verify that compliance checks are integrated into the deployment pipeline and that changes to payment-related code trigger security validation.",
+    "severity": "MEDIUM",
+    "detectable": false,
+    "new_in_v4": false,
+    "not_detectable_reason": "Production code change validation is a process requirement",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "6.5.3",
+    "title": "Pre-Production Separation from Production",
+    "description": "Pre-production environments are separated from production environments and the separation is enforced with access controls.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "6.5.4",
+    "title": "Role Separation Between Production and Pre-Production",
+    "description": "Roles and functions are separated between production and pre-production environments to provide accountability such that only reviewed and approved changes are deployed.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "6.5.5",
+    "title": "Live PANs Not in Pre-Production",
+    "description": "Live PANs are not used in pre-production environments, except where those environments are included in the CDE and protected accordingly.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "6.5.6",
+    "title": "Test Data Removal",
+    "description": "Test data and test accounts are removed from system components before the system goes into production.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "7.1.1",
+    "title": "Access Control Policies and Procedures",
+    "description": "Processes and mechanisms for restricting access to system components and cardholder data by business need to know are defined and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "7.1.2",
+    "title": "Access Control Roles and Responsibilities",
+    "description": "Roles and responsibilities for performing activities related to access control are documented, assigned, and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "7.2.1",
+    "title": "Access Control Model Defined",
+    "description": "An access control model is defined and includes granting access based on job classification and function, with the least privileges necessary.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "7.2.2",
+    "title": "Access Assigned Based on Role",
+    "description": "Access is assigned to users, including privileged users, based on job classification and function.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "7.2.3",
+    "title": "Required Privileges Approved",
+    "description": "Required privileges are approved by authorized personnel.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "7.2.4",
+    "title": "Access Reviews",
+    "description": "All user accounts and related access privileges, including third-party/vendor accounts, are reviewed at least once every six months.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "7.2.5",
+    "title": "Application and System Account Access",
+    "description": "All application and system accounts and related access privileges are assigned and managed on the basis of least privilege and reviewed periodically.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "7.2.5.1",
+    "title": "Application and System Account Review Frequency",
+    "description": "All access by application and system accounts and related access privileges are reviewed in accordance with the entity's targeted risk analysis.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "7.2.6",
+    "title": "Access Based on Need to Know",
+    "description": "All user access to query repositories of stored cardholder data is restricted to only those users with a business need and based on least privileges.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "7.3.1",
+    "title": "Access Control System Configuration",
+    "description": "An access control system is in place that restricts access based on a user's need to know and is set to deny all unless specifically allowed.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "7.3.2",
+    "title": "Access Control System Review",
+    "description": "The access control system is configured to enforce permissions assigned to individuals, applications, and systems based on job classification and function.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "7.3.3",
+    "title": "Default Deny All",
+    "description": "The access control system is set to deny all by default.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.1.1",
+    "title": "Authentication Policies and Procedures",
+    "description": "Processes and mechanisms for identifying users and authenticating access to system components are defined and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.1.2",
+    "title": "Authentication Roles and Responsibilities",
+    "description": "Roles and responsibilities for performing activities related to authentication are documented, assigned, and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.2.1",
+    "title": "Unique IDs for All Users",
+    "description": "All users are assigned a unique ID before being allowed to access system components or cardholder data.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.2.2",
+    "title": "Shared Account Management",
+    "description": "Group, shared, or generic accounts, or other shared authentication credentials are only used when necessary on an exception basis and are managed with additional controls.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.2.3",
+    "title": "Service Provider Customer Account Isolation",
+    "description": "Service providers with remote access to customer premises use unique authentication credentials for each customer premises.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.2.4",
+    "title": "User Lifecycle Management",
+    "description": "Addition, deletion, and modification of user IDs, authentication factors, and other identifier objects are managed through defined processes.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.2.5",
+    "title": "Terminated User Access Revocation",
+    "description": "Access for terminated users is immediately revoked.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.2.6",
+    "title": "Inactive Account Removal",
+    "description": "Inactive user accounts are removed or disabled within 90 days of inactivity.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.2.7",
+    "title": "Third-Party Remote Access Account Management",
+    "description": "Accounts used by third parties to access, support, or maintain system components via remote access are enabled only during the time period needed and are disabled when not in use.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.2.8",
+    "title": "Idle Session Timeout",
+    "description": "If a user session has been idle for more than 15 minutes, the user is required to re-authenticate to re-activate the terminal or session.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.3.1",
+    "title": "Strong Authentication for Users",
+    "description": "All user access to system components for users and administrators is authenticated via at least one of the following: something you know, something you have, something you are.",
+    "testing_procedure": "Examine source code for authentication implementations to verify that system access requires proper authentication factors and that no bypass mechanisms or hardcoded credentials exist.",
+    "severity": "HIGH",
+    "detectable": true,
+    "new_in_v4": false,
+    "coverage_scope": "Detects hardcoded passwords in Go source (var, const, :=, os.Setenv)",
+    "limitations": [
+      "Pattern-based: relies on variable naming conventions",
+      "Cannot verify password is actually strong"
+    ],
+    "not_covered": "Password complexity enforcement at runtime and password storage mechanism"
+  },
+  {
+    "requirement_id": "8.3.2",
+    "title": "Strong Cryptography for Authentication Factors",
+    "description": "Strong cryptography is used to render all authentication factors unreadable during transmission and storage on all system components.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.3.3",
+    "title": "User Identity Verification Before Credential Changes",
+    "description": "User identity is verified before modifying any authentication factor.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.3.4",
+    "title": "Failed Authentication Lockout",
+    "description": "Invalid authentication attempts are limited by locking out the user ID after not more than 10 attempts, setting the lockout duration to a minimum of 30 minutes or until the user's identity is confirmed.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.3.5",
+    "title": "Password Reset Security",
+    "description": "If passwords/passphrases are used as authentication factors, they are set and reset for each user securely.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.3.6",
+    "title": "Password Complexity Requirements",
+    "description": "If passwords/passphrases are used as authentication factors, they meet minimum complexity: at least 12 characters containing both numeric and alphabetic characters.",
+    "testing_procedure": "Examine source code for password validation logic to verify that minimum length of 12 characters is enforced and that both numeric and alphabetic characters are required. Check for hardcoded or weak default passwords.",
+    "severity": "HIGH",
+    "detectable": true,
+    "new_in_v4": true,
+    "coverage_scope": "Detects password length validation with threshold below 12 characters",
+    "limitations": [
+      "Cannot verify alphanumeric mix requirement",
+      "Heuristic: looks for length comparison patterns"
+    ],
+    "not_covered": "Full password complexity rules (mixed case, special chars) and password change enforcement"
+  },
+  {
+    "requirement_id": "8.3.7",
+    "title": "New Password Cannot Match Previous",
+    "description": "Individuals are not allowed to submit a new password/passphrase that is the same as any of the last four passwords/passphrases used.",
+    "testing_procedure": "Examine source code for password change logic to verify that the application maintains a history of at least the last four passwords and prevents reuse.",
+    "severity": "MEDIUM",
+    "detectable": false,
+    "new_in_v4": false,
+    "not_detectable_reason": "Password history enforcement too complex to detect statically",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "8.3.8",
+    "title": "Authentication Policies Communication",
+    "description": "Authentication policies and procedures are documented and communicated to all users.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.3.9",
+    "title": "Unique Password Per Application",
+    "description": "If passwords/passphrases are used as the only authentication factor for user access, passwords/passphrases are either changed at least once every 90 days, or dynamically analyzed for real-time security.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.3.10",
+    "title": "Service Provider Customer Password Guidance",
+    "description": "If passwords/passphrases are used as the only authentication factor for customer user access to cardholder data, guidance is provided to customer users.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.3.10.1",
+    "title": "Service Provider Password Change Interval",
+    "description": "If passwords/passphrases are used as the only authentication factor for customer user access, either the password/passphrase is changed at least once every 90 days, or access is dynamically analyzed.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "8.3.11",
+    "title": "Physical Token Usage",
+    "description": "Where authentication factors such as physical or logical security tokens, smart cards, or certificates are used, the use of these factors is defined and implemented.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.4.1",
+    "title": "MFA for Administrative Access",
+    "description": "MFA is implemented for all non-console access into the CDE for personnel with administrative access.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.4.2",
+    "title": "MFA for CDE Access",
+    "description": "MFA is implemented for all access into the CDE, not just administrative access, requiring at least two different types of authentication factors.",
+    "testing_procedure": "Examine source code for CDE access routes and verify that multi-factor authentication middleware or checks are applied to all routes handling cardholder data, not just administrative routes.",
+    "severity": "HIGH",
+    "detectable": true,
+    "new_in_v4": true,
+    "coverage_scope": "Detects payment routes and handlers missing MFA middleware wrapper",
+    "limitations": [
+      "Heuristic: MFA detected by wrapper function naming",
+      "Cannot verify MFA is actually enforced at infrastructure level"
+    ],
+    "not_covered": "MFA implementation correctness, token validation, and infrastructure-level MFA enforcement"
+  },
+  {
+    "requirement_id": "8.4.3",
+    "title": "MFA for Remote Network Access",
+    "description": "MFA is implemented for all remote network access originating from outside the entity's network that could access or impact the CDE.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.5.1",
+    "title": "MFA System Configuration",
+    "description": "MFA systems are implemented to ensure MFA factors are independent, access to non-CDE systems cannot provide access to CDE, and at least two different types of authentication factors are used.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "8.6.1",
+    "title": "System and Application Account Management",
+    "description": "If accounts used by systems or applications can be used for interactive login, they are managed and protected.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "8.6.2",
+    "title": "Hardcoded Password Prohibition",
+    "description": "Passwords/passphrases for any application and system accounts that can be used for interactive login are not hard coded in scripts, configuration files, or bespoke and custom source code.",
+    "testing_procedure": "Examine source code, scripts, and configuration files to verify that passwords and passphrases for application and system accounts are not hard coded.",
+    "severity": "CRITICAL",
+    "detectable": true,
+    "new_in_v4": true,
+    "coverage_scope": "Detects API keys, passwords, tokens in .env, .yaml, .json, .toml config files",
+    "limitations": [
+      "Entropy-based detection may miss low-entropy secrets",
+      "Known prefix matching limited to common providers (sk_, ghp_, AKIA)"
+    ],
+    "not_covered": "Secrets in non-standard config formats and runtime secret injection"
+  },
+  {
+    "requirement_id": "8.6.3",
+    "title": "Application Password Protection",
+    "description": "Passwords/passphrases for any application and system accounts are protected against misuse through periodic password changes, complexity, and access restrictions.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "9.1.1",
+    "title": "Physical Security Policies and Procedures",
+    "description": "Processes and mechanisms for restricting physical access to cardholder data are defined and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.1.2",
+    "title": "Physical Security Roles and Responsibilities",
+    "description": "Roles and responsibilities for performing activities related to physical security are documented, assigned, and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.2.1",
+    "title": "Facility Entry Controls",
+    "description": "Appropriate facility entry controls are in place to restrict physical access to systems in the CDE.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.2.1.1",
+    "title": "Individual Physical Access Monitoring",
+    "description": "Individual physical access to sensitive areas within the CDE is monitored with either video cameras or physical access control mechanisms.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.2.2",
+    "title": "Publicly Accessible Area Controls",
+    "description": "Physical and/or logical controls are implemented to restrict use of publicly accessible network jacks within the facility.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.2.3",
+    "title": "Wireless Access Point Physical Security",
+    "description": "Physical access to wireless access points, gateways, networking/communications hardware, and telecommunication lines within the facility is restricted.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.2.4",
+    "title": "Console Physical Access Restriction",
+    "description": "Access to consoles in sensitive areas is restricted via locking when not in use.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.3.1",
+    "title": "Visitor Physical Access Authorization",
+    "description": "Procedures are implemented for authorizing and managing visitor access to the CDE.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.3.1.1",
+    "title": "Visitor Access to CDE",
+    "description": "Physical access to sensitive areas is controlled, and access is authorized and is based on individual job function.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.3.2",
+    "title": "Visitor Identification",
+    "description": "Visitor ID badges or other identification are used to visually distinguish visitors from onsite personnel.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.3.3",
+    "title": "Visitor Badge Surrender",
+    "description": "Visitor badges or identification are surrendered or deactivated before visitors leave the facility or at the date of expiration.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.3.4",
+    "title": "Visitor Log Maintenance",
+    "description": "A visitor log is used to maintain a physical audit trail of visitor activity to the facility as well as computer rooms and data centers.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.4.1",
+    "title": "Media Physical Security",
+    "description": "All media with cardholder data is physically secured, and internal and external media distribution is controlled.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.4.1.1",
+    "title": "Offline Media Storage Security",
+    "description": "Offline media backups with cardholder data are stored in a secure location.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.4.1.2",
+    "title": "Offline Media Security Review",
+    "description": "The security of the offline media backup location is reviewed at least once every 12 months.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "9.4.2",
+    "title": "Media Classification",
+    "description": "All media with cardholder data is classified in accordance with the sensitivity of the data.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.4.3",
+    "title": "Secure Media Distribution",
+    "description": "Media with cardholder data sent outside the facility is secured through tracked delivery via a secured courier or other method that can be accurately tracked.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.4.4",
+    "title": "Management Approval for Media Distribution",
+    "description": "Management approves all media with cardholder data that is moved outside the facility.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.4.5",
+    "title": "Electronic Media Inventory",
+    "description": "Inventory logs of all electronic media with cardholder data are maintained.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.4.5.1",
+    "title": "Electronic Media Inventory Frequency",
+    "description": "Inventories of electronic media with cardholder data are conducted at least once every 12 months.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.4.6",
+    "title": "Media Destruction",
+    "description": "Hard-copy materials with cardholder data are destroyed when no longer needed for business or legal reasons by cross-cut shredding, incineration, or pulping so data cannot be reconstructed.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.4.7",
+    "title": "Electronic Media Destruction",
+    "description": "Electronic media with cardholder data is destroyed when no longer needed for business or legal reasons via secure wiping, degaussing, or physical destruction.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.5.1",
+    "title": "POI Device Protection",
+    "description": "POI devices that capture payment card data via direct physical interaction with the payment card form factor are protected from tampering and unauthorized substitution.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.5.1.1",
+    "title": "POI Device List Maintenance",
+    "description": "An up-to-date list of POI devices is maintained, including make, model, location, and serial number or other unique identifier.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.5.1.2",
+    "title": "POI Device Inspection",
+    "description": "POI device surfaces are periodically inspected to detect tampering and unauthorized substitution.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "9.5.1.2.1",
+    "title": "POI Inspection Frequency",
+    "description": "The frequency of periodic POI device inspections and the type of inspections performed is defined in the entity's targeted risk analysis.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "9.5.1.3",
+    "title": "POI Device Training",
+    "description": "Training is provided for personnel in POI environments to be aware of attempted tampering or unauthorized substitution of devices.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.1.1",
+    "title": "Logging and Monitoring Policies and Procedures",
+    "description": "Processes and mechanisms for logging and monitoring all access to system components and cardholder data are defined and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.1.2",
+    "title": "Logging and Monitoring Roles and Responsibilities",
+    "description": "Roles and responsibilities for performing activities related to logging and monitoring are documented, assigned, and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.2.1",
+    "title": "Audit Logs Enabled for All System Components",
+    "description": "Audit logs are enabled and active for all system components and cardholder data, capturing all user access, administrative actions, and access to audit logs.",
+    "testing_procedure": "Examine source code for HTTP handlers processing cardholder data to verify that audit logging is implemented for all access events, including user authentication, data access, and administrative actions.",
+    "severity": "HIGH",
+    "detectable": true,
+    "new_in_v4": false,
+    "coverage_scope": "Identifies payment HTTP handlers and verifies structured audit logging calls",
+    "limitations": [
+      "Only payment-keyword handlers checked, not all system components",
+      "1-level call resolution for logger delegation"
+    ],
+    "not_covered": "Logging for all system components, log content completeness, and log integrity"
+  },
+  {
+    "requirement_id": "10.2.1.1",
+    "title": "Log All Individual User Access to CHD",
+    "description": "Audit logs capture all individual user access to cardholder data.",
+    "testing_procedure": "Examine code for data access functions that handle cardholder data to verify that each access event is logged with user identification, timestamp, and the nature of the access.",
+    "severity": "HIGH",
+    "detectable": false,
+    "new_in_v4": false,
+    "covered_by": "10.2.1",
+    "not_detectable_reason": "Covered broadly by 10.2.1 payment handler logging; no individual-user-access-specific detection",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "10.2.1.2",
+    "title": "Log All Administrative Actions",
+    "description": "Audit logs capture all actions taken by any individual with administrative access, including any interactive use of application or system accounts.",
+    "testing_procedure": "Examine code for administrative routes and functions to verify that all administrative actions are logged with the administrator's identity, timestamp, and description of the action performed.",
+    "severity": "HIGH",
+    "detectable": false,
+    "new_in_v4": false,
+    "covered_by": "10.2.1",
+    "not_detectable_reason": "Covered broadly by 10.2.1; no admin-action-specific detection",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "10.2.1.3",
+    "title": "Log All Access to Audit Logs",
+    "description": "Audit logs capture all access to audit logs.",
+    "testing_procedure": "Examine code for audit log access functions to verify that access to the audit logs themselves is recorded, including who accessed them and when.",
+    "severity": "MEDIUM",
+    "detectable": false,
+    "new_in_v4": false,
+    "not_detectable_reason": "Requires understanding which endpoints serve audit logs",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "10.2.1.4",
+    "title": "Log All Invalid Authentication Attempts",
+    "description": "Audit logs capture all invalid logical access attempts.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.2.1.5",
+    "title": "Log All Changes to Credentials",
+    "description": "Audit logs capture all changes to identification and authentication credentials including creation of new accounts, elevation of privileges, and all changes to accounts with administrative access.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.2.1.6",
+    "title": "Log Initialization of Audit Logs",
+    "description": "Audit logs capture initialization of new audit logs, stopping or pausing of existing audit logs.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.2.1.7",
+    "title": "Log Creation and Deletion of System-Level Objects",
+    "description": "Audit logs capture all creation and deletion of system-level objects.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.2.2",
+    "title": "Audit Log Content Requirements",
+    "description": "Audit logs record sufficient detail for each auditable event including user identification, type of event, date and time, success or failure indication, origination of event, and identity or name of affected data, system component, resource, or service.",
+    "testing_procedure": "Examine logging code to verify that each audit log entry contains all required fields: user ID, event type, timestamp, success/failure indicator, event origin, and the identity of the affected resource.",
+    "severity": "HIGH",
+    "detectable": false,
+    "new_in_v4": false,
+    "not_detectable_reason": "Structured log field verification too fragile for static analysis",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "10.3.1",
+    "title": "Audit Log Read Protection",
+    "description": "Read access to audit logs is limited to those with a job-related need.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.3.2",
+    "title": "Audit Log Modification Protection",
+    "description": "Audit log files are protected to prevent modifications by individuals.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.3.3",
+    "title": "Audit Log Backup",
+    "description": "Audit log files, including those for external-facing technologies, are promptly backed up to a secure, central, internal log server or other media that is difficult to modify.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.3.4",
+    "title": "File Integrity Monitoring on Audit Logs",
+    "description": "File integrity monitoring or change-detection mechanisms are used on audit logs to ensure that existing log data cannot be changed without generating alerts.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.4.1",
+    "title": "Audit Log Review",
+    "description": "Audit logs are reviewed at least once daily to identify anomalies or suspicious activity.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.4.1.1",
+    "title": "Automated Audit Log Review",
+    "description": "Automated mechanisms are used to perform audit log reviews.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "10.4.2",
+    "title": "Security Event Review",
+    "description": "Logs of all other system components are reviewed periodically to identify anomalies or suspicious activity.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.4.2.1",
+    "title": "Security Event Review Frequency",
+    "description": "The frequency of periodic log reviews for all other system components is defined in the entity's targeted risk analysis.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "10.4.3",
+    "title": "Exception and Anomaly Follow-Up",
+    "description": "Exceptions and anomalies identified during the review process are addressed.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.5.1",
+    "title": "Audit Log Retention",
+    "description": "Audit log history is retained for at least 12 months, with at least the most recent three months immediately available for analysis.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.6.1",
+    "title": "Time Synchronization",
+    "description": "System clocks and time are synchronized using time-synchronization technology and the technology is kept current.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.6.2",
+    "title": "Time Synchronization Configuration",
+    "description": "Systems are configured to the correct and consistent time through time synchronization technology that uses current time data from external, trusted time sources.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.6.3",
+    "title": "Time Synchronization Settings Protection",
+    "description": "Time synchronization settings and data are protected as follows: access to time data is restricted to only personnel with a business need, and any changes to time settings on critical systems are logged, monitored, and reviewed.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.7.1",
+    "title": "Critical Security Control Failure Detection",
+    "description": "Failures of critical security control systems are detected, alerted, and addressed promptly, including but not limited to failure of network security controls, IDS/IPS, FIM, anti-malware, physical access controls, logical access controls, audit logging mechanisms, and segmentation controls.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.7.2",
+    "title": "Critical Security Control Failure Response",
+    "description": "Failures of critical security control systems are responded to promptly, with documented processes for restoring security functions, identifying the period of failure, and performing a risk assessment.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "10.7.3",
+    "title": "Critical Security Control Failure Response for Service Providers",
+    "description": "Additional requirement for service providers: Failures of any critical security controls are responded to promptly and specific actions for responding to the failure are documented.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.1.1",
+    "title": "Security Testing Policies and Procedures",
+    "description": "Processes and mechanisms for regularly testing security of systems and networks are defined and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.1.2",
+    "title": "Security Testing Roles and Responsibilities",
+    "description": "Roles and responsibilities for performing activities related to security testing are documented, assigned, and understood.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.2.1",
+    "title": "Authorized Wireless Access Points",
+    "description": "Authorized and unauthorized wireless access points are managed by maintaining an inventory and testing for unauthorized wireless access points quarterly.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.2.2",
+    "title": "Wireless Access Point Detection",
+    "description": "An inventory of authorized wireless access points is maintained, including a documented business justification.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.3.1",
+    "title": "Internal Vulnerability Scans",
+    "description": "Internal vulnerability scans are performed at least once every three months and after any significant change.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.3.1.1",
+    "title": "Internal Scan Management",
+    "description": "All other applicable vulnerabilities found during internal scans are managed through risk ranking and rescanning as needed.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.3.1.2",
+    "title": "Authenticated Internal Scanning",
+    "description": "Internal vulnerability scans are performed via authenticated scanning with sufficient privileges.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "11.3.1.3",
+    "title": "Internal Scan After Significant Changes",
+    "description": "Internal scans are performed after any significant change.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.3.2",
+    "title": "External Vulnerability Scans",
+    "description": "External vulnerability scans are performed at least once every three months and after any significant change by a PCI SSC Approved Scanning Vendor.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.3.2.1",
+    "title": "External Scan After Significant Changes",
+    "description": "External scans are performed after any significant change.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.4.1",
+    "title": "Penetration Testing Methodology",
+    "description": "A penetration testing methodology is defined, documented, and implemented, including industry-accepted penetration testing approaches, coverage for the entire CDE perimeter and critical systems.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.4.2",
+    "title": "Internal Penetration Testing",
+    "description": "Internal penetration testing is performed at least once every 12 months and after any significant infrastructure or application changes.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.4.3",
+    "title": "External Penetration Testing",
+    "description": "External penetration testing is performed at least once every 12 months and after any significant infrastructure or application changes.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.4.4",
+    "title": "Penetration Testing Remediation",
+    "description": "Exploitable vulnerabilities and security weaknesses found during penetration testing are corrected and testing is repeated to verify the corrections.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.4.5",
+    "title": "Segmentation Verification",
+    "description": "If segmentation is used to isolate the CDE from other networks, penetration tests are performed on segmentation controls at least once every 12 months and after any changes to segmentation controls.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.4.6",
+    "title": "Service Provider Segmentation Testing",
+    "description": "Additional requirement for service providers: External penetration testing is performed at least once every six months and after any significant changes to segmentation controls.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.4.7",
+    "title": "Multi-Tenant Service Provider Segmentation",
+    "description": "Additional requirement for multi-tenant service providers: penetration testing on segmentation controls to confirm isolation between tenant environments is performed at least once every six months.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "11.5.1",
+    "title": "Intrusion Detection/Prevention",
+    "description": "Network intrusion detection and/or intrusion prevention techniques are used to detect and/or prevent intrusions into the network, and all traffic at the CDE perimeter and at critical points within the CDE is monitored.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.5.1.1",
+    "title": "IDS/IPS Configuration",
+    "description": "Intrusion-detection and/or intrusion-prevention techniques detect, alert on/prevent, and address covert malware communication channels.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "11.5.2",
+    "title": "Change Detection on Critical Files",
+    "description": "A change-detection mechanism (file integrity monitoring) is deployed to alert personnel to unauthorized modification of critical system files, configuration files, or content files.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "11.6.1",
+    "title": "Payment Page Change Detection",
+    "description": "A change- and tamper-detection mechanism is deployed to alert personnel to unauthorized modification of HTTP headers and the content of payment pages as received by the consumer browser.",
+    "testing_procedure": "Examine payment page handlers and templates to verify that change-detection and tamper-detection mechanisms are deployed for HTTP headers and payment page content.",
+    "severity": "HIGH",
+    "detectable": true,
+    "new_in_v4": true,
+    "coverage_scope": "Advisory reminder for file integrity monitoring on payment pages",
+    "limitations": [
+      "Informational finding only, not actual FIM verification",
+      "No runtime file change detection"
+    ],
+    "not_covered": "Actual FIM implementation, alerting, and change detection mechanisms"
+  },
+  {
+    "requirement_id": "12.1.1",
+    "title": "Information Security Policy",
+    "description": "An overall information security policy is established, published, maintained, and disseminated to all relevant personnel, as well as to relevant vendors and business partners.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.1.2",
+    "title": "Information Security Policy Review",
+    "description": "The information security policy is reviewed at least once every 12 months and updated as needed to reflect changes to business objectives or the risk environment.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.1.3",
+    "title": "Acceptable Use Policies",
+    "description": "The information security policy clearly defines information security roles and responsibilities for all personnel.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.1.4",
+    "title": "CISO Responsibility Assignment",
+    "description": "Responsibility for information security is formally assigned to a Chief Information Security Officer or equivalent.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.2.1",
+    "title": "Acceptable Use Policies for Technology",
+    "description": "Acceptable use policies for end-user technologies are documented and implemented, and include explicit approval by authorized parties, acceptable uses of the technology, and an acceptable list of company-approved products.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.3.1",
+    "title": "Targeted Risk Analysis",
+    "description": "Each PCI DSS requirement that provides flexibility for how frequently it is performed is supported by a targeted risk analysis documented and performed at least once every 12 months.",
+    "testing_procedure": "Review risk analysis documentation to verify that targeted risk assessments are performed for all requirements with flexible frequencies, and that the analysis results determine the appropriate frequency for each activity.",
+    "severity": "MEDIUM",
+    "detectable": false,
+    "new_in_v4": true,
+    "not_detectable_reason": "Targeted risk analysis is a pure documentation/process requirement",
+    "requires_qsa": true
+  },
+  {
+    "requirement_id": "12.3.2",
+    "title": "Targeted Risk Analysis for Customized Approach",
+    "description": "Targeted risk analyses are performed for each PCI DSS requirement met through the customized approach.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "12.3.3",
+    "title": "Cryptographic Cipher Suites Review",
+    "description": "Cryptographic cipher suites and protocols in use are documented and reviewed at least once every 12 months.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "12.3.4",
+    "title": "Hardware and Software Technology Review",
+    "description": "Hardware and software technologies in use are reviewed at least once every 12 months to confirm they continue to receive security fixes from vendors promptly.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "12.4.1",
+    "title": "Service Provider Compliance Review",
+    "description": "Additional requirement for service providers: Responsibility for the protection of cardholder data is established by executive management and a PCI DSS compliance program is established.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.4.2",
+    "title": "Service Provider Compliance Reviews",
+    "description": "Additional requirement for service providers: Reviews are performed at least once every three months to confirm that personnel are following security policies and operational procedures.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.4.2.1",
+    "title": "Service Provider Review Documentation",
+    "description": "Additional requirement for service providers: Reviews performed in accordance with 12.4.2 are documented.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "12.5.1",
+    "title": "CDE Component Inventory",
+    "description": "An inventory of system components that are in scope for PCI DSS, including a description of function/use, is maintained and kept current.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.5.2",
+    "title": "PCI DSS Scope Review",
+    "description": "PCI DSS scope is documented and confirmed by the entity at least once every 12 months and upon significant change to the in-scope environment.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.5.2.1",
+    "title": "Scope Review Frequency for Service Providers",
+    "description": "Additional requirement for service providers: PCI DSS scope is documented and confirmed at least once every six months and upon significant change.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "12.5.3",
+    "title": "Significant Changes Scope Impact",
+    "description": "Additional requirement for service providers: Significant changes to organizational structure result in a documented and internal review of the impact to PCI DSS scope and applicability of controls.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "12.6.1",
+    "title": "Security Awareness Program",
+    "description": "A formal security awareness program is implemented to make all personnel aware of the entity's information security policy and procedures, and their role in protecting the cardholder data.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.6.2",
+    "title": "Security Awareness Review",
+    "description": "The security awareness program is reviewed at least once every 12 months and updated as needed to address any new threats and vulnerabilities.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.6.3",
+    "title": "Security Awareness Training Delivery",
+    "description": "Personnel receive security awareness training upon hire and at least once every 12 months.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.6.3.1",
+    "title": "Security Awareness Training Content",
+    "description": "Security awareness training includes awareness of threats and vulnerabilities that could impact the security of account data, and acceptable use of end-user technologies.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "12.6.3.2",
+    "title": "Social Engineering Training",
+    "description": "Security awareness training includes awareness about the acceptable use of end-user technologies.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "12.7.1",
+    "title": "Personnel Screening",
+    "description": "Potential personnel who will have access to the CDE are screened prior to hire to minimize the risk of attacks from internal sources.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.8.1",
+    "title": "Service Provider List",
+    "description": "A list of all third-party service providers with which account data is shared, or that could affect the security of account data, is maintained.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.8.2",
+    "title": "Service Provider Agreements",
+    "description": "Written agreements are maintained with all third-party service providers with which account data is shared.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.8.3",
+    "title": "Service Provider Engagement Process",
+    "description": "An established process is implemented for engaging third-party service providers including proper due diligence prior to engagement.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.8.4",
+    "title": "Service Provider Compliance Monitoring",
+    "description": "A program is implemented to monitor third-party service providers' PCI DSS compliance status at least once every 12 months.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.8.5",
+    "title": "Service Provider Responsibility Mapping",
+    "description": "Information is maintained about which PCI DSS requirements are managed by each third-party service provider and which are managed by the entity.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.9.1",
+    "title": "Service Provider Acknowledgment",
+    "description": "Additional requirement for service providers: Service providers acknowledge in writing to customers that they are responsible for the security of account data they possess, store, process, or transmit on behalf of the customer.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.9.2",
+    "title": "Service Provider Support for Assessments",
+    "description": "Additional requirement for service providers: Service providers support their customers' requests for information to meet requirements 12.8.4 and 12.8.5.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "12.10.1",
+    "title": "Incident Response Plan",
+    "description": "An incident response plan exists and is ready to be activated in the event of a suspected or confirmed security incident. The plan addresses roles, responsibilities, communication, notification requirements, incident response procedures, and containment and mitigation activities.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.10.2",
+    "title": "Incident Response Plan Review",
+    "description": "The security incident response plan is reviewed and tested at least once every 12 months.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.10.3",
+    "title": "Incident Response Personnel Availability",
+    "description": "Specific personnel are designated to be available on a 24/7 basis to respond to suspected or confirmed security incidents.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.10.4",
+    "title": "Incident Response Training",
+    "description": "Personnel responsible for responding to suspected and confirmed security incidents are appropriately and periodically trained on their incident response responsibilities.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.10.4.1",
+    "title": "Incident Response Training Frequency",
+    "description": "The frequency of training for incident response personnel is defined in the entity's targeted risk analysis.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  },
+  {
+    "requirement_id": "12.10.5",
+    "title": "Incident Response Plan Includes Alerts",
+    "description": "The security incident response plan includes monitoring and responding to alerts from security monitoring systems.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.10.6",
+    "title": "Incident Response Plan Evolution",
+    "description": "The security incident response plan is modified and evolved according to lessons learned and to incorporate industry developments.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": false
+  },
+  {
+    "requirement_id": "12.10.7",
+    "title": "Incident Response for Unexpected PAN",
+    "description": "Incident response procedures are in place to be initiated upon the detection of stored PAN anywhere it is not expected, and include determining what to do if PAN is discovered outside the CDE.",
+    "testing_procedure": "",
+    "severity": "",
+    "detectable": false,
+    "new_in_v4": true
+  }
+]

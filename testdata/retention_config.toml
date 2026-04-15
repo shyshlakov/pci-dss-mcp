@@ -1,0 +1,7 @@
+[cardholder_data]
+enabled = true
+storage = "redis"
+# VIOLATION: RET-CONFIG-NO-TTL - Missing TTL on sensitive config key (3.2.1)
+
+[logging]
+level = "info"

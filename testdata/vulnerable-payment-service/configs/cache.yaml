@@ -1,0 +1,7 @@
+cache:
+  default:
+    ttl: 3600
+  card_data:
+    namespace: "card:"
+  session:
+    ttl: 1800

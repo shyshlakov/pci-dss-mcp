@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Payment Page - Test Violations</title>
+    <!-- VIOLATION: META-CSP-UNSAFE - meta CSP with unsafe-inline (6.4.3) -->
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'">
+
+    <!-- VIOLATION: SRI-MISSING-PAYMENT - external script without integrity on payment page (6.4.3) -->
+    <script src="https://cdn.example.com/payment-sdk.js"></script>
+
+    <!-- VIOLATION: SRI-MISSING-PAYMENT - another external without SRI (6.4.3) -->
+    <script src="https://analytics.example.com/track.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <form action="/checkout" method="POST">
+        <!-- Payment keyword triggers CRITICAL severity escalation -->
+        <input type="text" name="card-number" placeholder="Card Number">
+        <input type="text" name="cvv" placeholder="CVV">
+        <input type="text" name="expiry" placeholder="MM/YY">
+        <button type="submit">Pay Now</button>
+    </form>
+
+    <!-- VIOLATION: NONCE-MISSING-PAYMENT - inline script without nonce on payment page (6.4.3) -->
+    <script>
+        document.querySelector('form').addEventListener('submit', function(e) {
+            // payment form validation
+        });
+    </script>
+
+    <!-- NO VIOLATION: script with integrity attribute -->
+    <script src="https://cdn.example.com/verified.js"
+            integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8w"
+            crossorigin="anonymous"></script>
+
+    <!-- NO VIOLATION: inline script with nonce -->
+    <script nonce="abc123def456">
+        console.log("authorized inline script");
+    </script>
+
+    <!-- Go template syntax test - must not cause parse errors (D-11) -->
+    {{ if .ShowAnalytics }}
+    <script src="https://analytics.example.com/ga.js"></script>
+    {{ end }}
+</body>
+</html>

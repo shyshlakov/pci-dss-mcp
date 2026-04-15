@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>All Violations - Payment Page Test Fixture</title>
+    <!-- SRI-MISSING: external script without integrity attribute -->
+    <script src="https://cdn.example.com/payment-sdk.js"></script>
+    <!-- SRI-MISSING: another external script without integrity -->
+    <script src="https://analytics.example.com/track.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <form id="payment-form" action="/checkout" method="POST">
+        <!-- Payment keyword in form triggers CRITICAL severity escalation -->
+        <input type="text" name="card_number" placeholder="Card Number">
+        <input type="text" name="cvv" placeholder="CVV">
+        <button type="submit">Pay Now</button>
+    </form>
+
+    <!-- NONCE-MISSING: inline script without nonce on payment page -->
+    <script>
+        document.querySelector('#payment-form').addEventListener('submit', function(e) {
+            // payment form validation
+        });
+    </script>
+
+    <!-- NO VIOLATION: external script with integrity attribute -->
+    <script src="https://cdn.example.com/verified.js"
+            integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8w"
+            crossorigin="anonymous"></script>
+
+    <!-- NO VIOLATION: inline script with nonce -->
+    <script nonce="abc123def456">
+        console.log("authorized inline script");
+    </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+database:
+  password: "production_secret_password_12345"
+  connection_string: "postgres://root:supersecret@localhost:5432/payments"
+api:
+  secret_key: "sk_live_abcdefghijklmnopqrstuvwxyz123456"
+payment:
+  card_data_retention: "unlimited"

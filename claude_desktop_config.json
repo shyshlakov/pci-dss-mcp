@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pci-dss-mcp": {
+      "command": "/path/to/pci-dss-mcp",
+      "args": []
+    }
+  }
+}

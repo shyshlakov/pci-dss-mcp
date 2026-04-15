@@ -1,0 +1,11 @@
+# Sensitive data config without TTL
+card_processing:
+  card_data:
+    storage_key: "cards:active"
+    # VIOLATION: RET-CONFIG-NO-TTL - Missing TTL on sensitive config key (3.2.1)
+
+# Clean config with TTL
+session_cache:
+  payment_token:
+    storage_key: "tokens:session"
+    ttl: 3600

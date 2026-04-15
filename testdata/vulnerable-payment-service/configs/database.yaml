@@ -1,0 +1,3 @@
+primary:
+  dsn: "postgres://admin:secret123@db.local:5432/payments"
+  pool_size: 10

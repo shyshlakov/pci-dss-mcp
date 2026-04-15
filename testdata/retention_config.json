@@ -1,0 +1,9 @@
+{
+  "cvv_cache": {
+    "enabled": true,
+    "storage": "redis"
+  },
+  "user_prefs": {
+    "theme": "dark"
+  }
+}

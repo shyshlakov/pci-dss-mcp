@@ -1,0 +1,6 @@
+service:
+  name: vulnerable-payment-service
+  port: 8080
+
+api_key: "sk_live_AbC123XyZ789dEf456GhI012JkL345"
+api_base_path: "/v1/tokens"

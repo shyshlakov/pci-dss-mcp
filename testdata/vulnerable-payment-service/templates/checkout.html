@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Checkout - Pay Now</title>
+</head>
+<body>
+  <h1>Checkout</h1>
+  <form action="/charge" method="POST">
+    <input name="card_number" />
+    <button type="submit">Pay</button>
+  </form>
+  <script src="https://cdn.example.com/pay.js"></script>
+  <script>processPayment()</script>
+</body>
+</html>

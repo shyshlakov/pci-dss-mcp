@@ -1,0 +1,55 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - misspell
+    - gocyclo
+    - unconvert
+    - bodyclose
+  settings:
+    gocyclo:
+      min-complexity: 30
+    misspell:
+      locale: US
+  exclusions:
+    paths:
+      - testdata
+      - \.planning
+    rules:
+      - path: _test\.go
+        linters:
+          - gocyclo
+          - errcheck
+          - unparam
+      - path: testdata/
+        linters:
+          - errcheck
+          - govet
+          - staticcheck
+          - ineffassign
+          - unused
+          - gocyclo
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/shyshlakov/pci-dss-mcp
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clean Payment Page</title>
+    <script src="https://cdn.example.com/payment.js"
+            integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8w"
+            crossorigin="anonymous"></script>
+</head>
+<body>
+    <form action="/pay" method="POST">
+        <input type="text" name="card-number">
+        <button type="submit">Pay</button>
+    </form>
+    <script nonce="random123">
+        // all inline scripts have nonces
+    </script>
+</body>
+</html>
