@@ -5,6 +5,15 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## [0.1.0] - 2026-04-15
+
+First public release. Covers the complete PCI DSS v4.0.1 scanner suite as a
+Model Context Protocol server for Go payment-service codebases.
+
+### Security
+- No known run-time vulnerabilities fixed in this release. `govulncheck` is
+  clean against the dependency set at the time of release.
+
 ### Added
 - **14 MCP tools** across 10 scanners covering PCI DSS v4.0.1 requirements
   3.2.1, 3.3.1, 3.4.1, 3.5.1, 4.2.1, 6.2.4, 6.3.3, 6.4.3, 8.3.1, 8.3.6,
