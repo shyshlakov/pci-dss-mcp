@@ -45,7 +45,7 @@ func main() {
 
 	// Create MCP server.
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "pci-dss-mcp", Version: "v0.1.0"},
+		&mcp.Implementation{Name: "pci-dss-mcp", Version: "v0.1.1"},
 		nil,
 	)
 

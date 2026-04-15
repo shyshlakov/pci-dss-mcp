@@ -5,6 +5,66 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## [0.1.1] - 2026-04-15
+
+False-positive reduction for three scanners plus a latent alignment bug
+in the SQL cross-reference pass. No new MCP tools or rules; existing
+scan output is more precise on real-world Go payment-service codebases.
+
+### Changed
+- **retentionscanner: `RET-CONFIG-NO-TTL` path-aware downgrade.** Findings
+  under directory segments matching `dev`, `local`, `compose`, `testutil`,
+  `testutils`, or `test` (with sub-word split on `_`/`-`) downgrade to
+  `INFO` with TriageHint `downgrade:dev_path_skipped | ...`. Production
+  paths under `configs/` and equivalent keep their original HIGH severity.
+  Eliminates ~20 false positives per scan on typical monorepo
+  dev-infrastructure compose files.
+- **sqlscanner: temporal DROP COLUMN awareness.** A new Pass 4 walks
+  migration files in chronological order inside `migrations/` and
+  `migration/` directories. When a later migration contains
+  `DROP COLUMN <col>` (with optional `IF EXISTS`) for a flagged column
+  and no subsequent migration re-adds it, `SQL-SENSITIVE-COLUMN` and
+  `SQL-TEXT-TYPE` findings for the add-migration downgrade to `INFO`
+  with TriageHint `downgrade:column_dropped_in_<file> | ...`. Re-ADD
+  detected via `ALTER TABLE ... ADD COLUMN <col>` → severity preserved.
+  Heuristic aborts for a directory if any file lacks a timestamp prefix.
+- **authscanner: testutil path exclusion extended.** `AUTH-HARDCODED-PWD`
+  findings under paths containing a segment equal to `test`, `testutil`,
+  or `testutils` (including `internal/testutil/**`, `internal/testutils/**`,
+  and `**/test/**`) downgrade to `INFO` with TriageHint
+  `downgrade:testutil_exclusion | ...`. Findings are never dropped —
+  the audit trail is preserved per the D-01 binding rule.
+- **README: Roadmap section added** listing five upcoming user-facing
+  features (SBOM generation, govulncheck reachability, SARIF v2.1.0
+  output, Semgrep adapter, cross-service CHD flow mapping). Stale
+  `RET-CONFIG-NO-TTL over-firing` note removed from Known limitations.
+
+### Fixed
+- **sqlscanner: `crossRefSQLWithGoEncryption` / `applyMigrationDropDowngrade`
+  alignment bug.** When the cross-reference pass suppressed an expiry
+  column under a Go-level PAN encryption hook, it deleted findings via
+  slice `append` but left `sqlFindingEnd` and `sqlMetas` pointing at the
+  pre-deletion state. The subsequent migration-drop pass then iterated
+  with a stale 1:1 finding↔meta alignment and could pair a SQL finding
+  with the wrong column meta — in the worst case leaving a sensitive
+  column (e.g. CVV) dropped in a later migration at HIGH instead of
+  INFO. `crossRefSQLWithGoEncryption` now returns updated findings,
+  `sqlMetas`, and `sqlEnd`; the suppression loop prunes both slices in
+  lockstep in reverse order. Regression covered by
+  `TestScanFullMigrationDropAfterCrossRefSuppression`.
+
+### Metrics
+- Real-world ppay-service smoke scan: MEDIUM+ finding count dropped
+  from 110 to 76 (−34 findings, 30.9% reduction). Both OpenTelemetry
+  CVEs (`GHSA-9h8m-3fm2-qjrq`, `GHSA-hfvc-g4fc-pqhx`) still detected
+  at HIGH on `go.opentelemetry.io/otel/sdk@v1.39.0`.
+- Regression-check on coft-service baseline: 0 CRITICAL / 4 HIGH /
+  3 MEDIUM — byte-for-byte match with the pre-0.1.1 baseline.
+- Golden fixture: all expected counters updated in
+  `testdata/vulnerable-payment-service/EXPECTED-FINDINGS.md`;
+  `make test-fixture` exits 0 with dual tempdir + LivePath coverage
+  for the three new heuristics.
+
 ## [0.1.0] - 2026-04-15
 
 First public release. Covers the complete PCI DSS v4.0.1 scanner suite as a
