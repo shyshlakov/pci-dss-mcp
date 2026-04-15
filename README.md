@@ -167,7 +167,7 @@ Other tools listed here — Semgrep, CodeQL, gosec, Snyk Code, Claude Code Secur
 
 ## Install
 
-pci-dss-mcp requires **Go 1.26+**. Three install paths:
+pci-dss-mcp requires **Go 1.26+**. Two install paths:
 
 ### Quick install (released version)
 
@@ -175,7 +175,8 @@ pci-dss-mcp requires **Go 1.26+**. Three install paths:
 go install github.com/shyshlakov/pci-dss-mcp@latest
 ```
 
-This puts `pci-dss-mcp` into `$GOPATH/bin` (usually `~/go/bin`). Make sure `$GOPATH/bin` is on your `PATH`.
+This compiles the binary and drops it in `$(go env GOPATH)/bin/pci-dss-mcp`
+(usually `~/go/bin/pci-dss-mcp` on macOS and Linux, `%USERPROFILE%\go\bin\pci-dss-mcp.exe` on Windows).
 
 ### Build from source (track main branch)
 
@@ -184,31 +185,55 @@ Recommended when you want the latest scanner accuracy fixes before a tag lands:
 ```bash
 git clone https://github.com/shyshlakov/pci-dss-mcp.git
 cd pci-dss-mcp
-make build
-cp pci-dss-mcp ~/.local/bin/pci-dss-mcp   # or anywhere on your PATH
+go install .
 ```
+
+`go install .` builds the binary and places it in the same `$(go env GOPATH)/bin/`
+location as the quick install path above, so the setup instructions below work
+for both install methods.
+
+### Find the absolute path to your binary
+
+The MCP client configs in the next section need an **absolute path**. Find yours:
+
+```bash
+which pci-dss-mcp
+# /Users/you/go/bin/pci-dss-mcp
+```
+
+If `which` returns nothing, your `$(go env GOPATH)/bin` is not on the shell PATH. Use:
+
+```bash
+echo "$(go env GOPATH)/bin/pci-dss-mcp"
+```
+
+You will need this path in every Setup step below. Replace occurrences of
+`/absolute/path/to/pci-dss-mcp` with your actual path.
 
 ### macOS provenance fix (required if you see SIGKILL)
 
-macOS tags unsigned binaries with a `com.apple.provenance` attribute that can cause `SIGKILL` when launched from an MCP client. Clear it after install:
+macOS tags unsigned binaries with a `com.apple.provenance` attribute that can
+cause `SIGKILL` when launched from an MCP client. Clear it after install:
 
 ```bash
-xattr -c ~/.local/bin/pci-dss-mcp
+xattr -c "$(which pci-dss-mcp)"
 ```
 
 ### Verify
 
 ```bash
-pci-dss-mcp
-# Expected output:
+pci-dss-mcp < /dev/null
+# Expected output on stderr:
 #   level=INFO msg="PCI DSS database loaded" requirements=250
 #   level=INFO msg="starting MCP server on stdio"
-# (then stdin-blocking; Ctrl+C to stop)
+# Process exits on EOF from /dev/null. No MCP client needed for this smoke check.
 ```
 
 ## Setup
 
-pci-dss-mcp runs over MCP stdio. Wire it into any MCP-capable client.
+pci-dss-mcp runs over MCP stdio. Wire it into any MCP-capable client. **All
+client configs below require the absolute path** — bare command names do not
+work because GUI clients (Claude Desktop, Cursor) do not inherit shell `PATH`.
 
 ### Claude Desktop
 
@@ -218,11 +243,15 @@ Edit `claude_desktop_config.json`:
 {
   "mcpServers": {
     "pci-dss-mcp": {
-      "command": "pci-dss-mcp"
+      "command": "/absolute/path/to/pci-dss-mcp",
+      "args": [],
+      "env": {}
     }
   }
 }
 ```
+
+Replace `/absolute/path/to/pci-dss-mcp` with the output of `which pci-dss-mcp`.
 
 Config file location:
 - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -233,28 +262,45 @@ Restart Claude Desktop after saving.
 
 ### Claude Code
 
-Add via CLI:
+Add via CLI with **user scope** so the server is available across all projects:
 
 ```bash
-claude mcp add pci-dss-mcp -- /Users/you/.local/bin/pci-dss-mcp
+claude mcp add --scope user pci-dss-mcp -- "$(which pci-dss-mcp)"
 ```
 
-Or edit `~/.claude/mcp.json` manually with the same shape as the Claude Desktop config above. Then `/mcp` in a Claude Code session to verify `pci-dss-mcp` appears in the server list.
+Without `--scope user`, Claude Code registers the server in the current
+directory's `.mcp.json` only. `--scope user` writes to `~/.claude/mcp.json`,
+making the server visible in every Claude Code session.
+
+Verify with:
+
+```bash
+claude mcp list
+# pci-dss-mcp: /Users/you/go/bin/pci-dss-mcp - ✓ Connected
+```
+
+Then open a Claude Code session and run `/mcp` to see `pci-dss-mcp` in the
+server list along with its tools.
 
 ### Cursor
 
-Edit `~/.cursor/mcp.json`:
+Edit `~/.cursor/mcp.json` (global) or `<project>/.cursor/mcp.json`
+(project-scoped):
 
 ```json
 {
   "mcpServers": {
     "pci-dss-mcp": {
-      "command": "/Users/you/.local/bin/pci-dss-mcp"
+      "type": "stdio",
+      "command": "/absolute/path/to/pci-dss-mcp",
+      "args": [],
+      "env": {}
     }
   }
 }
 ```
 
+Replace `/absolute/path/to/pci-dss-mcp` with the output of `which pci-dss-mcp`.
 Restart Cursor.
 
 ### Reloading after a rebuild
