@@ -204,6 +204,11 @@ func buildPasswordFinding(varName, strVal, path, projectRoot string, pos token.P
 		}
 	}
 	applyAuthDevContext(&finding, strVal, path, projectRoot)
+	if isTestutilPath(path) {
+		finding.Severity = scanner.SeverityInfo
+		finding.Confidence = "high"
+		finding.TriageHint = "downgrade:testutil_exclusion | " + downgradeReasonTestutil
+	}
 	return finding
 }
 
@@ -272,6 +277,11 @@ func passwordFromSetenv(node *ast.CallExpr, fset *token.FileSet, path, projectRo
 		RelatedRequirements: []string{"8.6.2"},
 	}
 	applyAuthDevContext(&finding, valStr, path, projectRoot)
+	if isTestutilPath(path) {
+		finding.Severity = scanner.SeverityInfo
+		finding.Confidence = "high"
+		finding.TriageHint = "downgrade:testutil_exclusion | " + downgradeReasonTestutil
+	}
 	return &finding
 }
 

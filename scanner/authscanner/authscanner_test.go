@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"strings"
 	"testing"
 
 	"github.com/shyshlakov/pci-dss-mcp/scanner"
@@ -673,4 +674,41 @@ func assertFindings(t *testing.T, actual []scanner.Finding, expected []expectedF
 			t.Errorf("finding[%d].Line = %d, want %d", i, f.Line, exp.line)
 		}
 	}
+}
+
+func TestBuildPasswordFindingTestutilDowngrade(t *testing.T) {
+	pos := token.Position{Line: 10, Column: 1}
+
+	t.Run("testutil path downgrades to INFO", func(t *testing.T) {
+		got := buildPasswordFinding("adminPassword", "real-secret", "internal/testutil/helpers.go", "", pos)
+		if got.Severity != scanner.SeverityInfo {
+			t.Errorf("Severity = %q, want %q", got.Severity, scanner.SeverityInfo)
+		}
+		if got.Confidence != "high" {
+			t.Errorf("Confidence = %q, want %q", got.Confidence, "high")
+		}
+		if !strings.HasPrefix(got.TriageHint, "downgrade:testutil_exclusion") {
+			t.Errorf("TriageHint = %q, want prefix %q", got.TriageHint, "downgrade:testutil_exclusion")
+		}
+	})
+
+	t.Run("non-testutil prod path stays CRITICAL", func(t *testing.T) {
+		got := buildPasswordFinding("adminPassword", "real-secret", "internal/payment/admin.go", "", pos)
+		if got.Severity != scanner.SeverityCritical {
+			t.Errorf("Severity = %q, want %q", got.Severity, scanner.SeverityCritical)
+		}
+		if strings.Contains(got.TriageHint, "testutil_exclusion") {
+			t.Errorf("TriageHint = %q, must not contain testutil_exclusion", got.TriageHint)
+		}
+	})
+
+	t.Run("pkg test path downgrades to INFO", func(t *testing.T) {
+		got := buildPasswordFinding("adminPassword", "real-secret", "pkg/test/setup.go", "", pos)
+		if got.Severity != scanner.SeverityInfo {
+			t.Errorf("Severity = %q, want %q", got.Severity, scanner.SeverityInfo)
+		}
+		if !strings.HasPrefix(got.TriageHint, "downgrade:testutil_exclusion") {
+			t.Errorf("TriageHint = %q, want prefix %q", got.TriageHint, "downgrade:testutil_exclusion")
+		}
+	})
 }
