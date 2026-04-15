@@ -1,0 +1,1 @@
+ALTER TABLE readded_card ADD COLUMN pan TEXT NOT NULL;

@@ -540,3 +540,45 @@ func TestCrossRefNoGoMatch(t *testing.T) {
 		}
 	}
 }
+
+func TestScanFullMigrationDropDowngradeIntegration(t *testing.T) {
+	tmp := t.TempDir()
+	migDir := filepath.Join(tmp, "migrations")
+	if err := os.MkdirAll(migDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	addPath := filepath.Join(migDir, "20240101000000_a.sql")
+	dropPath := filepath.Join(migDir, "20260101000000_b.sql")
+	addSQL := "CREATE TABLE legacy_card (\n    id BIGSERIAL PRIMARY KEY,\n    pan TEXT NOT NULL\n);\n"
+	dropSQL := "ALTER TABLE legacy_card DROP COLUMN IF EXISTS pan;\n"
+	if err := os.WriteFile(addPath, []byte(addSQL), 0o644); err != nil {
+		t.Fatalf("write add: %v", err)
+	}
+	if err := os.WriteFile(dropPath, []byte(dropSQL), 0o644); err != nil {
+		t.Fatalf("write drop: %v", err)
+	}
+
+	s := sqlscanner.New()
+	result, err := s.ScanFull(context.Background(), tmp, nil, false, true)
+	if err != nil {
+		t.Fatalf("ScanFull: %v", err)
+	}
+
+	var panFindings []scanner.Finding
+	for _, f := range result.Findings {
+		if strings.HasSuffix(filepath.ToSlash(f.FilePath), "20240101000000_a.sql") {
+			panFindings = append(panFindings, f)
+		}
+	}
+	if len(panFindings) == 0 {
+		t.Fatalf("no findings on add file, got %d total", len(result.Findings))
+	}
+	for _, f := range panFindings {
+		if f.Severity != scanner.SeverityInfo {
+			t.Errorf("finding %s severity = %s, want INFO", f.RuleID, f.Severity)
+		}
+		if !strings.HasPrefix(f.TriageHint, "downgrade:column_dropped_in_20260101000000_b") {
+			t.Errorf("TriageHint = %q, want prefix downgrade:column_dropped_in_20260101000000_b", f.TriageHint)
+		}
+	}
+}

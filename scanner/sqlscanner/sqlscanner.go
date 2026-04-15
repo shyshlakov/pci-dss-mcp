@@ -184,6 +184,13 @@ func (s *SQLScanner) ScanFull(ctx context.Context, targetPath string, excludePat
 		)
 	}
 
+	if sqlFindingEnd > sqlFindingStart && len(sqlMetas) > 0 {
+		result.Findings = applyMigrationDropDowngrade(
+			result.Findings, sqlMetas,
+			sqlFindingStart, sqlFindingEnd,
+		)
+	}
+
 	result.Metadata.DurationMS = time.Since(start).Milliseconds()
 	return result, nil
 }
