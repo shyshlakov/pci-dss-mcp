@@ -122,7 +122,7 @@ fixture files change.
 | CRYPTO-HARDCODED-KEY | HIGH | internal/auth/process.go | 6 | hardcoded sample literal in handler |
 | CRYPTO-HARDCODED-KEY | CRITICAL | internal/crypto/keys.go | 3 | AESKey constant 32 hex chars |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/http/handler/payment/charge.go | 6 | hardcoded key inside payment handler |
-| CRYPTO-HARDCODED-KEY | INFO | internal/test/constants.go | 3 | dev-context marker downgrades to INFO |
+| CRYPTO-HARDCODED-KEY | INFO | internal/testseed/constants.go | 3 | dev-context marker downgrades to INFO |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/util/cardops.go | 6 | hardcoded sample literal |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/util/cardproc.go | 6 | hardcoded sample literal |
 | CRYPTO-PLAIN-HTTP | CRITICAL | internal/http/client.go | 8 | http://api.payment.example/charge |
@@ -182,9 +182,9 @@ fixture files change.
 | PAN-KEYWORD | INFO | pkg/mastercard/models/card/card.go | 6 | json-only API model transit-only |
 | PAN-LITERAL | MEDIUM | internal/auth/process.go | 6 | sample card literal in handler |
 | PAN-LITERAL | MEDIUM | internal/http/handler/payment/charge.go | 6 | hardcoded sample card literal |
-| PAN-LITERAL | MEDIUM | internal/test/data/seed.go | 4 | Visa Luhn-valid 4111111111111111 |
-| PAN-LITERAL | MEDIUM | internal/test/data/seed.go | 5 | Mastercard Luhn-valid literal |
-| PAN-LITERAL | MEDIUM | internal/test/data/seed.go | 6 | Amex Luhn-valid literal |
+| PAN-LITERAL | MEDIUM | internal/testseed/data/seed.go | 4 | Visa Luhn-valid 4111111111111111 |
+| PAN-LITERAL | MEDIUM | internal/testseed/data/seed.go | 5 | Mastercard Luhn-valid literal |
+| PAN-LITERAL | MEDIUM | internal/testseed/data/seed.go | 6 | Amex Luhn-valid literal |
 | PAN-LITERAL | MEDIUM | internal/util/cardops.go | 6 | sample card literal |
 | PAN-LITERAL | MEDIUM | internal/util/cardproc.go | 6 | sample card literal |
 | PAN-LOGGER | CRITICAL | internal/service/tokens/logging.go | 11 | slog.Info with cardNumber ident arg |
@@ -247,8 +247,8 @@ fixture files change.
 | File | Reason |
 |------|--------|
 | internal/storage/postgres/model/card.go | gorm Number field WITH BeforeCreate Encrypt hook (D-03 #1) |
-| internal/test/constants.go | dev-context marker downgrades secrets to INFO (D-03 #6) |
-| internal/test/fixtures_test.go | _test.go file excluded by default test exclusion (D-03 #7) |
+| internal/testseed/constants.go | dev-context marker downgrades secrets to INFO (D-03 #6) |
+| internal/testseed/fixtures_test.go | _test.go file excluded by default test exclusion (D-03 #7) |
 | configs/dev/local.env | DedicatedDev context marker downgrades secrets to INFO (D-03 #10) |
 | pkg/mastercard/models/card/card.go | json-only struct tag — transit downgrade (D-03 #12) |
 | internal/http/handler/tokens/models/responses/exchange_token.go | response DTO json tag, transit-only (D-03 #2) |

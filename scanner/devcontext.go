@@ -44,7 +44,7 @@ var prodPathPrefixes = []string{
 // silent downgrades of every finding inside testdata/ trees, including the
 // golden fixture itself.
 var devPathSegments = []string{
-	"dev", "local", "docker", "fixtures", "test", "e2e",
+	"dev", "local", "docker", "fixtures", "test", "testseed", "e2e",
 	"example", "examples", "sample", "samples",
 }
 
@@ -64,7 +64,7 @@ var examplesSegments = map[string]bool{
 // from scanning entirely; only helper/fixture files in test/
 // directories are scanned.
 var dedicatedDevSegments = []string{
-	"dev", "local", "development", "sandbox", "test",
+	"dev", "local", "development", "sandbox", "test", "testseed",
 	"example", "examples", "sample", "samples",
 }
 
