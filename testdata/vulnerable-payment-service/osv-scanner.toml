@@ -1,0 +1,52 @@
+# This directory is the golden regression fixture for pci-dss-mcp scanners.
+# It intentionally pins vulnerable dependency versions so the dep scanner
+# detects them. These vulnerabilities exist only inside the fixture and
+# are NOT shipped in any pci-dss-mcp release artifact.
+#
+# Ignoring these advisories here scopes the exception to this directory
+# only (osv-scanner.toml does not propagate to parent or sibling dirs).
+# The root go.sum is scanned separately and must remain clean.
+
+[[IgnoredVulns]]
+id = "GHSA-78h2-9frx-2jm8"
+reason = "go-jose; fixture-only, not shipped in pci-dss-mcp release artifacts"
+
+[[IgnoredVulns]]
+id = "GO-2025-4135"
+reason = "fixture-only, not shipped in pci-dss-mcp release artifacts"
+
+[[IgnoredVulns]]
+id = "GO-2025-3487"
+reason = "fixture-only, not shipped in pci-dss-mcp release artifacts"
+
+[[IgnoredVulns]]
+id = "GO-2025-4134"
+reason = "fixture-only, not shipped in pci-dss-mcp release artifacts"
+
+[[IgnoredVulns]]
+id = "GO-2024-3321"
+reason = "golang.org/x/crypto; fixture-only, not shipped in pci-dss-mcp release artifacts"
+
+[[IgnoredVulns]]
+id = "GO-2025-4116"
+reason = "fixture-only, not shipped in pci-dss-mcp release artifacts"
+
+[[IgnoredVulns]]
+id = "GO-2025-3503"
+reason = "fixture-only, not shipped in pci-dss-mcp release artifacts"
+
+[[IgnoredVulns]]
+id = "GO-2025-3595"
+reason = "fixture-only, not shipped in pci-dss-mcp release artifacts"
+
+[[IgnoredVulns]]
+id = "GO-2024-3333"
+reason = "golang.org/x/net; fixture-only, not shipped in pci-dss-mcp release artifacts"
+
+[[IgnoredVulns]]
+id = "GO-2026-4440"
+reason = "fixture-only, not shipped in pci-dss-mcp release artifacts"
+
+[[IgnoredVulns]]
+id = "GO-2026-4441"
+reason = "fixture-only, not shipped in pci-dss-mcp release artifacts"
