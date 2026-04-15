@@ -1,0 +1,4 @@
+services:
+  card_data:
+    image: "redis:7"
+    store: "persistent"

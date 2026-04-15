@@ -540,3 +540,132 @@ func TestCrossRefNoGoMatch(t *testing.T) {
 		}
 	}
 }
+
+func TestScanFullMigrationDropDowngradeIntegration(t *testing.T) {
+	tmp := t.TempDir()
+	migDir := filepath.Join(tmp, "migrations")
+	if err := os.MkdirAll(migDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	addPath := filepath.Join(migDir, "20240101000000_a.sql")
+	dropPath := filepath.Join(migDir, "20260101000000_b.sql")
+	addSQL := "CREATE TABLE legacy_card (\n    id BIGSERIAL PRIMARY KEY,\n    pan TEXT NOT NULL\n);\n"
+	dropSQL := "ALTER TABLE legacy_card DROP COLUMN IF EXISTS pan;\n"
+	if err := os.WriteFile(addPath, []byte(addSQL), 0o644); err != nil {
+		t.Fatalf("write add: %v", err)
+	}
+	if err := os.WriteFile(dropPath, []byte(dropSQL), 0o644); err != nil {
+		t.Fatalf("write drop: %v", err)
+	}
+
+	s := sqlscanner.New()
+	result, err := s.ScanFull(context.Background(), tmp, nil, false, true)
+	if err != nil {
+		t.Fatalf("ScanFull: %v", err)
+	}
+
+	var panFindings []scanner.Finding
+	for _, f := range result.Findings {
+		if strings.HasSuffix(filepath.ToSlash(f.FilePath), "20240101000000_a.sql") {
+			panFindings = append(panFindings, f)
+		}
+	}
+	if len(panFindings) == 0 {
+		t.Fatalf("no findings on add file, got %d total", len(result.Findings))
+	}
+	for _, f := range panFindings {
+		if f.Severity != scanner.SeverityInfo {
+			t.Errorf("finding %s severity = %s, want INFO", f.RuleID, f.Severity)
+		}
+		if !strings.HasPrefix(f.TriageHint, "downgrade:column_dropped_in_20260101000000_b") {
+			t.Errorf("TriageHint = %q, want prefix downgrade:column_dropped_in_20260101000000_b", f.TriageHint)
+		}
+	}
+}
+
+// Regression for the cross-ref + migration-drop alignment bug:
+// crossRefSQLWithGoEncryption suppresses an expiry column (deletes the
+// finding) when the table has Go-level PAN encryption. Before the fix,
+// sqlMetas / sqlFindingEnd were not pruned in lockstep, so the subsequent
+// applyMigrationDropDowngrade pass paired SQL findings with the wrong
+// meta. In this scenario the CVV SQL-SENSITIVE-COLUMN finding (dropped in
+// a later migration) was left at HIGH instead of being downgraded to INFO.
+func TestScanFullMigrationDropAfterCrossRefSuppression(t *testing.T) {
+	tmp := t.TempDir()
+	migDir := filepath.Join(tmp, "migrations")
+	if err := os.MkdirAll(migDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	addPath := filepath.Join(migDir, "20240101000000_init.sql")
+	dropPath := filepath.Join(migDir, "20260101000000_drop_cvv.sql")
+	addSQL := "CREATE TABLE legacy_card (\n    id BIGSERIAL PRIMARY KEY,\n    number TEXT NOT NULL,\n    exp_month BIGINT,\n    cvv TEXT\n);\n"
+	dropSQL := "ALTER TABLE legacy_card DROP COLUMN cvv;\n"
+	if err := os.WriteFile(addPath, []byte(addSQL), 0o644); err != nil {
+		t.Fatalf("write add: %v", err)
+	}
+	if err := os.WriteFile(dropPath, []byte(dropSQL), 0o644); err != nil {
+		t.Fatalf("write drop: %v", err)
+	}
+
+	goSrc := `package model
+
+type LegacyCard struct {
+	ID     int64  ` + "`gorm:\"primaryKey\"`" + `
+	Number string ` + "`gorm:\"column:number\"`" + `
+}
+
+func (l *LegacyCard) TableName() string { return "legacy_card" }
+
+func (l *LegacyCard) BeforeCreate() error {
+	l.Number = Encrypt(l.Number)
+	return nil
+}
+
+func Encrypt(s string) string { return s }
+`
+	if err := os.WriteFile(filepath.Join(tmp, "model.go"), []byte(goSrc), 0o644); err != nil {
+		t.Fatalf("write go: %v", err)
+	}
+
+	s := sqlscanner.New()
+	result, err := s.ScanFull(context.Background(), tmp, nil, false, true)
+	if err != nil {
+		t.Fatalf("ScanFull: %v", err)
+	}
+
+	var cvvSensitive *scanner.Finding
+	for i := range result.Findings {
+		f := &result.Findings[i]
+		if !strings.HasSuffix(filepath.ToSlash(f.FilePath), "20240101000000_init.sql") {
+			continue
+		}
+		if f.RuleID != sqlscanner.RuleSQLSensitiveColumn {
+			continue
+		}
+		if !strings.Contains(f.Description, `"cvv"`) {
+			continue
+		}
+		cvvSensitive = f
+		break
+	}
+	if cvvSensitive == nil {
+		t.Fatalf("expected SQL-SENSITIVE-COLUMN for cvv on add migration, got %d findings total", len(result.Findings))
+	}
+	if cvvSensitive.Severity != scanner.SeverityInfo {
+		t.Errorf("cvv SQL-SENSITIVE-COLUMN severity = %s, want INFO (column dropped in later migration)", cvvSensitive.Severity)
+	}
+	if !strings.HasPrefix(cvvSensitive.TriageHint, "downgrade:column_dropped_in_20260101000000_drop_cvv") {
+		t.Errorf("cvv TriageHint = %q, want prefix downgrade:column_dropped_in_20260101000000_drop_cvv", cvvSensitive.TriageHint)
+	}
+
+	for _, f := range result.Findings {
+		if f.RuleID != sqlscanner.RuleSQLSensitiveColumn {
+			continue
+		}
+		if !strings.Contains(f.Description, `"exp_month"`) {
+			continue
+		}
+		t.Errorf("exp_month SQL-SENSITIVE-COLUMN should have been suppressed by crossRefSQLWithGoEncryption (Go encrypts PAN), got severity=%s", f.Severity)
+	}
+}
