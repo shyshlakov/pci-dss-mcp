@@ -4,16 +4,16 @@ last_updated: 2025-01-15
 phase: n/a
 plan: n/a
 total_intentional_violations: 130
-total_clean_patterns: 11
+total_clean_patterns: 12
 total_rules_covered: 54
 expected_summary:
- critical: 41
+ critical: 42
  high: 80
- medium: 25
+ medium: 26
  low: 0
  info: 35
-expected_active: 149
-expected_total_findings: 183
+expected_active: 151
+expected_total_findings: 185
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -172,6 +172,7 @@ fixture files change.
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/requests/tokenize.go | 4 | json-only DTO transit-only |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/requests/tokenize.go | 5 | json-only DTO transit-only |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/responses/exchange_token.go | 6 | response DTO transit-only |
+| PAN-KEYWORD | CRITICAL | internal/integration/stripe_client.go | 5 | F-28 D-03 adversarial guard: integration segment NOT excluded, production integration code stays walked |
 | PAN-KEYWORD | HIGH | internal/retention/entry.go | 10 | RED: incidental tagless Expiry field on Z9-Z12 scoring helper |
 | PAN-KEYWORD | INFO | internal/service/tokens/model/model.go | 5 | negative evidence — tagless field |
 | PAN-KEYWORD | HIGH | internal/service/tokens/model/model.go | 7 | tagless CVV escalated by struct sibling |
@@ -190,6 +191,7 @@ fixture files change.
 | PAN-LOGGER | CRITICAL | internal/service/tokens/logging.go | 11 | slog.Info with cardNumber ident arg |
 | PAN-TYPE | MEDIUM | internal/cache/keep_ttl.go | 9 | CVV declared as string |
 | PAN-TYPE | MEDIUM | internal/cache/no_expire_hset.go | 9 | cardNumber declared as string |
+| PAN-TYPE | MEDIUM | internal/integration/stripe_client.go | 5 | F-28 D-03 adversarial guard: CardNumber string field in production integration stays walked |
 | PAN-TYPE | MEDIUM | internal/retention/entry.go | 10 | RED: incidental Expiry string declared on Z9-Z12 scoring helper |
 | PAN-TYPE | MEDIUM | internal/service/tokens/model/model.go | 7 | CVV declared as string |
 | PAN-TYPE | MEDIUM | internal/service/tokens/store.go | 5 | CVV declared as string |
@@ -256,3 +258,4 @@ fixture files change.
 | clean/migrations/20240101000000_add_legacy_card.sql | column dropped in later migration — SQL-SENSITIVE-COLUMN and SQL-TEXT-TYPE downgraded to INFO (D-11) |
 | clean/migrations/20260101000000_drop_legacy_card.sql | DROP COLUMN only, no sensitive column declared |
 | clean/testutil/db_fixture.go | testutil path segment downgrades AUTH-HARDCODED-PWD to INFO (D-14) |
+| clean/test_dir_exclusion/internal/test/e2e/mock_data.go | F-28: walker skips files under /test/ or /e2e/ segment at IncludeTests=false; file contains adversarial PAN and SEC-PREFIX that would fire at IncludeTests=true |
