@@ -15,11 +15,6 @@ jobs:
   analyze:
     name: Analyze (Go)
     runs-on: ubuntu-latest
-    # CodeQL SARIF upload requires code scanning enabled, which on private
-    # repos needs GitHub Advanced Security (paid). Skip on private so the
-    # workflow stays green during pre-release verification; it activates
-    # automatically once the repo is flipped to public.
-    if: github.event.repository.visibility == 'public'
     permissions:
       security-events: write
       actions: read
@@ -34,7 +29,7 @@ jobs:
           go-version: "1.25.9"
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@3b1a19a80ab047f35cbb237b5bd9bdc1e14f166c # v3
+        uses: github/codeql-action/init@5c8a8a642e79153f5d047b10ec1cba1d1cc65699 # v3
         with:
           languages: go
           queries: security-and-quality
@@ -49,6 +44,6 @@ jobs:
         run: go build ./...
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@3b1a19a80ab047f35cbb237b5bd9bdc1e14f166c # v3
+        uses: github/codeql-action/analyze@5c8a8a642e79153f5d047b10ec1cba1d1cc65699 # v3
         with:
           category: "/language:go"
