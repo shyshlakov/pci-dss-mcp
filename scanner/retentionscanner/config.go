@@ -182,7 +182,7 @@ func detectConfigMissingTTL(path string) ([]scanner.Finding, int, error) {
 					"PCI DSS 3.2.1, 3.3.1 require data retention limits.",
 				parentKey,
 			)
-			findings = append(findings, scanner.Finding{
+			f := scanner.Finding{
 				RuleID:        "RET-CONFIG-NO-TTL",
 				Severity:      scanner.SeverityHigh,
 				RequirementID: "3.2.1",
@@ -190,7 +190,13 @@ func detectConfigMissingTTL(path string) ([]scanner.Finding, int, error) {
 				Line:          line,
 				Description:   desc,
 				Suggestion:    "Add a TTL/expiry/retention setting alongside sensitive data configuration.",
-			})
+			}
+			if isDevConfigPath(path) {
+				f.Severity = scanner.SeverityInfo
+				f.Confidence = "high"
+				f.TriageHint = "downgrade:dev_path_skipped | " + downgradeReasonDevPath
+			}
+			findings = append(findings, f)
 		}
 	}
 
