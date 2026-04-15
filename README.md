@@ -25,6 +25,7 @@
 - [Documentation](#documentation)
 - [Project Status](#project-status)
 - [Contributing](#contributing)
+- [Roadmap](#roadmap)
 - [License](#license)
 
 ---
@@ -533,7 +534,6 @@ See [CHANGELOG.md](CHANGELOG.md) for the release history.
 
 - **Go only** — no Python / Java / .NET support planned
 - **14 of 249 PCI DSS requirements** covered (6%) — the remaining 94% require manual QSA review
-- **Large monorepo noise** — the `RET-CONFIG-NO-TTL` rule currently over-fires on dev-infrastructure configs; a scoped fix is planned
 - **Taint analysis needs module cache** — `go list` must be able to resolve imports; falls back to AST-only on failure
 
 ## Contributing
@@ -546,6 +546,22 @@ Contributions welcome. Before opening a PR:
 4. **No emoji in code, comments, or commit messages**
 
 New detection rules **must** follow the fixture TDD cycle: update `testdata/vulnerable-payment-service/` and `EXPECTED-FINDINGS.md` first (RED), implement the scanner change (GREEN), verify `make test-fixture` exits 0. Skipping this cycle is a PR-blocking offense.
+
+## Roadmap
+
+pci-dss-mcp is in active development. The following user-facing features are planned for upcoming releases, in rough priority order:
+
+- **SBOM generation (CycloneDX v1.5)** — `generate_sbom(path)` will produce a standards-compliant software inventory with name, version, purl, license, and SHA-256 per component, satisfying the now-mandatory PCI DSS 6.3.2. Works offline from the local Go module cache, no network required.
+
+- **Reachability-aware dependency scanning** — `check_dependencies` will integrate `govulncheck` to prove whether vulnerable functions are actually called. Unreachable CVEs automatically downgrade to INFO, eliminating false HIGH alerts on unused code paths. Reachable CVEs surface the full call stack (`main → handler → service → vulnerable_func`) as evidence.
+
+- **SARIF v2.1.0 output** — `generate_compliance_report(output_format="sarif")` will emit industry-standard SARIF JSON consumable by VS Code SARIF Viewer, `github/codeql-action/upload-sarif`, and any CI pipeline that speaks SARIF. PCI DSS requirement IDs and CWE IDs embedded per finding for inline PR annotations.
+
+- **Semgrep adapter** — optional integration that runs `semgrep --sarif`, parses its 5000+ security rules, and maps them to PCI DSS requirements. Duplicate findings resolved in favor of internal scanners (which carry richer payment-context metadata). Graceful skip if Semgrep is not installed.
+
+- **Cross-service cardholder-data-flow mapping** — `map_cardholder_data_flow(specs_dir)` will parse OpenAPI v3 and protobuf schemas across a microservice fleet to auto-detect which services handle CHD, build the data-flow graph, flag full-PAN APIs, and recommend scope reduction. Findings map to PCI DSS 1.2.4 (data flow diagram accuracy).
+
+Each feature ships with golden-fixture coverage and only after `make test-fixture` passes. Release order may shift based on community feedback — [open an issue](https://github.com/shyshlakov/pci-dss-mcp/issues) if one of these would unblock you sooner.
 
 ## License
 
