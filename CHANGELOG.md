@@ -5,6 +5,17 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## v0.1.2 — 2026-04-15
+
+### Fixed
+- **F-24** `scanner/devcontext.go` now recognizes `examples/`, `example/`, `samples/`, `sample/` directory segments and `config.example.*`/`config.sample.*` filename patterns as dedicated dev-context. Credential findings inside these paths downgrade from CRITICAL to INFO and carry `TriageHint: dev_path_examples_skipped` for auditor visibility. Preserves recall via `configs/prod-*` adversarial fixture that stays CRITICAL.
+- **F-28** `scanner/walker.go` and `scanner/gitwalker.go` now skip files whose project-relative path contains a case-sensitive segment in `{test, testing, mocks, fixtures, e2e}` when `IncludeTests=false`, beyond the existing `*_test.go` suffix check. `testdata` (golden fixture tree) and `integration` (production payment integration directories like `internal/integration/stripe/`) are deliberately excluded from the set for recall safety. Real-world impact: ~5 false positives removed from cardpay-service scan.
+
+### Internal
+- New `scanner/pathsegments.go` with shared `hasTestDirSegment(root, path) bool` helper used by both walkers.
+- Fixture rename `testdata/vulnerable-payment-service/internal/test/` to `internal/testseed/` to avoid collision with the new walker exclusion rule. No behavioural change for the fixture acceptance test.
+- New `scanner.DevContext.ExamplesPath bool` field to let callers distinguish examples-dev from generic-dev paths.
+
 ## [0.1.1] - 2026-04-15
 
 False-positive reduction for three scanners plus a latent alignment bug
