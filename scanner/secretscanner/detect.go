@@ -434,6 +434,9 @@ func analyzeKeyValueInRoot(kv KeyValue, projectRoot string) []scanner.Finding {
 		// prod secrets behind a dev/ segment cannot bypass prod override.
 		if dc.DedicatedDev && !dc.IsProdPath {
 			findings[i].Severity = scanner.SeverityInfo
+			if dc.ExamplesPath {
+				findings[i].TriageHint = "dev_path_examples_skipped"
+			}
 		}
 		if dc.DedicatedDev || dc.IsDevPath || dc.IsPlaceholder {
 			findings[i].DevContext = true
