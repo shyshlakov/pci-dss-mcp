@@ -458,6 +458,9 @@ func applyVerifiedTypeFixup(
 
 		switch f.RuleID {
 		case RuleGormNoEncryptHook:
+			if len(matched) == 0 {
+				continue
+			}
 			anyHit := ""
 			for _, hit := range matched {
 				anyHit = hit
