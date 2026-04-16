@@ -17,16 +17,16 @@ func TestApplyHardcodedFilter(t *testing.T) {
 		wantHint string
 	}{
 		{
-			name:     "Layer1_errors_New_sentinel",
-			finding:  scanner.Finding{RuleID: "CRYPTO-HARDCODED-KEY", Severity: scanner.SeverityCritical, FilePath: "internal/errors.go"},
-			varName:  "ErrInvalidToken", strVal: "token has expired and cannot be refreshed",
+			name:    "Layer1_errors_New_sentinel",
+			finding: scanner.Finding{RuleID: "CRYPTO-HARDCODED-KEY", Severity: scanner.SeverityCritical, FilePath: "internal/errors.go"},
+			varName: "ErrInvalidToken", strVal: "token has expired and cannot be refreshed",
 			initExpr: "errors.New",
 			wantSev:  scanner.SeverityInfo, wantHint: "hardcoded_sentinel_error",
 		},
 		{
-			name:     "Layer1_fmt_Errorf_sentinel",
-			finding:  scanner.Finding{RuleID: "CRYPTO-HARDCODED-KEY", Severity: scanner.SeverityCritical, FilePath: "internal/errors.go"},
-			varName:  "ErrMissingKey", strVal: "missing encryption key for request %s",
+			name:    "Layer1_fmt_Errorf_sentinel",
+			finding: scanner.Finding{RuleID: "CRYPTO-HARDCODED-KEY", Severity: scanner.SeverityCritical, FilePath: "internal/errors.go"},
+			varName: "ErrMissingKey", strVal: "missing encryption key for request %s",
 			initExpr: "fmt.Errorf",
 			wantSev:  scanner.SeverityInfo, wantHint: "hardcoded_sentinel_error",
 		},
