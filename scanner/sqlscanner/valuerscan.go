@@ -349,9 +349,17 @@ func receiverHintString(expr ast.Expr) string {
 
 func bareTypeName(fieldType string) string {
 	t := strings.TrimSpace(fieldType)
-	t = strings.TrimPrefix(t, "*")
-	if i := strings.LastIndex(t, "."); i >= 0 {
-		t = t[i+1:]
+	for {
+		switch {
+		case strings.HasPrefix(t, "*"):
+			t = t[1:]
+		case strings.HasPrefix(t, "[]"):
+			t = t[2:]
+		default:
+			if i := strings.LastIndex(t, "."); i >= 0 {
+				t = t[i+1:]
+			}
+			return t
+		}
 	}
-	return t
 }

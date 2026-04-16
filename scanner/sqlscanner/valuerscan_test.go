@@ -5,6 +5,8 @@ import (
 	"go/token"
 	"strings"
 	"testing"
+
+	"github.com/shyshlakov/pci-dss-mcp/scanner"
 )
 
 func TestVerifyValueBody(t *testing.T) {
@@ -295,4 +297,101 @@ func mapKeys(m map[string]*valuerTypeInfo) []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+func TestBareTypeName(t *testing.T) {
+	tt := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"plain", "EncryptedString", "EncryptedString"},
+		{"pointer", "*EncryptedString", "EncryptedString"},
+		{"slice", "[]EncryptedString", "EncryptedString"},
+		{"slice_of_pointer", "[]*EncryptedString", "EncryptedString"},
+		{"pointer_to_slice", "*[]EncryptedString", "EncryptedString"},
+		{"qualified", "crypto.EncryptedString", "EncryptedString"},
+		{"slice_qualified", "[]crypto.EncryptedString", "EncryptedString"},
+		{"pointer_qualified", "*crypto.EncryptedString", "EncryptedString"},
+		{"slice_of_pointer_qualified", "[]*crypto.EncryptedString", "EncryptedString"},
+		{"with_whitespace", "  *EncryptedString  ", "EncryptedString"},
+		{"empty", "", ""},
+	}
+
+	for _, tc := range tt {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got := bareTypeName(tc.input)
+			if got != tc.expected {
+				t.Errorf("bareTypeName(%q) = %q, want %q", tc.input, got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestApplyVerifiedTypeFixupSliceField(t *testing.T) {
+	src := `package p
+import (
+	"crypto/aes"
+	"crypto/cipher"
+	"database/sql/driver"
+)
+var key = []byte("0123456789abcdef0123456789abcdef")
+type EncryptedPAN string
+func (e EncryptedPAN) Value() (driver.Value, error) {
+	block, _ := aes.NewCipher(key)
+	gcm, _ := cipher.NewGCM(block)
+	return gcm.Seal(nil, nil, []byte(e), nil), nil
+}
+func (e *EncryptedPAN) Scan(v interface{}) error { return nil }
+`
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	vmap := buildVerifiedTypeMap(file, fset, "test.go")
+	if _, ok := vmap["EncryptedPAN"]; !ok {
+		t.Fatalf("EncryptedPAN missing from verified type map: keys=%v", mapKeys(vmap))
+	}
+	pkgFuncs := collectPkgFuncEntries(file)
+
+	gs := &GormStruct{
+		Name:           "CardModel",
+		Line:           42,
+		HasEncryptHook: false,
+		SensitiveTags: []SensitiveTag{
+			{
+				FieldName:  "Pans",
+				ColumnName: "pans",
+				TagSource:  "gorm",
+				FieldType:  "[]EncryptedPAN",
+				Line:       43,
+			},
+		},
+	}
+	structByLocation := map[string]*GormStruct{
+		structKey("test.go", 42): gs,
+	}
+	findings := []scanner.Finding{
+		{
+			RuleID:        RuleGormNoEncryptHook,
+			Severity:      scanner.SeverityHigh,
+			RequirementID: "3.5.1",
+			FilePath:      "test.go",
+			Line:          42,
+			Description:   "Struct CardModel stores sensitive cardholder columns but has no hook.",
+		},
+	}
+
+	out := applyVerifiedTypeFixup(findings, structByLocation, vmap, pkgFuncs)
+	if len(out) != 1 {
+		t.Fatalf("expected 1 finding, got %d", len(out))
+	}
+	if out[0].RuleID != RuleGormEncryptOK {
+		t.Errorf("slice-of-encrypted-type: RuleID = %q, want %q", out[0].RuleID, RuleGormEncryptOK)
+	}
+	if out[0].Severity != scanner.SeverityInfo {
+		t.Errorf("slice-of-encrypted-type: Severity = %q, want INFO", out[0].Severity)
+	}
 }
