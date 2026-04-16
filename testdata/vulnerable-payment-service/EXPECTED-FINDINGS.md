@@ -1,19 +1,19 @@
 ---
-fixture_version: 1.5
-last_updated: 2025-01-15
-phase: n/a
-plan: n/a
-total_intentional_violations: 130
-total_clean_patterns: 12
+fixture_version: 1.6
+last_updated: 2026-04-16
+phase: 19.7
+plan: 01
+total_intentional_violations: 136
+total_clean_patterns: 17
 total_rules_covered: 54
 expected_summary:
- critical: 41
- high: 80
+ critical: 42
+ high: 81
  medium: 25
  low: 0
- info: 36
-expected_active: 150
-expected_total_findings: 184
+ info: 40
+expected_active: 156
+expected_total_findings: 190
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -55,11 +55,11 @@ fixture files change.
 
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 41 |
-| HIGH | 80 |
+| CRITICAL | 42 |
+| HIGH | 81 |
 | MEDIUM | 25 |
 | LOW | 0 |
-| INFO | 36 |
+| INFO | 40 |
 
 ## Violations
 
@@ -118,9 +118,15 @@ fixture files change.
 | AUTH-MISSING-MFA | HIGH | internal/retention/zeroing_typeswitch.go | 7 | RED: incidental AUTH-MISSING-MFA on Z11 fixture |
 | AUTH-MISSING-MFA | HIGH | internal/util/cardproc.go | 5 | ProcessCardBuffer handler no MFA |
 | AUTH-WEAK-POLICY | CRITICAL | internal/auth/policy.go | 12 | MinPasswordLength below PCI 8.3.6 |
+| CRYPTO-HARDCODED-KEY | HIGH | clean/crypto_filter_cases/constants_file.go | 3 | F-25 Layer 4 path downgrade CRITICAL to HIGH tag crypto_key_constants_file |
+| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/header_const.go | 3 | F-25 Layer 2 header pattern downgrades to INFO tag hardcoded_header_name |
+| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/json_key.go | 3 | F-25 Layer 2 camelCase pattern downgrades to INFO tag hardcoded_json_key |
+| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/log_field.go | 3 | F-25 Layer 2 snake_case pattern downgrades to INFO tag hardcoded_log_field |
+| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/sentinel_error.go | 5 | F-25 Layer 1 AST errors.New guard downgrades to INFO tag hardcoded_sentinel_error |
 | CRYPTO-HARDCODED-KEY | CRITICAL | internal/auth/admin.go | 3 | hardcoded admin secret |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/auth/process.go | 6 | hardcoded sample literal in handler |
 | CRYPTO-HARDCODED-KEY | CRITICAL | internal/crypto/keys.go | 3 | AESKey constant 32 hex chars |
+| CRYPTO-HARDCODED-KEY | CRITICAL | internal/crypto/real_hardcoded_aes.go | 3 | F-25 adversarial 64-char hex AES-256 key stays CRITICAL through all layers |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/http/handler/payment/charge.go | 6 | hardcoded key inside payment handler |
 | CRYPTO-HARDCODED-KEY | INFO | internal/testseed/constants.go | 3 | dev-context marker downgrades to INFO |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/util/cardops.go | 6 | hardcoded sample literal |
@@ -258,3 +264,8 @@ fixture files change.
 | clean/migrations/20260101000000_drop_legacy_card.sql | DROP COLUMN only, no sensitive column declared |
 | clean/testutil/db_fixture.go | testutil path segment downgrades AUTH-HARDCODED-PWD to INFO (D-14) |
 | clean/test_dir_exclusion/internal/test/e2e/mock_data.go | F-28: walker skips files under /test/ or /e2e/ segment at IncludeTests=false; file contains adversarial PAN and SEC-PREFIX that would fire at IncludeTests=true |
+| clean/crypto_filter_cases/header_const.go | F-25 Layer 2 header downgrade to INFO |
+| clean/crypto_filter_cases/json_key.go | F-25 Layer 2 camelCase downgrade to INFO |
+| clean/crypto_filter_cases/log_field.go | F-25 Layer 2 snake_case downgrade to INFO |
+| clean/crypto_filter_cases/sentinel_error.go | F-25 Layer 1 AST sentinel error downgrade to INFO |
+| clean/crypto_filter_cases/constants_file.go | F-25 Layer 4 path downgrade to HIGH (not INFO) |
