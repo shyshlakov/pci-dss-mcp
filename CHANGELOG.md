@@ -5,6 +5,21 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## v0.1.4 — 2026-04-16
+
+### Fixed
+- **F-26** GORM encrypted custom type verification. Recognizes the modern GORM encryption-at-rest pattern where a custom Go type implements `driver.Valuer` with transparent column encryption via the `Value()` (or `GormValue()`) method body. The sqlscanner now AST-walks each candidate body for real cryptographic primitive calls before emitting `GORM-NO-ENCRYPT-HOOK`. Recognized strong signals include `aes.NewCipher`, `cipher.NewGCM`, `cipher.NewCBCEncrypter`, `crypto/rand.Read`, `crypto/hmac.New`, `golang.org/x/crypto/nacl/secretbox.Seal`, `golang.org/x/crypto/chacha20poly1305.New`, and `github.com/google/tink/go/aead.Encrypt`. A KMS-client heuristic accepts any method in `{Encrypt, EncryptCtx, EncryptWithContext, Seal, Wrap}` invoked on a receiver whose name contains `kms`, `vault`, `hsm`, `barbican`, `secretmanager`, or `keymanager`. One level of intra-package helper recursion is followed with a cycle guard. Reduces false positives by 2-3 per service on real-world payment codebases that use custom encrypted column types.
+
+### Added
+- New `GORM-ENCRYPT-OK` INFO marker (follows the `-OK` suffix convention from `AUDIT-LOG-OK` / `CSP-OK`). Emitted when a struct field's custom type has a verified-encrypted `Value()` method. The triage engine auto-skips it via the existing `HasSuffix("-OK")` rule.
+- Sibling `GORM-SENSITIVE-TAG` findings on the same field drop to INFO with a matching triage hint when the field type passes verification.
+
+### Internal
+- New `scanner/sqlscanner/valuerscan.go` with `verifyValueBody`, `buildVerifiedTypeMap`, `collectPkgFuncEntries`, the D-02 strong-signal whitelist, the D-03 KMS receiver/method heuristic, and the D-04 1-level recursion with cycle guard.
+- `scanner/sqlscanner/sqlscanner.go` Pass 2 now also accumulates verified custom-type entries and package-level helper functions across the whole module walk; a new Pass 2b applies the verified-type fixup to `GORM-NO-ENCRYPT-HOOK` and `GORM-SENSITIVE-TAG` findings before SQL cross-reference. Per-file imports travel with each helper so cross-file recursion resolves alias paths correctly.
+- 7 new clean fixture files under `testdata/vulnerable-payment-service/clean/gorm_encrypt_type/` covering direct-crypto, helper-recursion, and KMS-client patterns. 1 adversarial type fixture (`internal/crypto/fake_encrypted_string.go`, base64-only `Value()`) and 1 adversarial GORM model fixture (`internal/storage/postgres/model/fake_encrypt_model.go`) lock the D-06 NOT-signal rejection rule.
+- Triage output budget bumped from 160 KB to 176 KB to accommodate the two additional active findings on the adversarial fixture.
+
 ## v0.1.3 — 2026-04-16
 
 ### Fixed
