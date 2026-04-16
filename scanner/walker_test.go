@@ -310,6 +310,64 @@ func TestWalkFilesTestExclusionOnlyGo(t *testing.T) {
 	}
 }
 
+func TestWalkFilesSkipTestSegmentAtIncludeTestsFalse(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "internal", "test", "e2e", "mock.go"), "package e2e")
+	writeFile(t, filepath.Join(root, "internal", "integration", "stripe.go"), "package integration")
+	writeFile(t, filepath.Join(root, "internal", "foo.go"), "package internalpkg")
+
+	cfg := WalkConfig{Extensions: []string{".go"}, IncludeTests: false}
+	files, err := collectWalk(root, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	got := make(map[string]bool, len(files))
+	for _, f := range files {
+		rel, _ := filepath.Rel(root, f)
+		got[filepath.ToSlash(rel)] = true
+	}
+
+	if got["internal/test/e2e/mock.go"] {
+		t.Errorf("internal/test/e2e/mock.go should be skipped at IncludeTests=false")
+	}
+	if !got["internal/integration/stripe.go"] {
+		t.Errorf("internal/integration/stripe.go should be walked (D-03 guard)")
+	}
+	if !got["internal/foo.go"] {
+		t.Errorf("internal/foo.go should be walked")
+	}
+}
+
+func TestWalkFilesIncludeTestSegmentAtIncludeTestsTrue(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "internal", "test", "e2e", "mock.go"), "package e2e")
+	writeFile(t, filepath.Join(root, "internal", "integration", "stripe.go"), "package integration")
+	writeFile(t, filepath.Join(root, "internal", "foo.go"), "package internalpkg")
+
+	cfg := WalkConfig{Extensions: []string{".go"}, IncludeTests: true}
+	files, err := collectWalk(root, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	got := make(map[string]bool, len(files))
+	for _, f := range files {
+		rel, _ := filepath.Rel(root, f)
+		got[filepath.ToSlash(rel)] = true
+	}
+
+	if !got["internal/test/e2e/mock.go"] {
+		t.Errorf("internal/test/e2e/mock.go should be walked at IncludeTests=true")
+	}
+	if !got["internal/integration/stripe.go"] {
+		t.Errorf("internal/integration/stripe.go should be walked")
+	}
+	if !got["internal/foo.go"] {
+		t.Errorf("internal/foo.go should be walked")
+	}
+}
+
 // collectWalk consumes a WalkFiles iterator and returns all paths or the first error.
 func collectWalk(root string, cfg WalkConfig) ([]string, error) {
 	var paths []string

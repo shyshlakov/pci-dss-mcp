@@ -16,6 +16,7 @@ type DevContext struct {
 	// IsDevPath which also fires for testdata/, test/, fixtures/, e2e/, docker/.
 	// Callers downgrade findings FURTHER to INFO when this is set.
 	DedicatedDev bool
+	ExamplesPath bool
 	OriginalSev  Severity // severity before adjustment
 	AdjustedSev  Severity // severity after dev-context adjustment
 	Label        string   // "dev-context" or "" for report annotation
@@ -43,7 +44,15 @@ var prodPathPrefixes = []string{
 // silent downgrades of every finding inside testdata/ trees, including the
 // golden fixture itself.
 var devPathSegments = []string{
-	"dev", "local", "docker", "fixtures", "test", "e2e",
+	"dev", "local", "docker", "fixtures", "test", "testseed", "e2e",
+	"example", "examples", "sample", "samples",
+}
+
+var examplesSegments = map[string]bool{
+	"example":  true,
+	"examples": true,
+	"sample":   true,
+	"samples":  true,
 }
 
 // dedicatedDevSegments are directory segments that indicate a dedicated dev
@@ -55,7 +64,8 @@ var devPathSegments = []string{
 // from scanning entirely; only helper/fixture files in test/
 // directories are scanned.
 var dedicatedDevSegments = []string{
-	"dev", "local", "development", "sandbox", "test",
+	"dev", "local", "development", "sandbox", "test", "testseed",
+	"example", "examples", "sample", "samples",
 }
 
 // devFilePatterns are filename patterns that indicate dev environment.
@@ -65,6 +75,7 @@ var devFilePatterns = []string{
 	"docker-compose.dev.", "docker-compose.local.", "docker-compose.override.",
 	".env.local", ".env.dev", ".env.development",
 	".env.example", ".env.sample", ".env.template",
+	"config.example.", "config.sample.",
 }
 
 // placeholderValues are case-insensitive exact values that indicate placeholders.
@@ -105,6 +116,7 @@ func ClassifyDevContextInRoot(filePath string, value string, originalSev Severit
 	// callers consult dc.DedicatedDev and downgrade to Info themselves
 	//. This keeps the classifier pure and pushes policy to callers.
 	dc.DedicatedDev = isDedicatedDevPath(filePath)
+	dc.ExamplesPath = isExamplesPath(filePath, projectRoot)
 
 	var candidate Severity
 	switch {
@@ -250,6 +262,26 @@ func isDedicatedDevPath(filePath string) bool {
 			if seg == dd {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+func isExamplesPath(filePath string, projectRoot string) bool {
+	normalized := filepath.ToSlash(filePath)
+	lower := strings.ToLower(normalized)
+
+	pathForSegments := lower
+	if projectRoot != "" {
+		rel, err := filepath.Rel(projectRoot, filePath)
+		if err == nil {
+			pathForSegments = strings.ToLower(filepath.ToSlash(rel))
+		}
+	}
+
+	for _, seg := range strings.Split(pathForSegments, "/") {
+		if examplesSegments[seg] {
+			return true
 		}
 	}
 	return false

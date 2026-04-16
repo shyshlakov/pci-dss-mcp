@@ -4,16 +4,16 @@ last_updated: 2025-01-15
 phase: n/a
 plan: n/a
 total_intentional_violations: 130
-total_clean_patterns: 10
+total_clean_patterns: 12
 total_rules_covered: 54
 expected_summary:
- critical: 40
+ critical: 41
  high: 80
  medium: 25
  low: 0
- info: 34
-expected_active: 147
-expected_total_findings: 181
+ info: 36
+expected_active: 150
+expected_total_findings: 184
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -55,11 +55,11 @@ fixture files change.
 
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 40 |
+| CRITICAL | 41 |
 | HIGH | 80 |
 | MEDIUM | 25 |
 | LOW | 0 |
-| INFO | 34 |
+| INFO | 36 |
 
 ## Violations
 
@@ -122,7 +122,7 @@ fixture files change.
 | CRYPTO-HARDCODED-KEY | HIGH | internal/auth/process.go | 6 | hardcoded sample literal in handler |
 | CRYPTO-HARDCODED-KEY | CRITICAL | internal/crypto/keys.go | 3 | AESKey constant 32 hex chars |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/http/handler/payment/charge.go | 6 | hardcoded key inside payment handler |
-| CRYPTO-HARDCODED-KEY | INFO | internal/test/constants.go | 3 | dev-context marker downgrades to INFO |
+| CRYPTO-HARDCODED-KEY | INFO | internal/testseed/constants.go | 3 | dev-context marker downgrades to INFO |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/util/cardops.go | 6 | hardcoded sample literal |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/util/cardproc.go | 6 | hardcoded sample literal |
 | CRYPTO-PLAIN-HTTP | CRITICAL | internal/http/client.go | 8 | http://api.payment.example/charge |
@@ -172,6 +172,7 @@ fixture files change.
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/requests/tokenize.go | 4 | json-only DTO transit-only |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/requests/tokenize.go | 5 | json-only DTO transit-only |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/responses/exchange_token.go | 6 | response DTO transit-only |
+| PAN-KEYWORD | INFO | internal/integration/stripe_client.go | 5 | F-28 D-03 adversarial guard: integration segment NOT excluded, transit-only struct downgraded by taint engine |
 | PAN-KEYWORD | HIGH | internal/retention/entry.go | 10 | RED: incidental tagless Expiry field on Z9-Z12 scoring helper |
 | PAN-KEYWORD | INFO | internal/service/tokens/model/model.go | 5 | negative evidence — tagless field |
 | PAN-KEYWORD | HIGH | internal/service/tokens/model/model.go | 7 | tagless CVV escalated by struct sibling |
@@ -182,9 +183,9 @@ fixture files change.
 | PAN-KEYWORD | INFO | pkg/mastercard/models/card/card.go | 6 | json-only API model transit-only |
 | PAN-LITERAL | MEDIUM | internal/auth/process.go | 6 | sample card literal in handler |
 | PAN-LITERAL | MEDIUM | internal/http/handler/payment/charge.go | 6 | hardcoded sample card literal |
-| PAN-LITERAL | MEDIUM | internal/test/data/seed.go | 4 | Visa Luhn-valid 4111111111111111 |
-| PAN-LITERAL | MEDIUM | internal/test/data/seed.go | 5 | Mastercard Luhn-valid literal |
-| PAN-LITERAL | MEDIUM | internal/test/data/seed.go | 6 | Amex Luhn-valid literal |
+| PAN-LITERAL | MEDIUM | internal/testseed/data/seed.go | 4 | Visa Luhn-valid 4111111111111111 |
+| PAN-LITERAL | MEDIUM | internal/testseed/data/seed.go | 5 | Mastercard Luhn-valid literal |
+| PAN-LITERAL | MEDIUM | internal/testseed/data/seed.go | 6 | Amex Luhn-valid literal |
 | PAN-LITERAL | MEDIUM | internal/util/cardops.go | 6 | sample card literal |
 | PAN-LITERAL | MEDIUM | internal/util/cardproc.go | 6 | sample card literal |
 | PAN-LOGGER | CRITICAL | internal/service/tokens/logging.go | 11 | slog.Info with cardNumber ident arg |
@@ -214,9 +215,11 @@ fixture files change.
 | RET-ZERO-BEFORE-AUTH | CRITICAL | internal/payment/zeroing_init.go | 20 | if-init zeroing ( fixture) |
 | RET-ZERO-DEFER-ONLY | HIGH | internal/util/cardproc.go | 5 | defer clearCard only, no explicit clear |
 | SEC-CONNSTR | CRITICAL | configs/database.yaml | 2 | postgres://admin:secret123@db.local |
+| SEC-CREDENTIAL-KEY | INFO | clean/examples/api-example.env.json | 0 | F-24 examples dir credential downgrades to INFO with TriageHint dev_path_examples_skipped |
 | SEC-CREDENTIAL-KEY | CRITICAL | configs/auth.toml | 0 | credential = "live_secret_xyz" |
 | SEC-CREDENTIAL-KEY | INFO | configs/dev/local.env | 2 | DedicatedDev context downgrade |
 | SEC-CREDENTIAL-KEY | INFO | configs/dev/local.env | 3 | DedicatedDev context downgrade |
+| SEC-CREDENTIAL-KEY | CRITICAL | configs/prod-api-key.json | 0 | F-24 adversarial production configs path stays CRITICAL |
 | SEC-CREDENTIAL-KEY | CRITICAL | configs/service.env | 1 | DATABASE_PASSWORD=supersecret |
 | SEC-CREDENTIAL-KEY | CRITICAL | configs/service.yaml | 5 | api_key sk_live_... |
 | SEC-HIGH-ENTROPY | HIGH | configs/service.yaml | 5 | api_key high entropy literal |
@@ -245,8 +248,8 @@ fixture files change.
 | File | Reason |
 |------|--------|
 | internal/storage/postgres/model/card.go | gorm Number field WITH BeforeCreate Encrypt hook (D-03 #1) |
-| internal/test/constants.go | dev-context marker downgrades secrets to INFO (D-03 #6) |
-| internal/test/fixtures_test.go | _test.go file excluded by default test exclusion (D-03 #7) |
+| internal/testseed/constants.go | dev-context marker downgrades secrets to INFO (D-03 #6) |
+| internal/testseed/fixtures_test.go | _test.go file excluded by default test exclusion (D-03 #7) |
 | configs/dev/local.env | DedicatedDev context marker downgrades secrets to INFO (D-03 #10) |
 | pkg/mastercard/models/card/card.go | json-only struct tag — transit downgrade (D-03 #12) |
 | internal/http/handler/tokens/models/responses/exchange_token.go | response DTO json tag, transit-only (D-03 #2) |
@@ -254,3 +257,4 @@ fixture files change.
 | clean/migrations/20240101000000_add_legacy_card.sql | column dropped in later migration — SQL-SENSITIVE-COLUMN and SQL-TEXT-TYPE downgraded to INFO (D-11) |
 | clean/migrations/20260101000000_drop_legacy_card.sql | DROP COLUMN only, no sensitive column declared |
 | clean/testutil/db_fixture.go | testutil path segment downgrades AUTH-HARDCODED-PWD to INFO (D-14) |
+| clean/test_dir_exclusion/internal/test/e2e/mock_data.go | F-28: walker skips files under /test/ or /e2e/ segment at IncludeTests=false; file contains adversarial PAN and SEC-PREFIX that would fire at IncludeTests=true |

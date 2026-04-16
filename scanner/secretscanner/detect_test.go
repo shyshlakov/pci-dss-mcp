@@ -719,3 +719,62 @@ func TestAnalyzeKeyValue_VaultPathSkipsCredentialKey(t *testing.T) {
 		}
 	}
 }
+
+// TestAnalyzeKeyValueExamplesPathTriageHint verifies F-24: credentials in
+// examples/ directories downgrade to INFO and carry the
+// dev_path_examples_skipped TriageHint. Production-path credentials stay
+// CRITICAL with no TriageHint.
+func TestAnalyzeKeyValueExamplesPathTriageHint(t *testing.T) {
+	t.Run("examples_dir_downgrades_with_triage_hint", func(t *testing.T) {
+		kv := KeyValue{
+			Key:      "api_key",
+			Value:    "abcdef1234567890abcdef",
+			Line:     2,
+			FilePath: "clean/examples/api-example.env.json",
+		}
+		findings := analyzeKeyValue(kv)
+		if len(findings) == 0 {
+			t.Fatalf("expected at least one finding for credential key in examples dir")
+		}
+		for _, f := range findings {
+			if f.RuleID != "SEC-CREDENTIAL-KEY" {
+				continue
+			}
+			if f.Severity != scanner.SeverityInfo {
+				t.Errorf("severity = %q, want %q (examples dir must downgrade to INFO)",
+					f.Severity, scanner.SeverityInfo)
+			}
+			if !f.DevContext {
+				t.Errorf("DevContext = false, want true (examples dir must set flag)")
+			}
+			if f.TriageHint != "dev_path_examples_skipped" {
+				t.Errorf("TriageHint = %q, want %q", f.TriageHint, "dev_path_examples_skipped")
+			}
+		}
+	})
+
+	t.Run("prod_configs_stays_critical_no_triage_hint", func(t *testing.T) {
+		kv := KeyValue{
+			Key:      "api_key",
+			Value:    "abcdef1234567890abcdef",
+			Line:     2,
+			FilePath: "configs/prod-api-key.json",
+		}
+		findings := analyzeKeyValue(kv)
+		if len(findings) == 0 {
+			t.Fatalf("expected at least one finding for credential key in prod configs path")
+		}
+		for _, f := range findings {
+			if f.RuleID != "SEC-CREDENTIAL-KEY" {
+				continue
+			}
+			if f.Severity != scanner.SeverityCritical {
+				t.Errorf("severity = %q, want %q (configs/ path must stay CRITICAL)",
+					f.Severity, scanner.SeverityCritical)
+			}
+			if f.TriageHint != "" {
+				t.Errorf("TriageHint = %q, want empty (prod path must not set examples hint)", f.TriageHint)
+			}
+		}
+	})
+}

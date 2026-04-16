@@ -112,9 +112,13 @@ func WalkFiles(root string, cfg WalkConfig) iter.Seq2[string, error] {
 				}
 			}
 
-			// Skip test files unless explicitly included.
-			if !cfg.IncludeTests && strings.HasSuffix(filepath.Base(path), "_test.go") {
-				return nil
+			if !cfg.IncludeTests {
+				if strings.HasSuffix(filepath.Base(path), "_test.go") {
+					return nil
+				}
+				if hasTestDirSegment(root, path) {
+					return nil
+				}
 			}
 
 			// Filter by extension.
