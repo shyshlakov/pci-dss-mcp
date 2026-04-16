@@ -670,7 +670,7 @@ func Encrypt(s string) string { return s }
 	}
 }
 
-// gorm:"...;serializer:json" is a marshalling directive, not encryption-at-rest;
+// gorm:"...;serializer:json" is a marshaling directive, not encryption-at-rest;
 // suppressing GORM-NO-ENCRYPT-HOOK on it would silently mask unencrypted CHD.
 func TestScanFullSerializerJSONDoesNotSuppressEncryptHookFinding(t *testing.T) {
 	tmp := t.TempDir()
