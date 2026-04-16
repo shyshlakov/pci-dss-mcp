@@ -11,9 +11,9 @@ expected_summary:
  high: 83
  medium: 27
  low: 0
- info: 42
+ info: 43
 expected_active: 160
-expected_total_findings: 196
+expected_total_findings: 197
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -59,7 +59,7 @@ fixture files change.
 | HIGH | 83 |
 | MEDIUM | 27 |
 | LOW | 0 |
-| INFO | 42 |
+| INFO | 43 |
 
 ## Violations
 
@@ -142,6 +142,12 @@ fixture files change.
 | CSP-MISSING | INFO | internal/http/handler/tokens/exchange.go | 5 | non-HTML handler informational note |
 | CSP-MISSING | INFO | internal/http/handler/tokens/tokenize.go | 11 | non-HTML handler informational note |
 | CSP-MISSING | INFO | internal/payment/core.go | 19 | non-HTML handler informational note after fixture-shortcut removal |
+| CSP-MISSING | INFO | internal/payment/zeroing_init.go | 20 | non-HTML handler informational note (path-dep live-only) |
+| CSP-MISSING | INFO | internal/retention/zeroing_elseif.go | 7 | non-HTML handler informational note (path-dep live-only) |
+| CSP-MISSING | INFO | internal/retention/zeroing_select.go | 10 | non-HTML handler informational note (path-dep live-only) |
+| CSP-MISSING | INFO | internal/retention/zeroing_switch.go | 7 | non-HTML handler informational note (path-dep live-only) |
+| CSP-MISSING | INFO | internal/retention/zeroing_typeswitch.go | 7 | non-HTML handler informational note (path-dep live-only) |
+| CSP-MISSING | INFO | internal/tokens/delegation/delegating.go | 19 | non-HTML handler informational note (path-dep live-only) |
 | CSP-MISSING | INFO | internal/util/cardproc.go | 5 | non-HTML handler informational note |
 | CSP-NO-SCRIPT-SRC | HIGH | internal/http/handler/checkout/noscript.go | 8 | CSP missing script-src and default-src |
 | CSP-OK | INFO | internal/http/handler/payment/clean.go | 8 | verified valid CSP header set |
@@ -176,9 +182,9 @@ fixture files change.
 | PAN-KEYWORD | HIGH | internal/banking/mixed_pan_iban.go | 4 | F-27 defense-in-depth CVV PCI-scope sibling keeps HIGH |
 | PAN-KEYWORD | INFO | internal/banking/mixed_pan_iban.go | 6 | CVV field taint SAD negative-evidence transit downgrade |
 | PAN-KEYWORD | HIGH | internal/banking/mixed_pan_iban.go | 8 | CardNumber field in hybrid struct |
-| PAN-KEYWORD | INFO | internal/billing/handler.go | 15 | transit-only PAN field still INFO |
-| PAN-KEYWORD | INFO | internal/order/submit.go | 6 | CHD field + /order/ path, transit-only json tag |
-| PAN-KEYWORD | INFO | internal/payment/core.go | 13 | tagless Number field still INFO |
+| PAN-KEYWORD | INFO | internal/billing/handler.go | 13 | transit-only PAN field still INFO |
+| PAN-KEYWORD | INFO | internal/order/submit.go | 4 | CHD field + /order/ path, transit-only json tag |
+| PAN-KEYWORD | INFO | internal/payment/core.go | 14 | tagless Number field still INFO |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/requests/tokenize.go | 4 | json-only DTO transit-only |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/requests/tokenize.go | 5 | json-only DTO transit-only |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/responses/exchange_token.go | 6 | response DTO transit-only |

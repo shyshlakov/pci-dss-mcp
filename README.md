@@ -357,11 +357,12 @@ Concrete prompt templates to paste into any MCP-capable client. All examples ass
 ### 1. Quick scan before a commit
 
 ```
-Run a PCI DSS compliance scan on the current project and show me only
-HIGH and CRITICAL findings. Skip INFO noise.
+Run a PCI DSS compliance scan on the current project and show me
+HIGH and CRITICAL findings first, then summarize what INFO findings
+were detected.
 ```
 
-Under the hood, Claude will call `generate_compliance_report` with `min_severity: "HIGH"`. Fast, focused, fits in any context window.
+Under the hood, Claude will call `generate_compliance_report` with `min_severity: "HIGH"` for the main report, then review INFO findings separately. INFO findings are not noise -- they represent patterns that were detected and verified as safe (e.g. transit-only cardholder data, dev-context secrets, encrypted fields). Reviewing them confirms the scanner checked your code and gives auditors visibility into what was evaluated.
 
 ### 2. Full compliance scan + AI-verified triage (recommended workflow)
 
@@ -536,6 +537,14 @@ config/prod.json:15
 ```
 
 Suppressed findings appear as `SUPPRESSED` in reports — **never silently dropped**. Auditors must see what was suppressed and why.
+
+### Why INFO findings matter
+
+pci-dss-mcp never silently skips a detected pattern. When the scanner finds a sensitive pattern (e.g. a struct field named `AccountNumber`) **and** verifies it is safe (e.g. transit-only DTO, banking domain context, dev-context secret, encrypted storage), it emits the finding as INFO instead of dropping it. This means:
+
+- **For developers:** INFO findings confirm the scanner checked your code and found the protective measure. No action required.
+- **For auditors:** INFO findings provide an audit trail of what was evaluated. A QSA can see that `AccountNumber` was detected, analyzed, and classified as out-of-PCI-scope because sibling fields indicate a banking (IBAN/BIC) context rather than a payment (CVV/CardNumber) context.
+- **For CI pipelines:** filter on `min_severity: "HIGH"` for pass/fail gates, but preserve INFO in the full report for audit evidence.
 
 See [docs/severity.md](docs/severity.md) for the severity model.
 
