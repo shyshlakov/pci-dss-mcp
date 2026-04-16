@@ -669,3 +669,46 @@ func Encrypt(s string) string { return s }
 		t.Errorf("exp_month SQL-SENSITIVE-COLUMN should have been suppressed by crossRefSQLWithGoEncryption (Go encrypts PAN), got severity=%s", f.Severity)
 	}
 }
+
+// gorm:"...;serializer:json" is a marshalling directive, not encryption-at-rest;
+// suppressing GORM-NO-ENCRYPT-HOOK on it would silently mask unencrypted CHD.
+func TestScanFullSerializerJSONDoesNotSuppressEncryptHookFinding(t *testing.T) {
+	tmp := t.TempDir()
+
+	goSrc := `package model
+
+type SerializedCard struct {
+	ID  int64  ` + "`gorm:\"primaryKey\"`" + `
+	CVV string ` + "`gorm:\"column:cvv;serializer:json\"`" + `
+}
+`
+	if err := os.WriteFile(filepath.Join(tmp, "model.go"), []byte(goSrc), 0o644); err != nil {
+		t.Fatalf("write go: %v", err)
+	}
+
+	s := sqlscanner.New()
+	result, err := s.ScanFull(context.Background(), tmp, nil, false, true)
+	if err != nil {
+		t.Fatalf("ScanFull: %v", err)
+	}
+
+	var noHook *scanner.Finding
+	for i := range result.Findings {
+		f := &result.Findings[i]
+		if f.RuleID == sqlscanner.RuleGormEncryptOK {
+			t.Errorf("unexpected GORM-ENCRYPT-OK on serializer:json field: %+v", f)
+		}
+		if f.RuleID == sqlscanner.RuleGormNoEncryptHook {
+			noHook = f
+		}
+	}
+	if noHook == nil {
+		t.Fatalf("expected GORM-NO-ENCRYPT-HOOK on serializer:json field, got %d findings total", len(result.Findings))
+	}
+	if noHook.Severity != scanner.SeverityHigh {
+		t.Errorf("GORM-NO-ENCRYPT-HOOK severity = %q, want HIGH (serializer:json must not downgrade)", noHook.Severity)
+	}
+	if noHook.RequirementID != "3.5.1" {
+		t.Errorf("GORM-NO-ENCRYPT-HOOK req = %q, want 3.5.1", noHook.RequirementID)
+	}
+}
