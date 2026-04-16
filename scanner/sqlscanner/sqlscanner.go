@@ -397,14 +397,13 @@ func structKey(path string, line int) string {
 	return fmt.Sprintf("%s:%d", path, line)
 }
 
-// applyVerifiedTypeFixup walks GORM findings and rewrites them when a
-// struct's sensitive field uses a custom type whose Value() / GormValue()
-// method body has been verified to call real cryptographic primitives via
-// the D-02 strong-signal whitelist, the D-03 KMS heuristic, or D-04 1-level
-// helper recursion. GORM-NO-ENCRYPT-HOOK becomes GORM-ENCRYPT-OK INFO and
-// each matching GORM-SENSITIVE-TAG drops to INFO. Findings on structs
-// without a verified field, or fields whose type fails verification, are
-// left untouched per the conservative default.
+// applyVerifiedTypeFixup rewrites GORM-NO-ENCRYPT-HOOK to GORM-ENCRYPT-OK
+// (and matching GORM-SENSITIVE-TAG to INFO) when a struct's sensitive field
+// uses a custom type whose Value() / GormValue() body calls AES-GCM /
+// NaCl secretbox / ChaCha20-Poly1305 directly, invokes a KMS-shaped client
+// method, or delegates to a same-package helper that does. Findings on
+// structs without a verified field, or fields whose type fails verification,
+// are left untouched per the conservative default.
 func applyVerifiedTypeFixup(
 	findings []scanner.Finding,
 	structByLocation map[string]*GormStruct,
