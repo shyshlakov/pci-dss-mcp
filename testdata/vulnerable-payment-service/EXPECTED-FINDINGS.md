@@ -8,12 +8,12 @@ total_clean_patterns: 17
 total_rules_covered: 54
 expected_summary:
  critical: 42
- high: 84
- medium: 28
+ high: 83
+ medium: 27
  low: 0
- info: 41
-expected_active: 162
-expected_total_findings: 197
+ info: 42
+expected_active: 160
+expected_total_findings: 196
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -56,10 +56,10 @@ fixture files change.
 | Severity | Count |
 |----------|-------|
 | CRITICAL | 42 |
-| HIGH | 84 |
-| MEDIUM | 28 |
+| HIGH | 83 |
+| MEDIUM | 27 |
 | LOW | 0 |
-| INFO | 41 |
+| INFO | 42 |
 
 ## Violations
 
@@ -174,7 +174,7 @@ fixture files change.
 | NONCE-MISSING-PAYMENT | CRITICAL | templates/checkout.html | 13 | payment inline script no nonce |
 | PAN-KEYWORD | INFO | clean/banking_struct/pure_banking.go | 5 | F-27 banking domain downgrade IBAN+BIC+RoutingNumber siblings tag banking_domain |
 | PAN-KEYWORD | HIGH | internal/banking/mixed_pan_iban.go | 4 | F-27 defense-in-depth CVV PCI-scope sibling keeps HIGH |
-| PAN-KEYWORD | HIGH | internal/banking/mixed_pan_iban.go | 6 | CVV field in hybrid struct |
+| PAN-KEYWORD | INFO | internal/banking/mixed_pan_iban.go | 6 | CVV field taint SAD negative-evidence transit downgrade |
 | PAN-KEYWORD | HIGH | internal/banking/mixed_pan_iban.go | 8 | CardNumber field in hybrid struct |
 | PAN-KEYWORD | INFO | internal/billing/handler.go | 15 | transit-only PAN field still INFO |
 | PAN-KEYWORD | INFO | internal/order/submit.go | 6 | CHD field + /order/ path, transit-only json tag |
@@ -200,7 +200,6 @@ fixture files change.
 | PAN-LITERAL | MEDIUM | internal/util/cardproc.go | 6 | sample card literal |
 | PAN-LOGGER | CRITICAL | internal/service/tokens/logging.go | 11 | slog.Info with cardNumber ident arg |
 | PAN-TYPE | MEDIUM | internal/banking/mixed_pan_iban.go | 4 | AccountNumber declared as string |
-| PAN-TYPE | MEDIUM | internal/banking/mixed_pan_iban.go | 6 | CVV declared as string |
 | PAN-TYPE | MEDIUM | internal/banking/mixed_pan_iban.go | 8 | CardNumber declared as string |
 | PAN-TYPE | MEDIUM | internal/cache/keep_ttl.go | 9 | CVV declared as string |
 | PAN-TYPE | MEDIUM | internal/cache/no_expire_hset.go | 9 | cardNumber declared as string |

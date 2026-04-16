@@ -5,6 +5,17 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## v0.1.3 — 2026-04-16
+
+### Fixed
+- **F-25** Five-layer CRYPTO-HARDCODED-KEY filter cascade reduces false positives on HTTP header constants, sentinel errors, log field names, JSON key names, and constants files. Layer 1 (AST sentinel error guard), Layer 2 (shape heuristics with Shannon entropy guard), Layer 3 (hex/base64 fast-path forces CRITICAL on genuine keys), Layer 4 (path downgrade for constants/errors files). All downgraded findings carry TriageHint tags for auditor visibility.
+- **F-27** IBAN vs PAN sibling heuristic for banking-domain structs. AccountNumber fields in structs with >= 2 banking siblings (IBAN, BIC, SWIFT, RoutingNumber, SortCode, ABA, BankCode) and zero PCI-scope siblings downgrade PAN-KEYWORD to INFO. Defense-in-depth guards: any PCI-scope sibling, card-related struct tags, or tokenization context aborts the downgrade.
+
+### Internal
+- New `scanner/cryptoscanner/hardcoded_filter.go` with `ApplyHardcodedFilter` five-layer cascade.
+- New `scanner/panscanner/banking_context.go` with `IsBankingContext` sibling analysis.
+- 8 new fixture files in `testdata/vulnerable-payment-service/` covering all filter layers and banking context patterns.
+
 ## v0.1.2 — 2026-04-15
 
 ### Fixed
