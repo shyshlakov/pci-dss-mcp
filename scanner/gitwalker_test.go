@@ -153,3 +153,79 @@ func TestGitTrackedFilesAbsolutePaths(t *testing.T) {
 		}
 	}
 }
+
+func TestGitTrackedFilesSkipTestSegmentAtIncludeTestsFalse(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	dir := initGitRepo(t)
+	writeFile(t, filepath.Join(dir, "internal", "test", "e2e", "mock.go"), "package e2e")
+	writeFile(t, filepath.Join(dir, "internal", "integration", "stripe.go"), "package integration")
+	writeFile(t, filepath.Join(dir, "internal", "foo.go"), "package internalpkg")
+
+	cmd := exec.Command("git", "add", ".")
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git add failed: %v\n%s", err, out)
+	}
+
+	resolvedDir, _ := filepath.EvalSymlinks(dir)
+	cfg := WalkConfig{Extensions: []string{".go"}, IncludeTests: false}
+	got := make(map[string]bool)
+	for path, err := range GitTrackedFiles(dir, cfg) {
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		rel, _ := filepath.Rel(resolvedDir, path)
+		got[filepath.ToSlash(rel)] = true
+	}
+
+	if got["internal/test/e2e/mock.go"] {
+		t.Errorf("internal/test/e2e/mock.go should be skipped at IncludeTests=false")
+	}
+	if !got["internal/integration/stripe.go"] {
+		t.Errorf("internal/integration/stripe.go should be walked (D-03 guard)")
+	}
+	if !got["internal/foo.go"] {
+		t.Errorf("internal/foo.go should be walked")
+	}
+}
+
+func TestGitTrackedFilesIncludeTestSegmentAtIncludeTestsTrue(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	dir := initGitRepo(t)
+	writeFile(t, filepath.Join(dir, "internal", "test", "e2e", "mock.go"), "package e2e")
+	writeFile(t, filepath.Join(dir, "internal", "integration", "stripe.go"), "package integration")
+	writeFile(t, filepath.Join(dir, "internal", "foo.go"), "package internalpkg")
+
+	cmd := exec.Command("git", "add", ".")
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git add failed: %v\n%s", err, out)
+	}
+
+	resolvedDir, _ := filepath.EvalSymlinks(dir)
+	cfg := WalkConfig{Extensions: []string{".go"}, IncludeTests: true}
+	got := make(map[string]bool)
+	for path, err := range GitTrackedFiles(dir, cfg) {
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		rel, _ := filepath.Rel(resolvedDir, path)
+		got[filepath.ToSlash(rel)] = true
+	}
+
+	if !got["internal/test/e2e/mock.go"] {
+		t.Errorf("internal/test/e2e/mock.go should be walked at IncludeTests=true")
+	}
+	if !got["internal/integration/stripe.go"] {
+		t.Errorf("internal/integration/stripe.go should be walked")
+	}
+	if !got["internal/foo.go"] {
+		t.Errorf("internal/foo.go should be walked")
+	}
+}

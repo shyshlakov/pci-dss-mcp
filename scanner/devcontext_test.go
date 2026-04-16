@@ -430,8 +430,6 @@ func TestDedicatedDevNegatives(t *testing.T) {
 	cases := []string{
 		"internal/testdata/fixture.env",
 		"internal/foo_test.go", // _test.go suffix, not a "test" directory segment
-		"fixtures/sample.env",
-		"e2e/config.yaml",
 		"src/main.go",
 	}
 	for _, p := range cases {
@@ -439,5 +437,114 @@ func TestDedicatedDevNegatives(t *testing.T) {
 		if dc.DedicatedDev {
 			t.Errorf("path %s: DedicatedDev = true, want false", p)
 		}
+	}
+}
+
+// TestClassifyDevContextExamplesPath verifies F-24: paths inside examples/
+// or samples/ directories carry ExamplesPath=true and downgrade credential
+// findings to INFO via DedicatedDev. Production paths must NOT match.
+func TestClassifyDevContextExamplesPath(t *testing.T) {
+	tests := []struct {
+		name             string
+		filePath         string
+		wantExamples     bool
+		wantDedicatedDev bool
+		wantIsDevPath    bool
+		wantIsProdPath   bool
+		wantAdjustedSev  Severity
+	}{
+		{
+			name:             "examples_dir_downgrades",
+			filePath:         "clean/examples/api-example.env.json",
+			wantExamples:     true,
+			wantDedicatedDev: true,
+			wantIsDevPath:    true,
+			wantAdjustedSev:  SeverityMedium,
+		},
+		{
+			name:             "sample_segment_downgrades",
+			filePath:         "docs/sample/foo.yaml",
+			wantExamples:     true,
+			wantDedicatedDev: true,
+			wantIsDevPath:    true,
+			wantAdjustedSev:  SeverityMedium,
+		},
+		{
+			name:             "samples_segment_downgrades",
+			filePath:         "internal/samples/data.yaml",
+			wantExamples:     true,
+			wantDedicatedDev: true,
+			wantIsDevPath:    true,
+			wantAdjustedSev:  SeverityMedium,
+		},
+		{
+			name:             "env_example_filename_downgrades",
+			filePath:         "myproject/.env.example",
+			wantExamples:     false,
+			wantDedicatedDev: false,
+			wantIsDevPath:    true,
+			wantAdjustedSev:  SeverityMedium,
+		},
+		{
+			name:             "config_example_filename_downgrades",
+			filePath:         "myproject/config.example.yaml",
+			wantExamples:     false,
+			wantDedicatedDev: false,
+			wantIsDevPath:    true,
+			wantAdjustedSev:  SeverityMedium,
+		},
+		{
+			name:             "config_sample_filename_downgrades",
+			filePath:         "myproject/config.sample.json",
+			wantExamples:     false,
+			wantDedicatedDev: false,
+			wantIsDevPath:    true,
+			wantAdjustedSev:  SeverityMedium,
+		},
+		{
+			name:             "configs_prod_not_examples",
+			filePath:         "configs/prod-api-key.json",
+			wantExamples:     false,
+			wantDedicatedDev: false,
+			wantIsDevPath:    false,
+			wantAdjustedSev:  SeverityCritical,
+		},
+		{
+			name:             "docs_examples_subtree",
+			filePath:         "docs/examples/auth/demo.go",
+			wantExamples:     true,
+			wantDedicatedDev: true,
+			wantIsDevPath:    true,
+			wantAdjustedSev:  SeverityMedium,
+		},
+		{
+			name:             "src_main_not_examples",
+			filePath:         "src/main.go",
+			wantExamples:     false,
+			wantDedicatedDev: false,
+			wantIsDevPath:    false,
+			wantAdjustedSev:  SeverityCritical,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dc := ClassifyDevContextInRoot(tt.filePath, "real-secret-value-1234", SeverityCritical, "")
+			if dc.ExamplesPath != tt.wantExamples {
+				t.Errorf("ExamplesPath = %v, want %v", dc.ExamplesPath, tt.wantExamples)
+			}
+			if dc.DedicatedDev != tt.wantDedicatedDev {
+				t.Errorf("DedicatedDev = %v, want %v", dc.DedicatedDev, tt.wantDedicatedDev)
+			}
+			if dc.IsDevPath != tt.wantIsDevPath {
+				t.Errorf("IsDevPath = %v, want %v", dc.IsDevPath, tt.wantIsDevPath)
+			}
+			if dc.IsProdPath != tt.wantIsProdPath {
+				t.Errorf("IsProdPath = %v, want %v", dc.IsProdPath, tt.wantIsProdPath)
+			}
+			if dc.AdjustedSev != tt.wantAdjustedSev {
+				t.Errorf("AdjustedSev = %q, want %q", dc.AdjustedSev, tt.wantAdjustedSev)
+			}
+		})
 	}
 }
