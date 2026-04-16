@@ -41,7 +41,7 @@ Every finding carries `requirement_id`, `severity`, `file_path`, `line`, and a t
 - **Not a replacement for broad SAST.** Use Semgrep, CodeQL, or gosec for OWASP Top-10 and language-agnostic vulnerabilities.
 - **Not a replacement for LLM-based code review.** pci-dss-mcp maps payment-specific issues to PCI DSS requirement IDs; LLM agents catch broad bugs via reasoning. The two layers compose.
 - **Not Go-agnostic.** Go-specific AST patterns and taint flow tracing are what make the precision possible.
-- **Not a QSA replacement.** Static analysis covers ~6% of PCI DSS v4.0.1 requirements. A Qualified Security Assessor must sign off on the rest.
+- **Not a QSA replacement.** Static analysis covers ~5.6% of PCI DSS v4.0.1 requirements. A Qualified Security Assessor must sign off on the rest.
 
 See [docs/comparison.md](docs/comparison.md) for a detailed feature comparison with Semgrep, CodeQL, gosec, Snyk Code, and Claude Code.
 
@@ -264,7 +264,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the release history.
 ### Known limitations
 
 - **Go only** — no Python / Java / .NET support planned
-- **14 of ~251 PCI DSS v4.0.1 sub-requirements** covered (~6%) — the rest require manual QSA review
+- **14 of ~250 PCI DSS v4.0.1 sub-requirements** covered (~5.6%) — the remaining ~94% require manual QSA review
 - **Taint analysis needs module cache** — falls back to AST-only on failure
 
 ## Contributing
@@ -289,6 +289,20 @@ Planned features in rough priority order:
 - **Cross-service CHD flow mapping** — OpenAPI/protobuf schema analysis across microservices
 
 Each feature ships with golden-fixture coverage. Release order may shift based on community feedback — [open an issue](https://github.com/shyshlakov/pci-dss-mcp/issues) if one of these would unblock you sooner.
+
+### Projected coverage impact
+
+The five planned features take PCI DSS v4.0.1 sub-requirement coverage from the current **14 / ~250** (5.6%) to a projected **16–18 / ~250** (~7%):
+
+| Phase | New sub-requirement coverage | Notes |
+|-------|------------------------------|-------|
+| SBOM generation | **6.3.2** | Mandatory since 31 March 2025; currently zero coverage in any MCP tool |
+| Reachability-aware deps | (deepens existing **6.3.3**); helps **11.3.1.1** when paired with SBOM | Improves precision of an existing rule; the SBOM + reachability pair closes the "manage all discovered vulns" loop |
+| SARIF output | None — orthogonal output format | Pure tooling integration |
+| Semgrep adapter | (broadens existing **6.2.4**, **4.2.1**, **8.6.2**) | Per Semgrep's own compliance docs, their PCI surface overlaps with ours; the real gain is rule **breadth** (~5000 rules), not new sub-requirements |
+| Cross-service CHD flow | **1.2.4** (data flow diagram accuracy); possibly **1.2.3** (network diagram) | Auto-derived from OpenAPI v3 + protobuf + k8s manifests |
+
+**Why the ceiling is so low.** Roughly 95% of PCI DSS v4.0.1 sub-requirements describe operational, network, physical, and policy controls — incident response procedures, firewall configuration, physical access, vendor management, training records, log review processes — that are not detectable from source code alone. Pushing meaningfully beyond ~20 sub-requirements would require runtime network probing, log-pipeline inspection, or document analysis, which are intentionally out of scope for a code-time MCP tool. The remaining sub-requirements always need human QSA review.
 
 ## License
 
