@@ -158,7 +158,7 @@ func (s *SQLScanner) ScanFull(ctx context.Context, targetPath string, excludePat
 		if strings.ToLower(filepath.Ext(path)) != ".go" {
 			continue
 		}
-		findings, structs, file, fset, lines, err := s.scanGoFileWithStructs(path)
+		findings, structs, file, _, lines, err := s.scanGoFileWithStructs(path)
 		if err != nil {
 			return nil, fmt.Errorf("scanning %s: %w", path, err)
 		}
@@ -182,7 +182,7 @@ func (s *SQLScanner) ScanFull(ctx context.Context, targetPath string, excludePat
 		}
 
 		if file != nil {
-			for typeName, info := range buildVerifiedTypeMap(file, fset, path) {
+			for typeName, info := range buildVerifiedTypeMap(file, path) {
 				allVerifiedTypes[typeName] = info
 			}
 			for fnName, entry := range collectPkgFuncEntries(file) {

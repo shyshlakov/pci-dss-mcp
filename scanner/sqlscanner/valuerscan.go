@@ -2,7 +2,6 @@ package sqlscanner
 
 import (
 	"go/ast"
-	"go/token"
 	"strings"
 )
 
@@ -150,8 +149,7 @@ func collectPkgFuncEntries(file *ast.File) map[string]pkgFuncEntry {
 	return out
 }
 
-func buildVerifiedTypeMap(file *ast.File, fset *token.FileSet, filePath string) map[string]*valuerTypeInfo {
-	_ = fset
+func buildVerifiedTypeMap(file *ast.File, filePath string) map[string]*valuerTypeInfo {
 	out := map[string]*valuerTypeInfo{}
 	if file == nil {
 		return out

@@ -202,7 +202,7 @@ func (p *PointerValuer) Scan(v interface{}) error { return nil }
 				t.Fatalf("parse: %v", err)
 			}
 
-			vmap := buildVerifiedTypeMap(file, fset, "test.go")
+			vmap := buildVerifiedTypeMap(file, "test.go")
 			vt, ok := vmap[tc.typeName]
 			if !ok {
 				t.Fatalf("type %q not in verified type map: keys=%v", tc.typeName, mapKeys(vmap))
@@ -276,7 +276,7 @@ func (t T4) GormValue(ctx context.Context, db *fakeDB) fakeExpr { return fakeExp
 			if err != nil {
 				t.Fatalf("parse: %v", err)
 			}
-			vmap := buildVerifiedTypeMap(file, fset, "test.go")
+			vmap := buildVerifiedTypeMap(file, "test.go")
 
 			gotKeys := mapKeys(vmap)
 			if len(gotKeys) != len(tc.wantTypes) {
@@ -350,7 +350,7 @@ func (e *EncryptedPAN) Scan(v interface{}) error { return nil }
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	vmap := buildVerifiedTypeMap(file, fset, "test.go")
+	vmap := buildVerifiedTypeMap(file, "test.go")
 	if _, ok := vmap["EncryptedPAN"]; !ok {
 		t.Fatalf("EncryptedPAN missing from verified type map: keys=%v", mapKeys(vmap))
 	}
