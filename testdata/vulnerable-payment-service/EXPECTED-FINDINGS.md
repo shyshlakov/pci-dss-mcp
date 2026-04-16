@@ -1,19 +1,19 @@
 ---
-fixture_version: 1.6
+fixture_version: 1.7
 last_updated: 2026-04-16
 phase: 19.7
-plan: 01
-total_intentional_violations: 137
-total_clean_patterns: 16
+plan: 02
+total_intentional_violations: 144
+total_clean_patterns: 17
 total_rules_covered: 54
 expected_summary:
  critical: 42
- high: 81
- medium: 25
+ high: 84
+ medium: 28
  low: 0
- info: 40
-expected_active: 156
-expected_total_findings: 190
+ info: 41
+expected_active: 162
+expected_total_findings: 197
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -56,10 +56,10 @@ fixture files change.
 | Severity | Count |
 |----------|-------|
 | CRITICAL | 42 |
-| HIGH | 81 |
-| MEDIUM | 25 |
+| HIGH | 84 |
+| MEDIUM | 28 |
 | LOW | 0 |
-| INFO | 40 |
+| INFO | 41 |
 
 ## Violations
 
@@ -172,6 +172,10 @@ fixture files change.
 | META-CSP-UNSAFE | HIGH | templates/meta_unsafe.html | 5 | meta unsafe-inline directive |
 | NONCE-MISSING | HIGH | templates/non_payment.html | 9 | non-payment inline script no nonce |
 | NONCE-MISSING-PAYMENT | CRITICAL | templates/checkout.html | 13 | payment inline script no nonce |
+| PAN-KEYWORD | INFO | clean/banking_struct/pure_banking.go | 5 | F-27 banking domain downgrade IBAN+BIC+RoutingNumber siblings tag banking_domain |
+| PAN-KEYWORD | HIGH | internal/banking/mixed_pan_iban.go | 4 | F-27 defense-in-depth CVV PCI-scope sibling keeps HIGH |
+| PAN-KEYWORD | HIGH | internal/banking/mixed_pan_iban.go | 6 | CVV field in hybrid struct |
+| PAN-KEYWORD | HIGH | internal/banking/mixed_pan_iban.go | 8 | CardNumber field in hybrid struct |
 | PAN-KEYWORD | INFO | internal/billing/handler.go | 15 | transit-only PAN field still INFO |
 | PAN-KEYWORD | INFO | internal/order/submit.go | 6 | CHD field + /order/ path, transit-only json tag |
 | PAN-KEYWORD | INFO | internal/payment/core.go | 13 | tagless Number field still INFO |
@@ -195,6 +199,9 @@ fixture files change.
 | PAN-LITERAL | MEDIUM | internal/util/cardops.go | 6 | sample card literal |
 | PAN-LITERAL | MEDIUM | internal/util/cardproc.go | 6 | sample card literal |
 | PAN-LOGGER | CRITICAL | internal/service/tokens/logging.go | 11 | slog.Info with cardNumber ident arg |
+| PAN-TYPE | MEDIUM | internal/banking/mixed_pan_iban.go | 4 | AccountNumber declared as string |
+| PAN-TYPE | MEDIUM | internal/banking/mixed_pan_iban.go | 6 | CVV declared as string |
+| PAN-TYPE | MEDIUM | internal/banking/mixed_pan_iban.go | 8 | CardNumber declared as string |
 | PAN-TYPE | MEDIUM | internal/cache/keep_ttl.go | 9 | CVV declared as string |
 | PAN-TYPE | MEDIUM | internal/cache/no_expire_hset.go | 9 | cardNumber declared as string |
 | PAN-TYPE | MEDIUM | internal/retention/entry.go | 10 | RED: incidental Expiry string declared on Z9-Z12 scoring helper |
@@ -264,6 +271,7 @@ fixture files change.
 | clean/migrations/20260101000000_drop_legacy_card.sql | DROP COLUMN only, no sensitive column declared |
 | clean/testutil/db_fixture.go | testutil path segment downgrades AUTH-HARDCODED-PWD to INFO (D-14) |
 | clean/test_dir_exclusion/internal/test/e2e/mock_data.go | F-28: walker skips files under /test/ or /e2e/ segment at IncludeTests=false; file contains adversarial PAN and SEC-PREFIX that would fire at IncludeTests=true |
+| clean/banking_struct/pure_banking.go | F-27 banking domain AccountNumber + IBAN/BIC/RoutingNumber downgrades PAN-KEYWORD to INFO |
 | clean/crypto_filter_cases/header_const.go | F-25 Layer 2 header downgrade to INFO |
 | clean/crypto_filter_cases/json_key.go | F-25 Layer 2 camelCase downgrade to INFO |
 | clean/crypto_filter_cases/log_field.go | F-25 Layer 2 snake_case downgrade to INFO |
