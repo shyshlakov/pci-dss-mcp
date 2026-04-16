@@ -466,7 +466,12 @@ func (s *panScanState) emitFieldFindings(field *ast.Field, st *ast.StructType, t
 		pos := s.fset.Position(ident.Pos())
 		typeStr := typeExprString(field.Type)
 
-		s.appendField(s.buildKeywordFinding(ident.Name, pos, paymentCount), typeName, ident.Name, st)
+		finding := s.buildKeywordFinding(ident.Name, pos, paymentCount)
+		if Normalize(ident.Name) == "accountnumber" && IsBankingContext(st, typeName, s.path) {
+			finding.Severity = scanner.SeverityInfo
+			finding.TriageHint = "banking_domain"
+		}
+		s.appendField(finding, typeName, ident.Name, st)
 
 		if typeStr == "string" {
 			s.appendField(scanner.Finding{

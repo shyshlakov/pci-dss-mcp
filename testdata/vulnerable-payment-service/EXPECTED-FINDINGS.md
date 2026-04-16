@@ -1,19 +1,19 @@
 ---
-fixture_version: 1.5
-last_updated: 2025-01-15
-phase: n/a
-plan: n/a
-total_intentional_violations: 130
-total_clean_patterns: 12
+fixture_version: 1.7
+last_updated: 2026-04-16
+phase: 19.7
+plan: 02
+total_intentional_violations: 144
+total_clean_patterns: 17
 total_rules_covered: 54
 expected_summary:
- critical: 41
- high: 80
- medium: 25
+ critical: 42
+ high: 83
+ medium: 27
  low: 0
- info: 36
-expected_active: 150
-expected_total_findings: 184
+ info: 43
+expected_active: 160
+expected_total_findings: 197
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -55,11 +55,11 @@ fixture files change.
 
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 41 |
-| HIGH | 80 |
-| MEDIUM | 25 |
+| CRITICAL | 42 |
+| HIGH | 83 |
+| MEDIUM | 27 |
 | LOW | 0 |
-| INFO | 36 |
+| INFO | 43 |
 
 ## Violations
 
@@ -118,9 +118,15 @@ fixture files change.
 | AUTH-MISSING-MFA | HIGH | internal/retention/zeroing_typeswitch.go | 7 | RED: incidental AUTH-MISSING-MFA on Z11 fixture |
 | AUTH-MISSING-MFA | HIGH | internal/util/cardproc.go | 5 | ProcessCardBuffer handler no MFA |
 | AUTH-WEAK-POLICY | CRITICAL | internal/auth/policy.go | 12 | MinPasswordLength below PCI 8.3.6 |
+| CRYPTO-HARDCODED-KEY | HIGH | internal/config/constants_file.go | 3 | F-25 Layer 4 path downgrade CRITICAL to HIGH tag crypto_key_constants_file |
+| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/header_const.go | 3 | F-25 Layer 2 header pattern downgrades to INFO tag hardcoded_header_name |
+| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/json_key.go | 3 | F-25 Layer 2 camelCase pattern downgrades to INFO tag hardcoded_json_key |
+| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/log_field.go | 3 | F-25 Layer 2 snake_case pattern downgrades to INFO tag hardcoded_log_field |
+| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/sentinel_error.go | 5 | F-25 Layer 1 AST errors.New guard downgrades to INFO tag hardcoded_sentinel_error |
 | CRYPTO-HARDCODED-KEY | CRITICAL | internal/auth/admin.go | 3 | hardcoded admin secret |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/auth/process.go | 6 | hardcoded sample literal in handler |
 | CRYPTO-HARDCODED-KEY | CRITICAL | internal/crypto/keys.go | 3 | AESKey constant 32 hex chars |
+| CRYPTO-HARDCODED-KEY | CRITICAL | internal/crypto/real_hardcoded_aes.go | 3 | F-25 adversarial 64-char hex AES-256 key stays CRITICAL through all layers |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/http/handler/payment/charge.go | 6 | hardcoded key inside payment handler |
 | CRYPTO-HARDCODED-KEY | INFO | internal/testseed/constants.go | 3 | dev-context marker downgrades to INFO |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/util/cardops.go | 6 | hardcoded sample literal |
@@ -136,6 +142,12 @@ fixture files change.
 | CSP-MISSING | INFO | internal/http/handler/tokens/exchange.go | 5 | non-HTML handler informational note |
 | CSP-MISSING | INFO | internal/http/handler/tokens/tokenize.go | 11 | non-HTML handler informational note |
 | CSP-MISSING | INFO | internal/payment/core.go | 19 | non-HTML handler informational note after fixture-shortcut removal |
+| CSP-MISSING | INFO | internal/payment/zeroing_init.go | 20 | non-HTML handler informational note (path-dep live-only) |
+| CSP-MISSING | INFO | internal/retention/zeroing_elseif.go | 7 | non-HTML handler informational note (path-dep live-only) |
+| CSP-MISSING | INFO | internal/retention/zeroing_select.go | 10 | non-HTML handler informational note (path-dep live-only) |
+| CSP-MISSING | INFO | internal/retention/zeroing_switch.go | 7 | non-HTML handler informational note (path-dep live-only) |
+| CSP-MISSING | INFO | internal/retention/zeroing_typeswitch.go | 7 | non-HTML handler informational note (path-dep live-only) |
+| CSP-MISSING | INFO | internal/tokens/delegation/delegating.go | 19 | non-HTML handler informational note (path-dep live-only) |
 | CSP-MISSING | INFO | internal/util/cardproc.go | 5 | non-HTML handler informational note |
 | CSP-NO-SCRIPT-SRC | HIGH | internal/http/handler/checkout/noscript.go | 8 | CSP missing script-src and default-src |
 | CSP-OK | INFO | internal/http/handler/payment/clean.go | 8 | verified valid CSP header set |
@@ -166,9 +178,13 @@ fixture files change.
 | META-CSP-UNSAFE | HIGH | templates/meta_unsafe.html | 5 | meta unsafe-inline directive |
 | NONCE-MISSING | HIGH | templates/non_payment.html | 9 | non-payment inline script no nonce |
 | NONCE-MISSING-PAYMENT | CRITICAL | templates/checkout.html | 13 | payment inline script no nonce |
-| PAN-KEYWORD | INFO | internal/billing/handler.go | 15 | transit-only PAN field still INFO |
-| PAN-KEYWORD | INFO | internal/order/submit.go | 6 | CHD field + /order/ path, transit-only json tag |
-| PAN-KEYWORD | INFO | internal/payment/core.go | 13 | tagless Number field still INFO |
+| PAN-KEYWORD | INFO | clean/banking_struct/pure_banking.go | 5 | F-27 banking domain downgrade IBAN+BIC+RoutingNumber siblings tag banking_domain |
+| PAN-KEYWORD | HIGH | internal/banking/mixed_pan_iban.go | 4 | F-27 defense-in-depth CVV PCI-scope sibling keeps HIGH |
+| PAN-KEYWORD | INFO | internal/banking/mixed_pan_iban.go | 6 | CVV field taint SAD negative-evidence transit downgrade |
+| PAN-KEYWORD | HIGH | internal/banking/mixed_pan_iban.go | 8 | CardNumber field in hybrid struct |
+| PAN-KEYWORD | INFO | internal/billing/handler.go | 13 | transit-only PAN field still INFO |
+| PAN-KEYWORD | INFO | internal/order/submit.go | 4 | CHD field + /order/ path, transit-only json tag |
+| PAN-KEYWORD | INFO | internal/payment/core.go | 14 | tagless Number field still INFO |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/requests/tokenize.go | 4 | json-only DTO transit-only |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/requests/tokenize.go | 5 | json-only DTO transit-only |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/responses/exchange_token.go | 6 | response DTO transit-only |
@@ -189,6 +205,8 @@ fixture files change.
 | PAN-LITERAL | MEDIUM | internal/util/cardops.go | 6 | sample card literal |
 | PAN-LITERAL | MEDIUM | internal/util/cardproc.go | 6 | sample card literal |
 | PAN-LOGGER | CRITICAL | internal/service/tokens/logging.go | 11 | slog.Info with cardNumber ident arg |
+| PAN-TYPE | MEDIUM | internal/banking/mixed_pan_iban.go | 4 | AccountNumber declared as string |
+| PAN-TYPE | MEDIUM | internal/banking/mixed_pan_iban.go | 8 | CardNumber declared as string |
 | PAN-TYPE | MEDIUM | internal/cache/keep_ttl.go | 9 | CVV declared as string |
 | PAN-TYPE | MEDIUM | internal/cache/no_expire_hset.go | 9 | cardNumber declared as string |
 | PAN-TYPE | MEDIUM | internal/retention/entry.go | 10 | RED: incidental Expiry string declared on Z9-Z12 scoring helper |
@@ -258,3 +276,8 @@ fixture files change.
 | clean/migrations/20260101000000_drop_legacy_card.sql | DROP COLUMN only, no sensitive column declared |
 | clean/testutil/db_fixture.go | testutil path segment downgrades AUTH-HARDCODED-PWD to INFO (D-14) |
 | clean/test_dir_exclusion/internal/test/e2e/mock_data.go | F-28: walker skips files under /test/ or /e2e/ segment at IncludeTests=false; file contains adversarial PAN and SEC-PREFIX that would fire at IncludeTests=true |
+| clean/banking_struct/pure_banking.go | F-27 banking domain AccountNumber + IBAN/BIC/RoutingNumber downgrades PAN-KEYWORD to INFO |
+| clean/crypto_filter_cases/header_const.go | F-25 Layer 2 header downgrade to INFO |
+| clean/crypto_filter_cases/json_key.go | F-25 Layer 2 camelCase downgrade to INFO |
+| clean/crypto_filter_cases/log_field.go | F-25 Layer 2 snake_case downgrade to INFO |
+| clean/crypto_filter_cases/sentinel_error.go | F-25 Layer 1 AST sentinel error downgrade to INFO |

@@ -212,9 +212,9 @@ var config = "ghp_zX9vQm2tL8jKrB4nYpF6sW1eR7aC"
 		t.Fatalf("Scan() error: %v", err)
 	}
 
-	found := findFinding(result.Findings, "CRYPTO-HARDCODED-KEY", scanner.SeverityHigh)
+	found := findFinding(result.Findings, "CRYPTO-HARDCODED-KEY", scanner.SeverityCritical)
 	if found == nil {
-		t.Errorf("Expected HIGH CRYPTO-HARDCODED-KEY for high-entropy string, got findings: %v", result.Findings)
+		t.Errorf("Expected CRITICAL CRYPTO-HARDCODED-KEY for high-entropy string (filter Layer 3 upgrade), got findings: %v", result.Findings)
 	}
 }
 
@@ -231,9 +231,9 @@ var data = "QUJDREVGR0hJSktMTU5PUFFSU1RVVldY"
 		t.Fatalf("Scan() error: %v", err)
 	}
 
-	found := findFinding(result.Findings, "CRYPTO-HARDCODED-KEY", scanner.SeverityHigh)
+	found := findFinding(result.Findings, "CRYPTO-HARDCODED-KEY", scanner.SeverityCritical)
 	if found == nil {
-		t.Errorf("Expected HIGH CRYPTO-HARDCODED-KEY for base64 string, got findings: %v", result.Findings)
+		t.Errorf("Expected CRITICAL CRYPTO-HARDCODED-KEY for base64 string (filter Layer 3 upgrade), got findings: %v", result.Findings)
 	}
 }
 
@@ -250,9 +250,9 @@ var hexData = "0123456789abcdef0123456789abcdef"
 		t.Fatalf("Scan() error: %v", err)
 	}
 
-	found := findFinding(result.Findings, "CRYPTO-HARDCODED-KEY", scanner.SeverityHigh)
+	found := findFinding(result.Findings, "CRYPTO-HARDCODED-KEY", scanner.SeverityCritical)
 	if found == nil {
-		t.Errorf("Expected HIGH CRYPTO-HARDCODED-KEY for hex string, got findings: %v", result.Findings)
+		t.Errorf("Expected CRITICAL CRYPTO-HARDCODED-KEY for hex string (filter Layer 3 hex fast-path), got findings: %v", result.Findings)
 	}
 }
 
