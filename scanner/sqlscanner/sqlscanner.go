@@ -20,6 +20,8 @@ package sqlscanner
 import (
 	"context"
 	"fmt"
+	"go/ast"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -138,6 +140,9 @@ func (s *SQLScanner) ScanFull(ctx context.Context, targetPath string, excludePat
 	// Pass 2:.go files → gorm/db/sql tag + encryption hook analysis.
 	// Also collect GormStruct data for cross-reference (, T-19-04).
 	goEncryptByTable := map[string]goEncryptInfo{}
+	allVerifiedTypes := map[string]*valuerTypeInfo{}
+	allPkgFuncs := map[string]pkgFuncEntry{}
+	structByLocation := map[string]*GormStruct{}
 	goCfg := scanner.WalkConfig{
 		Extensions:   []string{".go"},
 		ExcludeGlobs: excludePatterns,
@@ -153,7 +158,7 @@ func (s *SQLScanner) ScanFull(ctx context.Context, targetPath string, excludePat
 		if strings.ToLower(filepath.Ext(path)) != ".go" {
 			continue
 		}
-		findings, structs, lines, err := s.scanGoFileWithStructs(path)
+		findings, structs, file, _, lines, err := s.scanGoFileWithStructs(path)
 		if err != nil {
 			return nil, fmt.Errorf("scanning %s: %w", path, err)
 		}
@@ -162,18 +167,36 @@ func (s *SQLScanner) ScanFull(ctx context.Context, targetPath string, excludePat
 		result.Metadata.ScannedLines += lines
 
 		// Collect encryption data for cross-reference.
-		for _, gs := range structs {
-			if gs.EffectiveTableName == "" {
-				continue
+		for i := range structs {
+			gs := &structs[i]
+			if gs.EffectiveTableName != "" {
+				key := strings.ToLower(gs.EffectiveTableName)
+				goEncryptByTable[key] = goEncryptInfo{
+					TableName:       gs.EffectiveTableName,
+					EncryptedFields: gs.EncryptedFields,
+					HasEncryptHook:  gs.HasEncryptHook,
+					ColumnToField:   gs.ColumnToField,
+				}
 			}
-			key := strings.ToLower(gs.EffectiveTableName)
-			goEncryptByTable[key] = goEncryptInfo{
-				TableName:       gs.EffectiveTableName,
-				EncryptedFields: gs.EncryptedFields,
-				HasEncryptHook:  gs.HasEncryptHook,
-				ColumnToField:   gs.ColumnToField,
+			structByLocation[structKey(path, gs.Line)] = gs
+		}
+
+		if file != nil {
+			for typeName, info := range buildVerifiedTypeMap(file, path) {
+				allVerifiedTypes[typeName] = info
+			}
+			for fnName, entry := range collectPkgFuncEntries(file) {
+				allPkgFuncs[fnName] = entry
 			}
 		}
+	}
+
+	// Pass 2b: verify custom encrypted column types and rewrite findings.
+	if len(allVerifiedTypes) > 0 {
+		result.Findings = applyVerifiedTypeFixup(
+			result.Findings, structByLocation,
+			allVerifiedTypes, allPkgFuncs,
+		)
 	}
 
 	// Pass 3: cross-reference SQL findings with Go encryption hooks.
@@ -288,14 +311,13 @@ func isPANProtectedInTable(columns []Column) bool {
 // encryption severity, and returns GormStruct metadata for cross-reference
 // with SQL findings. Reuses the same ParseGormStructsWithContext call to
 // avoid double-parsing.
-func (s *SQLScanner) scanGoFileWithStructs(path string) ([]scanner.Finding, []GormStruct, int, error) {
+func (s *SQLScanner) scanGoFileWithStructs(path string) ([]scanner.Finding, []GormStruct, *ast.File, *token.FileSet, int, error) {
 	file, fset, err := scanner.ParseGoFile(path)
 	if err != nil {
-		// Parse errors on individual files should not kill the whole scan.
-		return nil, nil, 0, nil
+		return nil, nil, nil, nil, 0, nil
 	}
 	if file == nil {
-		return nil, nil, 0, nil
+		return nil, nil, nil, nil, 0, nil
 	}
 	lineCount := fset.Position(file.End()).Line
 
@@ -364,7 +386,143 @@ func (s *SQLScanner) scanGoFileWithStructs(path string) ([]scanner.Finding, []Go
 			})
 		}
 	}
-	return findings, parsed, lineCount, nil
+	return findings, parsed, file, fset, lineCount, nil
+}
+
+// structKey returns a stable key for locating a GormStruct by file path and
+// declaration line. Used by Pass 2b to map GORM-NO-ENCRYPT-HOOK findings back
+// to the struct they describe so sensitive field types can be re-checked
+// against the verified custom-type map.
+func structKey(path string, line int) string {
+	return fmt.Sprintf("%s:%d", path, line)
+}
+
+// applyVerifiedTypeFixup rewrites GORM-NO-ENCRYPT-HOOK to GORM-ENCRYPT-OK
+// (and matching GORM-SENSITIVE-TAG to INFO) when a struct's sensitive field
+// uses a custom type whose Value() / GormValue() body calls AES-GCM /
+// NaCl secretbox / ChaCha20-Poly1305 directly, invokes a KMS-shaped client
+// method, or delegates to a same-package helper that does. Findings on
+// structs without a verified field, or fields whose type fails verification,
+// are left untouched per the conservative default.
+func applyVerifiedTypeFixup(
+	findings []scanner.Finding,
+	structByLocation map[string]*GormStruct,
+	verifiedTypes map[string]*valuerTypeInfo,
+	pkgFuncs map[string]pkgFuncEntry,
+) []scanner.Finding {
+	verifiedStructFields := map[string]map[string]string{}
+
+	for key, gs := range structByLocation {
+		matched := map[string]string{}
+		for _, tag := range gs.SensitiveTags {
+			bare := bareTypeName(tag.FieldType)
+			if bare == "" {
+				continue
+			}
+			vt, ok := verifiedTypes[bare]
+			if !ok {
+				continue
+			}
+			ok, hit := verifyValueBodyEntries(vt, pkgFuncs)
+			if !ok {
+				continue
+			}
+			matched[tag.FieldName] = hit
+		}
+		if len(matched) > 0 {
+			verifiedStructFields[key] = matched
+		}
+	}
+
+	if len(verifiedStructFields) == 0 {
+		return findings
+	}
+
+	for i := range findings {
+		f := &findings[i]
+		if f.RuleID != RuleGormNoEncryptHook && f.RuleID != RuleGormSensitiveTag {
+			continue
+		}
+		key := structKey(f.FilePath, f.Line)
+		matched, hasStruct := verifiedStructFields[key]
+		if !hasStruct {
+			if f.RuleID != RuleGormSensitiveTag {
+				continue
+			}
+			matched, hasStruct = lookupStructForFieldFinding(structByLocation, verifiedStructFields, f)
+			if !hasStruct {
+				continue
+			}
+		}
+
+		switch f.RuleID {
+		case RuleGormNoEncryptHook:
+			if len(matched) == 0 {
+				continue
+			}
+			anyHit := ""
+			for _, hit := range matched {
+				anyHit = hit
+				break
+			}
+			f.RuleID = RuleGormEncryptOK
+			f.Severity = scanner.SeverityInfo
+			f.RequirementID = "3.5.1"
+			f.Description = "Custom encrypted column type detected: Value() method body verified to call " + anyHit + ". Field-level encryption is wired via driver.Valuer instead of the BeforeCreate/BeforeSave hook pattern."
+			f.Suggestion = "Verified-OK marker. No action required. Auditors: confirm the verified function performs PCI-compliant encryption (AES-GCM, NaCl secretbox, ChaCha20-Poly1305, or KMS-backed wrapping)."
+			f.TriageHint = "gorm_encrypt_type_ok | Value() method body verified to call " + anyHit
+		case RuleGormSensitiveTag:
+			fieldName := extractFieldNameFromDescription(f.Description)
+			hit, ok := matched[fieldName]
+			if !ok {
+				continue
+			}
+			if f.Severity != scanner.SeverityInfo {
+				f.Severity = scanner.SeverityInfo
+			}
+			f.TriageHint = "gorm_encrypt_type_ok | field type Value() body verified to call " + hit
+		}
+	}
+	return findings
+}
+
+// lookupStructForFieldFinding locates the GORM-SENSITIVE-TAG finding's
+// owning struct by scanning structByLocation entries that share the file
+// path and contain a sensitive tag at the finding line.
+func lookupStructForFieldFinding(
+	structByLocation map[string]*GormStruct,
+	verifiedStructFields map[string]map[string]string,
+	f *scanner.Finding,
+) (map[string]string, bool) {
+	for key, gs := range structByLocation {
+		if !strings.HasPrefix(key, f.FilePath+":") {
+			continue
+		}
+		for _, tag := range gs.SensitiveTags {
+			if tag.Line == f.Line {
+				matched, ok := verifiedStructFields[key]
+				return matched, ok
+			}
+		}
+	}
+	return nil, false
+}
+
+// extractFieldNameFromDescription pulls the Go field name out of a
+// GORM-SENSITIVE-TAG description string formatted as
+// "Struct <Name> field <FieldName> has sensitive DB column tag (...)".
+func extractFieldNameFromDescription(desc string) string {
+	const marker = " field "
+	i := strings.Index(desc, marker)
+	if i < 0 {
+		return ""
+	}
+	rest := desc[i+len(marker):]
+	j := strings.Index(rest, " ")
+	if j < 0 {
+		return rest
+	}
+	return rest[:j]
 }
 
 // crossRefSQLWithGoEncryption downgrades SQL-SENSITIVE-COLUMN findings to

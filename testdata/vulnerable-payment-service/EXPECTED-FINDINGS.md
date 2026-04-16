@@ -1,19 +1,19 @@
 ---
-fixture_version: 1.7
+fixture_version: 1.8
 last_updated: 2026-04-16
-phase: 19.7
-plan: 02
-total_intentional_violations: 144
-total_clean_patterns: 17
-total_rules_covered: 54
+phase: 19.8
+plan: 01
+total_intentional_violations: 147
+total_clean_patterns: 20
+total_rules_covered: 55
 expected_summary:
- critical: 42
- high: 83
+ critical: 43
+ high: 85
  medium: 27
  low: 0
- info: 43
-expected_active: 160
-expected_total_findings: 197
+ info: 49
+expected_active: 163
+expected_total_findings: 206
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -25,7 +25,7 @@ rules_coverage:
  retentionscanner: [RET-DB-SENSITIVE-STORE, RET-GORM-SENSITIVE-STORE, RET-REDIS-NO-TTL, RET-REDIS-KEEP-TTL, RET-REDIS-NO-EXPIRE, RET-CONFIG-NO-TTL, RET-ZERO-BEFORE-AUTH, RET-ZERO-AFTER-RESPONSE, RET-ZERO-DEFER-ONLY]
  scriptscanner: [CSP-MISSING, CSP-OK, CSP-UNSAFE-INLINE, CSP-UNSAFE-EVAL, CSP-NO-SCRIPT-SRC, CSP-VALUE-UNANALYZABLE, META-CSP-ONLY, META-CSP-UNSAFE, SRI-MISSING, SRI-MISSING-PAYMENT, NONCE-MISSING, NONCE-MISSING-PAYMENT, FIM-REQUIRED]
  depscanner: [DEP-VULN]
- sqlscanner: [SQL-SENSITIVE-COLUMN, SQL-TEXT-TYPE, GORM-SENSITIVE-TAG, GORM-NO-ENCRYPT-HOOK]
+ sqlscanner: [SQL-SENSITIVE-COLUMN, SQL-TEXT-TYPE, GORM-SENSITIVE-TAG, GORM-NO-ENCRYPT-HOOK, GORM-ENCRYPT-OK]
 known_gaps: []
 pending_rules: []
 ---
@@ -55,11 +55,11 @@ fixture files change.
 
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 42 |
-| HIGH | 83 |
+| CRITICAL | 43 |
+| HIGH | 85 |
 | MEDIUM | 27 |
 | LOW | 0 |
-| INFO | 43 |
+| INFO | 49 |
 
 ## Violations
 
@@ -123,6 +123,7 @@ fixture files change.
 | CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/json_key.go | 3 | F-25 Layer 2 camelCase pattern downgrades to INFO tag hardcoded_json_key |
 | CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/log_field.go | 3 | F-25 Layer 2 snake_case pattern downgrades to INFO tag hardcoded_log_field |
 | CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/sentinel_error.go | 5 | F-25 Layer 1 AST errors.New guard downgrades to INFO tag hardcoded_sentinel_error |
+| CRYPTO-HARDCODED-KEY | CRITICAL | clean/gorm_encrypt_type/real_encrypted/secure_string.go | 13 | F-26 D-08 defense-in-depth: hardcoded AES key in Value() method coexists with GORM-ENCRYPT-OK |
 | CRYPTO-HARDCODED-KEY | CRITICAL | internal/auth/admin.go | 3 | hardcoded admin secret |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/auth/process.go | 6 | hardcoded sample literal in handler |
 | CRYPTO-HARDCODED-KEY | CRITICAL | internal/crypto/keys.go | 3 | AESKey constant 32 hex chars |
@@ -164,9 +165,17 @@ fixture files change.
 | ERR-LEAK-FORMAT | HIGH | internal/payment/core.go | 19 | abstract Execute name, /payment/ path + *Card param, signal 2 + 4 |
 | ERR-LEAK-WRITE | CRITICAL | internal/http/handler/tokens/exchange.go | 7 | w.Write([]byte(err.Error())) |
 | FIM-REQUIRED | MEDIUM | templates/checkout.html | 1 | payment template advisory |
+| GORM-ENCRYPT-OK | INFO | clean/gorm_encrypt_type/helper_encrypted/card_model.go | 3 | F-26 D-04 HelperEncryptedString Value() verified via 1-level recursion into EncryptPAN |
+| GORM-ENCRYPT-OK | INFO | clean/gorm_encrypt_type/kms_encrypted/card_model.go | 3 | F-26 D-03 KMSEncryptedString Value() verified via KMS heuristic VaultKMSClient.Encrypt |
+| GORM-ENCRYPT-OK | INFO | clean/gorm_encrypt_type/real_encrypted/card_model.go | 3 | F-26 D-02 SecureString Value() verified aes.NewCipher cipher.NewGCM |
+| GORM-NO-ENCRYPT-HOOK | HIGH | internal/storage/postgres/model/fake_encrypt_model.go | 7 | F-26 D-06 FakeSecureToken type FakeEncryptedString Value body only base64 |
 | GORM-NO-ENCRYPT-HOOK | HIGH | internal/storage/postgres/model/leaked.go | 3 | LeakedToken struct has no BeforeCreate/Encrypt |
 | GORM-NO-ENCRYPT-HOOK | HIGH | internal/storage/postgres/model/token.go | 5 | Token struct has no encrypt hook |
+| GORM-SENSITIVE-TAG | INFO | clean/gorm_encrypt_type/helper_encrypted/card_model.go | 5 | F-26 Number field with verified HelperEncryptedString custom type |
+| GORM-SENSITIVE-TAG | INFO | clean/gorm_encrypt_type/kms_encrypted/card_model.go | 5 | F-26 Number field with verified KMSEncryptedString custom type |
+| GORM-SENSITIVE-TAG | INFO | clean/gorm_encrypt_type/real_encrypted/card_model.go | 5 | F-26 Number field with verified SecureString custom type |
 | GORM-SENSITIVE-TAG | INFO | internal/storage/postgres/model/card.go | 5 | clean Card model with BeforeCreate Encrypt hook |
+| GORM-SENSITIVE-TAG | HIGH | internal/storage/postgres/model/fake_encrypt_model.go | 9 | F-26 D-06 FakeSecureToken Number gorm column with unverified custom type |
 | GORM-SENSITIVE-TAG | HIGH | internal/storage/postgres/model/leaked.go | 5 | LeakedToken Number gorm column |
 | GORM-SENSITIVE-TAG | HIGH | internal/storage/postgres/model/leaked.go | 6 | LeakedToken CVV gorm column |
 | GORM-SENSITIVE-TAG | HIGH | internal/storage/postgres/model/token.go | 8 | Token Number gorm column |
@@ -281,3 +290,6 @@ fixture files change.
 | clean/crypto_filter_cases/json_key.go | F-25 Layer 2 camelCase downgrade to INFO |
 | clean/crypto_filter_cases/log_field.go | F-25 Layer 2 snake_case downgrade to INFO |
 | clean/crypto_filter_cases/sentinel_error.go | F-25 Layer 1 AST sentinel error downgrade to INFO |
+| clean/gorm_encrypt_type/real_encrypted/card_model.go | F-26 real crypto in Value() body — GORM-ENCRYPT-OK |
+| clean/gorm_encrypt_type/helper_encrypted/card_model.go | F-26 helper recursion verified — GORM-ENCRYPT-OK |
+| clean/gorm_encrypt_type/kms_encrypted/card_model.go | F-26 KMS client in Value() body — GORM-ENCRYPT-OK |
