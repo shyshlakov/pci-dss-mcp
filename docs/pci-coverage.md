@@ -1,6 +1,6 @@
 # PCI DSS v4.0.1 Coverage Map
 
-pci-dss-mcp checks **14 of 249** PCI DSS v4.0.1 requirements across 10 scanners. This covers Requirements 3, 4, 6, 8, 10, and 11.
+pci-dss-mcp checks **14 of ~250** PCI DSS v4.0.1 requirements across 10 scanners (~5.6%). This covers Requirements 3, 4, 6, 8, 10, and 11.
 
 ## Covered Requirements
 
@@ -54,7 +54,7 @@ Additionally, many sub-requirements within covered categories (3, 4, 6, 8, 10, 1
 
 **This tool supplements but does not replace a Qualified Security Assessor (QSA) review.**
 
-NOT_CHECKED does not mean non-compliant. It means the requirement cannot be verified through static analysis of source code. A QSA must independently verify all 249 requirements for full PCI DSS compliance.
+NOT_CHECKED does not mean non-compliant. It means the requirement cannot be verified through static analysis of source code. A QSA must independently verify all ~250 requirements for full PCI DSS compliance.
 
 Static analysis catches code-level violations before they ship. It does not assess:
 - Organizational policies and procedures

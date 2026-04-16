@@ -41,7 +41,7 @@ Every finding carries `requirement_id`, `severity`, `file_path`, `line`, and a t
 - **Not a replacement for broad SAST.** Use Semgrep, CodeQL, or gosec for OWASP Top-10 and language-agnostic vulnerabilities.
 - **Not a replacement for LLM-based code review.** pci-dss-mcp maps payment-specific issues to PCI DSS requirement IDs; LLM agents catch broad bugs via reasoning. The two layers compose.
 - **Not Go-agnostic.** Go-specific AST patterns and taint flow tracing are what make the precision possible.
-- **Not a QSA replacement.** Static analysis covers ~6% of PCI DSS v4.0.1 requirements. A Qualified Security Assessor must sign off on the rest.
+- **Not a QSA replacement.** Static analysis covers ~5.6% of PCI DSS v4.0.1 requirements. A Qualified Security Assessor must sign off on the rest.
 
 See [docs/comparison.md](docs/comparison.md) for a detailed feature comparison with Semgrep, CodeQL, gosec, Snyk Code, and Claude Code.
 
