@@ -117,8 +117,8 @@ func TestToolValidPath(t *testing.T) {
 	if !out.HasSeverity(scanner.SeverityCritical) {
 		t.Errorf("Expected CRITICAL findings, got stats: %+v", out.SeverityStats)
 	}
-	if !out.HasSeverity(scanner.SeverityHigh) {
-		t.Errorf("Expected HIGH findings, got stats: %+v", out.SeverityStats)
+	if !out.HasSeverity(scanner.SeverityInfo) {
+		t.Errorf("Expected INFO findings, got stats: %+v", out.SeverityStats)
 	}
 	if !out.HasRuleID("CRYPTO-WEAK-HASH") {
 		t.Errorf("Expected CRYPTO-WEAK-HASH in findings, got: %+v", out.Findings)

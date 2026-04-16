@@ -217,27 +217,44 @@ func checkAssignment(varName string, value ast.Expr, fset *token.FileSet, path s
 	return checkAssignmentInRoot(varName, value, fset, path, "")
 }
 
-// checkAssignmentInRoot checks a single variable assignment for hardcoded key
-// patterns. projectRoot is forwarded to ClassifyDevContextInRoot.
+func detectInitExpr(expr ast.Expr) string {
+	call, ok := expr.(*ast.CallExpr)
+	if !ok {
+		return ""
+	}
+	switch fn := call.Fun.(type) {
+	case *ast.SelectorExpr:
+		if ident, ok := fn.X.(*ast.Ident); ok {
+			return ident.Name + "." + fn.Sel.Name
+		}
+	case *ast.Ident:
+		return fn.Name
+	}
+	return ""
+}
+
 func checkAssignmentInRoot(varName string, value ast.Expr, fset *token.FileSet, path, projectRoot string) *scanner.Finding {
 	strVal := extractStringValue(value)
 	if strVal == "" || isExcluded(strVal) || isSQLQuery(strVal) || isCharacterSet(strVal) {
 		return nil
 	}
 
+	initExpr := detectInitExpr(value)
 	pos := fset.Position(value.Pos())
 
-	if finding := checkTier1KeywordMatch(varName, strVal, pos, path, projectRoot); finding != nil {
-		return finding
+	var finding *scanner.Finding
+	if f := checkTier1KeywordMatch(varName, strVal, pos, path, projectRoot); f != nil {
+		finding = f
+	} else if f := checkTier2HighEntropy(varName, strVal, pos, path, projectRoot); f != nil {
+		finding = f
+	} else if f := checkTier3EncodedPattern(varName, strVal, pos, path, projectRoot); f != nil {
+		finding = f
 	}
-	if finding := checkTier2HighEntropy(varName, strVal, pos, path, projectRoot); finding != nil {
-		return finding
+	if finding == nil {
+		return nil
 	}
-
-	if finding := checkTier3EncodedPattern(varName, strVal, pos, path, projectRoot); finding != nil {
-		return finding
-	}
-	return nil
+	filtered := ApplyHardcodedFilter(*finding, varName, strVal, initExpr)
+	return &filtered
 }
 
 // applyDevContext adjusts the finding's severity and description based on the

@@ -1,3 +1,3 @@
-package crypto_filter_cases
+package config
 
 var defaultApiKey = "default-placeholder-val"

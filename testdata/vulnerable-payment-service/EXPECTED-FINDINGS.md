@@ -3,8 +3,8 @@ fixture_version: 1.6
 last_updated: 2026-04-16
 phase: 19.7
 plan: 01
-total_intentional_violations: 136
-total_clean_patterns: 17
+total_intentional_violations: 137
+total_clean_patterns: 16
 total_rules_covered: 54
 expected_summary:
  critical: 42
@@ -118,7 +118,7 @@ fixture files change.
 | AUTH-MISSING-MFA | HIGH | internal/retention/zeroing_typeswitch.go | 7 | RED: incidental AUTH-MISSING-MFA on Z11 fixture |
 | AUTH-MISSING-MFA | HIGH | internal/util/cardproc.go | 5 | ProcessCardBuffer handler no MFA |
 | AUTH-WEAK-POLICY | CRITICAL | internal/auth/policy.go | 12 | MinPasswordLength below PCI 8.3.6 |
-| CRYPTO-HARDCODED-KEY | HIGH | clean/crypto_filter_cases/constants_file.go | 3 | F-25 Layer 4 path downgrade CRITICAL to HIGH tag crypto_key_constants_file |
+| CRYPTO-HARDCODED-KEY | HIGH | internal/config/constants_file.go | 3 | F-25 Layer 4 path downgrade CRITICAL to HIGH tag crypto_key_constants_file |
 | CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/header_const.go | 3 | F-25 Layer 2 header pattern downgrades to INFO tag hardcoded_header_name |
 | CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/json_key.go | 3 | F-25 Layer 2 camelCase pattern downgrades to INFO tag hardcoded_json_key |
 | CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/log_field.go | 3 | F-25 Layer 2 snake_case pattern downgrades to INFO tag hardcoded_log_field |
@@ -268,4 +268,3 @@ fixture files change.
 | clean/crypto_filter_cases/json_key.go | F-25 Layer 2 camelCase downgrade to INFO |
 | clean/crypto_filter_cases/log_field.go | F-25 Layer 2 snake_case downgrade to INFO |
 | clean/crypto_filter_cases/sentinel_error.go | F-25 Layer 1 AST sentinel error downgrade to INFO |
-| clean/crypto_filter_cases/constants_file.go | F-25 Layer 4 path downgrade to HIGH (not INFO) |
