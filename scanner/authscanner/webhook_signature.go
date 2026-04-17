@@ -194,11 +194,6 @@ func signatureVerifiedBeforeParser(body *ast.BlockStmt, parserPos token.Pos, pkg
 				hit = name
 				return false
 			}
-			if strongCallSignals[fn.Sel.Name] {
-				verified = true
-				hit = fn.Sel.Name
-				return false
-			}
 		case *ast.Ident:
 			if !verifyHelperRE.MatchString(fn.Name) {
 				return true
@@ -239,11 +234,6 @@ func helperCallsStrongSignal(body *ast.BlockStmt, pkgFuncs map[string]*ast.FuncD
 			if strongCallSignals[name] {
 				verified = true
 				hit = name
-				return false
-			}
-			if strongCallSignals[fn.Sel.Name] {
-				verified = true
-				hit = fn.Sel.Name
 				return false
 			}
 		case *ast.Ident:
