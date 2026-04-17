@@ -64,6 +64,7 @@ func (s *AuthScanner) ScanWithExclusions(ctx context.Context, targetPath string,
 
 // ScanFull scans with full control over exclusions, test file inclusion, and git tracking.
 func (s *AuthScanner) ScanFull(ctx context.Context, targetPath string, excludePatterns []string, includeTests bool, includeUntracked bool) (*scanner.ScanResult, error) {
+	ResetWebhookMiddlewareCache()
 	start := time.Now()
 
 	// Absolutize the scan root so devcontext segment matching can reliably	// dependency.md Bug 2.
@@ -141,6 +142,10 @@ func (s *AuthScanner) scanGoFileInRoot(path, projectRoot string) ([]scanner.Find
 
 	// 3. Check missing MFA on payment routes/handlers.
 	findings = append(findings, detectMissingMFA(file, fset, path)...)
+
+	findings = ApplyS2SDowngrade(findings, file, fset, path)
+
+	findings = append(findings, WebhookSignatureScan(file, fset, path, projectRoot)...)
 
 	return findings, lineCount, nil
 }
