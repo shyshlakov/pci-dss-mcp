@@ -1,19 +1,19 @@
 ---
-fixture_version: 1.8
-last_updated: 2026-04-16
-phase: 19.8
+fixture_version: 1.9
+last_updated: 2026-04-17
+phase: 19.9
 plan: 01
-total_intentional_violations: 147
-total_clean_patterns: 20
+total_intentional_violations: 149
+total_clean_patterns: 22
 total_rules_covered: 55
 expected_summary:
- critical: 43
- high: 85
+ critical: 44
+ high: 86
  medium: 27
  low: 0
- info: 49
-expected_active: 163
-expected_total_findings: 206
+ info: 51
+expected_active: 167
+expected_total_findings: 208
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -55,17 +55,18 @@ fixture files change.
 
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 43 |
-| HIGH | 85 |
+| CRITICAL | 44 |
+| HIGH | 86 |
 | MEDIUM | 27 |
 | LOW | 0 |
-| INFO | 49 |
+| INFO | 51 |
 
 ## Violations
 
 | Rule ID | Severity | File | Line | Notes |
 |---------|----------|------|------|-------|
 | AUDIT-LOG-OK | INFO | internal/http/handler/tokens/tokenize.go | 11 | logrus structured fields PCI 10.2.1 partial coverage |
+| AUDIT-NO-LOG | CRITICAL | clean/s2s_handler/generic_consensus_webhook.go | 12 | incidental AUDIT-NO-LOG on s2s fixture handler |
 | AUDIT-NO-LOG | CRITICAL | internal/auth/process.go | 5 | AuthorizeCharge handler no log calls |
 | AUDIT-NO-LOG | CRITICAL | internal/http/handler/callback/mastercard.go | 8 | S2S callback handler no log calls |
 | AUDIT-NO-LOG | CRITICAL | internal/http/handler/checkout/checkout.go | 8 | RenderCheckout no log calls |
@@ -93,11 +94,14 @@ fixture files change.
 | AUTH-HARDCODED-PWD | INFO | clean/testutil/db_fixture.go | 3 | testutil helper hardcoded password testutil_exclusion downgrade |
 | AUTH-HARDCODED-PWD | CRITICAL | internal/auth/admin.go | 3 | const AdminPassword = "admin123" |
 | AUTH-HARDCODED-PWD | CRITICAL | internal/payment/hardcoded_admin.go | 3 | prod path hardcoded admin password stays CRITICAL adversarial |
+| AUTH-MISSING-MFA | INFO | clean/s2s_handler/generic_consensus_webhook.go | 9 | downgrade:s2s_handler T2+T3 consensus name regex + /hooks/ path + POST + no Authorization read |
+| AUTH-MISSING-MFA | INFO | clean/s2s_handler/stripe_hmac_webhook.go | 13 | downgrade:s2s_handler T1 strong hmac.Equal before json.Unmarshal |
 | AUTH-MISSING-MFA | HIGH | internal/auth/process.go | 5 | AuthorizeCharge handler no MFA |
 | AUTH-MISSING-MFA | HIGH | internal/billing/encode_map.go | 19 | EncodeHandler no MFA gate after fixture-shortcut removal |
 | AUTH-MISSING-MFA | HIGH | internal/billing/handler.go | 16 | abstract handler no MFA gate after fixture-shortcut removal |
 | AUTH-MISSING-MFA | HIGH | internal/exchange/handler.go | 10 | abstract handler no MFA gate after fixture-shortcut removal |
 | AUTH-MISSING-MFA | HIGH | internal/http/handler.go | 10 | router has no MFA middleware |
+| AUTH-MISSING-MFA | HIGH | internal/http/handler/admin/admin_panel.go | 9 | D-03 negative signal: http.SetCookie write keeps HIGH despite webhook-shaped name |
 | AUTH-MISSING-MFA | HIGH | internal/http/handler/callback/mastercard.go | 8 | callback handler no MFA |
 | AUTH-MISSING-MFA | HIGH | internal/http/handler/checkout/checkout.go | 8 | checkout handler no MFA |
 | AUTH-MISSING-MFA | HIGH | internal/http/handler/checkout/dynamic.go | 8 | dynamic checkout handler no MFA |
@@ -293,3 +297,5 @@ fixture files change.
 | clean/gorm_encrypt_type/real_encrypted/card_model.go | F-26 real crypto in Value() body — GORM-ENCRYPT-OK |
 | clean/gorm_encrypt_type/helper_encrypted/card_model.go | F-26 helper recursion verified — GORM-ENCRYPT-OK |
 | clean/gorm_encrypt_type/kms_encrypted/card_model.go | F-26 KMS client in Value() body — GORM-ENCRYPT-OK |
+| clean/s2s_handler/stripe_hmac_webhook.go | B-21 T1 strong: hmac.Equal before json.Unmarshal — AUTH-MISSING-MFA downgrades to INFO |
+| clean/s2s_handler/generic_consensus_webhook.go | B-21 T2+T3 consensus: /hooks/ path + Callback name + POST + no Authorization read — AUTH-MISSING-MFA downgrades to INFO |
