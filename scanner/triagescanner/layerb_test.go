@@ -105,7 +105,7 @@ func TestTriageLayerB_Default(t *testing.T) {
 	}
 }
 
-func TestTriageLayerB_TopNPerSeverity_Is2(t *testing.T) {
+func TestTriageLayerB_TopNPerSeverity_Is1(t *testing.T) {
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForTriage(t, fixtureRoot)
 	result := callTriageDefault(t, scanRoot)
@@ -116,8 +116,8 @@ func TestTriageLayerB_TopNPerSeverity_Is2(t *testing.T) {
 	}
 	for _, sev := range []string{"critical", "high", "medium", "info"} {
 		arr, _ := top[sev].([]any)
-		if len(arr) > 2 {
-			t.Errorf("top_findings[%q] len=%d, want <=2", sev, len(arr))
+		if len(arr) > 1 {
+			t.Errorf("top_findings[%q] len=%d, want <=1", sev, len(arr))
 		}
 	}
 	if lowArr, _ := top["low"].([]any); len(lowArr) != 0 {

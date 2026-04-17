@@ -79,15 +79,20 @@ func TestLayerB_CrossTool_SizeBudget(t *testing.T) {
 	}
 
 	const budget = 20480
+	const triageTightBudget = 10000
 	t.Logf("cross-tool Layer B wire sizes (golden fixture):")
 	t.Logf("  triage_findings = %6d bytes (budget %d)  %s", len(triageBytes), budget, budgetVerdict(len(triageBytes), budget))
 	t.Logf("  scan_pan_data   = %6d bytes (budget %d)  %s", len(panBytes), budget, budgetVerdict(len(panBytes), budget))
+	t.Logf("  triage tight budget = %d (G-01 safety margin with N=1)", triageTightBudget)
 
 	if len(triageBytes) >= budget {
 		t.Errorf("triage_findings Layer B %d bytes exceeds budget %d", len(triageBytes), budget)
 	}
 	if len(panBytes) >= budget {
 		t.Errorf("scan_pan_data Layer B %d bytes exceeds budget %d", len(panBytes), budget)
+	}
+	if len(triageBytes) >= triageTightBudget {
+		t.Errorf("triage_findings Layer B %d bytes exceeds tight budget %d (G-01 regression)", len(triageBytes), triageTightBudget)
 	}
 }
 
