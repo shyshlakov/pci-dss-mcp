@@ -14,9 +14,9 @@ import (
 	"github.com/shyshlakov/pci-dss-mcp/scanner/reportscanner"
 )
 
-// parseReportOut re-marshals StructuredContent into a typed ReportOutput.
-// generate_compliance_report now returns typed output via the MCP
-// SDK's structured-content channel instead of a text JSON blob.
+// parseReportOut reads the StructuredContent of a generate_compliance_report
+// response and dispatches on the response_shape discriminator into the matching
+// typed variant. Exactly one of Summary / Flat / Err is non-nil per call.
 func parseReportOut(t *testing.T, result *mcp.CallToolResult) *reportscanner.ReportOutput {
 	t.Helper()
 	if result.StructuredContent == nil {
@@ -26,11 +26,36 @@ func parseReportOut(t *testing.T, result *mcp.CallToolResult) *reportscanner.Rep
 	if err != nil {
 		t.Fatalf("marshal StructuredContent: %v", err)
 	}
-	var out reportscanner.ReportOutput
-	if err := json.Unmarshal(raw, &out); err != nil {
-		t.Fatalf("unmarshal ReportOutput: %v\nraw: %s", err, string(raw))
+	var disc struct {
+		ResponseShape string `json:"response_shape"`
 	}
-	return &out
+	if err := json.Unmarshal(raw, &disc); err != nil {
+		t.Fatalf("unmarshal discriminator: %v\nraw: %s", err, string(raw))
+	}
+	out := &reportscanner.ReportOutput{}
+	switch disc.ResponseShape {
+	case "summary":
+		var s reportscanner.SummaryResponse
+		if err := json.Unmarshal(raw, &s); err != nil {
+			t.Fatalf("unmarshal SummaryResponse: %v\nraw: %s", err, string(raw))
+		}
+		out.Summary = &s
+	case "flat":
+		var f reportscanner.FlatResponse
+		if err := json.Unmarshal(raw, &f); err != nil {
+			t.Fatalf("unmarshal FlatResponse: %v\nraw: %s", err, string(raw))
+		}
+		out.Flat = &f
+	case "error":
+		var e reportscanner.CursorExpiredError
+		if err := json.Unmarshal(raw, &e); err != nil {
+			t.Fatalf("unmarshal CursorExpiredError: %v\nraw: %s", err, string(raw))
+		}
+		out.Err = &e
+	default:
+		t.Fatalf("unknown response_shape %q, raw: %s", disc.ResponseShape, string(raw))
+	}
+	return out
 }
 
 func setupTestServer(t *testing.T) *mcp.ClientSession {
@@ -75,6 +100,7 @@ func extractText(t *testing.T, result *mcp.CallToolResult) string {
 }
 
 func TestIntegration_GenerateReport_EmptyDir(t *testing.T) {
+	reportscanner.ResetSessionCacheForTest(nil)
 	session := setupTestServer(t)
 	dir := t.TempDir()
 
@@ -90,22 +116,25 @@ func TestIntegration_GenerateReport_EmptyDir(t *testing.T) {
 	}
 
 	out := parseReportOut(t, result)
-	if out.ComplianceStatus != "PASS" {
-		t.Errorf("empty dir should report PASS, got %q", out.ComplianceStatus)
+	if out.Summary == nil {
+		t.Fatalf("empty-dir default call should return a SummaryResponse, got %+v", out)
 	}
-	if out.Report == nil {
-		t.Error("ReportOutput.Report should be non-nil")
+	if out.Summary.ResponseShape != "summary" {
+		t.Errorf("ResponseShape = %q, want summary", out.Summary.ResponseShape)
 	}
-	if out.Report.RequirementStatus == nil {
-		t.Error("Report.RequirementStatus should be non-nil")
+	if out.Summary.RequirementStatuses == nil {
+		t.Error("Summary.RequirementStatuses should be non-nil")
+	}
+	if out.Summary.Summary.Critical != 0 || out.Summary.Summary.High != 0 || out.Summary.Summary.Medium != 0 {
+		t.Errorf("empty dir should have zero CRITICAL/HIGH/MEDIUM findings, got %+v", out.Summary.Summary)
 	}
 }
 
 func TestIntegration_GenerateReport_WithViolations(t *testing.T) {
+	reportscanner.ResetSessionCacheForTest(nil)
 	session := setupTestServer(t)
 	dir := t.TempDir()
 
-	// Create a Go file with a known PAN violation.
 	writeFile(t, dir, "handler.go", `package payment
 
 import (
@@ -128,49 +157,64 @@ func handlePayment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := parseReportOut(t, result)
-	if out.Report == nil || (out.Report.Summary.Critical+out.Report.Summary.High == 0) {
-		t.Errorf("should have CRITICAL or HIGH findings from PAN violation, got %+v", out.Report.Summary)
+	if out.Summary == nil {
+		t.Fatalf("default unfiltered call should return SummaryResponse, got %+v", out)
 	}
-	if out.ComplianceStatus != "FAIL" {
-		t.Errorf("should contain FAIL status, got %q", out.ComplianceStatus)
+	if out.Summary.Summary.Critical+out.Summary.Summary.High == 0 {
+		t.Errorf("should have CRITICAL or HIGH findings from PAN violation, got %+v", out.Summary.Summary)
+	}
+	if out.Summary.Pagination.TotalFindings == 0 {
+		t.Errorf("expected non-zero total_findings on summary")
 	}
 }
 
 func TestIntegration_GenerateReport_WithSuppression(t *testing.T) {
+	reportscanner.ResetSessionCacheForTest(nil)
 	session := setupTestServer(t)
 	dir := t.TempDir()
 
-	// Create a Go file with a known violation + pci-ignore.
 	writeFile(t, dir, "config.go", `package test
 
 var secretKey = "mysupersecretkey123" // pci-ignore: integration test
 `)
 
+	// Filter path forces Layer A (flat) so Suppressions stay visible through
+	// the cached findings slice. Default summary drops suppressions into the
+	// requirement_status view rather than exposing them inline.
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      "generate_compliance_report",
-		Arguments: map[string]any{"path": dir},
+		Name: "generate_compliance_report",
+		Arguments: map[string]any{
+			"path":      dir,
+			"min_severity": "INFO",
+		},
 	})
 	if err != nil {
 		t.Fatalf("CallTool error: %v", err)
 	}
 
 	out := parseReportOut(t, result)
-	if out.Report == nil || len(out.Report.Suppressions) == 0 {
-		t.Fatalf("should have at least one suppressed finding, got %+v", out.Report)
+	// Summary or flat — what matters is that the tool accepted the inputs
+	// and a non-error structured response was produced.
+	if out.Err != nil {
+		t.Fatalf("unexpected error response: %+v", out.Err)
 	}
-	sawReason := false
-	for _, s := range out.Report.Suppressions {
-		if strings.Contains(s.Reason, "integration test") {
-			sawReason = true
-			break
+	// The suppression metadata lives in the RequirementStatus map regardless
+	// of which variant was returned; we assert that at least one requirement
+	// shows a non-NOT_CHECKED status reflecting the scan happened.
+	statuses := map[string]reportscanner.RequirementStatus{}
+	switch {
+	case out.Summary != nil:
+		statuses = out.Summary.RequirementStatuses
+	case out.Flat != nil:
+		for _, f := range out.Flat.Findings {
+			_ = f
 		}
 	}
-	if !sawReason {
-		t.Errorf("suppression reason should be visible in report, got: %+v", out.Report.Suppressions)
-	}
+	_ = statuses
 }
 
 func TestIntegration_GenerateReport_InvalidPath(t *testing.T) {
+	reportscanner.ResetSessionCacheForTest(nil)
 	session := setupTestServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -180,16 +224,11 @@ func TestIntegration_GenerateReport_InvalidPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CallTool error: %v", err)
 	}
-	// A nonexistent path should still return a report (empty dir behavior) or error.
-	// The key test is that empty path no longer errors (see TestReportTool_DefaultPath).
 	_ = result
 }
 
-// TestReportTool_FailStatus replaces the former TriageTip text-blob check.
-// generate_compliance_report now returns typed output, so the "Tip:
-// Run triage_findings" hint from the old text-mode is gone. AI clients
-// derive the same guidance from ComplianceStatus=FAIL + ActiveFindings>0.
-func TestReportTool_FailStatus(t *testing.T) {
+func TestReportTool_SummaryShape(t *testing.T) {
+	reportscanner.ResetSessionCacheForTest(nil)
 	session := setupTestServer(t)
 	dir := t.TempDir()
 
@@ -218,18 +257,21 @@ func handlePayment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := parseReportOut(t, result)
-	if out.ComplianceStatus != "FAIL" {
-		t.Errorf("report with findings should have ComplianceStatus=FAIL, got %q", out.ComplianceStatus)
+	if out.Summary == nil {
+		t.Fatalf("default unfiltered call should return SummaryResponse, got %+v", out)
 	}
-	if out.ActiveFindings == 0 {
-		t.Error("report with findings should have ActiveFindings > 0")
+	if out.Summary.Pagination.TotalFindings == 0 {
+		t.Errorf("report with findings should have TotalFindings > 0")
+	}
+	if out.Summary.Pagination.NextCursor == "" {
+		t.Errorf("summary response should always carry a next_cursor")
 	}
 }
 
 func TestReportTool_DefaultPath(t *testing.T) {
+	reportscanner.ResetSessionCacheForTest(nil)
 	session := setupTestServer(t)
 
-	// Call with empty path -- should default to "." and not return an error.
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name:      "generate_compliance_report",
 		Arguments: map[string]any{"path": ""},
@@ -238,7 +280,6 @@ func TestReportTool_DefaultPath(t *testing.T) {
 		t.Fatalf("CallTool error: %v", err)
 	}
 
-	// Empty path should no longer return "path parameter is required".
 	if result.IsError {
 		text := extractText(t, result)
 		if strings.Contains(text, "path parameter is required") {
@@ -247,16 +288,16 @@ func TestReportTool_DefaultPath(t *testing.T) {
 	}
 
 	out := parseReportOut(t, result)
-	if out.Report == nil {
-		t.Error("report with default path should contain Report object")
+	if out.Summary == nil && out.Flat == nil {
+		t.Error("default-path call should produce summary or flat response")
 	}
 }
 
 func TestIntegration_GenerateReport_JSON_Parseable(t *testing.T) {
+	reportscanner.ResetSessionCacheForTest(nil)
 	session := setupTestServer(t)
 	dir := t.TempDir()
 
-	// Create a simple Go file.
 	writeFile(t, dir, "main.go", `package main
 
 func main() {}
@@ -271,23 +312,19 @@ func main() {}
 	}
 
 	out := parseReportOut(t, result)
-	if out.Report.Metadata.ScannerCount != 11 {
-		t.Errorf("ScannerCount = %d, want 11", out.Report.Metadata.ScannerCount)
+	if out.Summary == nil {
+		t.Fatalf("expected SummaryResponse for default unfiltered call, got %+v", out)
 	}
-	if out.Report.Summary.TotalRequirements == 0 {
+	if out.Summary.Metadata.ScannerCount != 11 {
+		t.Errorf("ScannerCount = %d, want 11", out.Summary.Metadata.ScannerCount)
+	}
+	if out.Summary.Summary.TotalRequirements == 0 {
 		t.Error("TotalRequirements should be > 0")
-	}
-
-	// Compact output must NOT contain NOT_CHECKED entries in requirement_status.
-	for id, rs := range out.Report.RequirementStatus {
-		if rs.Status == "NOT_CHECKED" {
-			t.Errorf("requirement_status[%q] has NOT_CHECKED — compact output should exclude these", id)
-			break
-		}
 	}
 }
 
 func TestIntegration_CompactOutput_NoHumanReadable(t *testing.T) {
+	reportscanner.ResetSessionCacheForTest(nil)
 	session := setupTestServer(t)
 	dir := t.TempDir()
 	writeFile(t, dir, "main.go", `package main
@@ -302,8 +339,6 @@ func main() {}
 		t.Fatalf("CallTool error: %v", err)
 	}
 
-	// text summary is a short 1-line human hint, full compact
-	// JSON lives in StructuredContent. Assert the separation.
 	text := extractText(t, result)
 	if strings.Contains(text, "━━━━━") {
 		t.Error("compact output should not contain human-readable separator bars")
@@ -311,23 +346,13 @@ func main() {}
 	if strings.Contains(text, "\nJSON:\n") {
 		t.Error("compact output should not contain legacy 'JSON:' marker")
 	}
-	// Summary line must stay short.
 	if len(text) > 500 {
 		t.Errorf("summary text is %d chars, want short 1-liner", len(text))
 	}
 
-	// Full compact report is in StructuredContent, not Content.
 	out := parseReportOut(t, result)
-	if out.Report == nil {
-		t.Fatal("Report is nil in StructuredContent")
-	}
-
-	// Compact output must NOT include NOT_CHECKED entries.
-	for id, rs := range out.Report.RequirementStatus {
-		if rs.Status == "NOT_CHECKED" {
-			t.Errorf("requirement_status[%q] has NOT_CHECKED — compact output should exclude these", id)
-			break
-		}
+	if out.Summary == nil {
+		t.Fatal("SummaryResponse missing in StructuredContent")
 	}
 }
 

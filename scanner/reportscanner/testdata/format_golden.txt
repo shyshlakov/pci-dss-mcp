@@ -1,0 +1,1432 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PCI DSS v4.0.1 Compliance Report
+Target: <SCAN_ROOT>
+Generated: <TS>
+Duration: <DUR> | Files: 870 | Lines: 14551
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+49 CRITICAL, 88 HIGH, 27 MEDIUM findings
+(0 LOW, 59 INFO informational findings not shown)
+
+--- Requirement 3: Protect Stored Account Data ---
+
+[CRITICAL] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/service/tokens/logging.go:11
+  Sensitive cardholder data 'cardNumber' passed to logging function slog.Info
+  Fix: Remove sensitive data from log output. Log a masked or tokenized reference instead.
+
+[CRITICAL] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/internal/auth/process.go:5
+  SAD zeroed before authorization call in AuthorizeCharge -- authorization may use empty/corrupt data.
+  Fix: Move clear/zero call after authorization.
+
+[CRITICAL] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/internal/cache/sensitive_redis.go:10
+  Redis Set with TTL=0 on sensitive data -- data persists indefinitely. PCI DSS 3.2.1 prohibits storing SAD after authorization.
+  Fix: Set an explicit TTL (e.g., 5*time.Minute) for sensitive data.
+
+[CRITICAL] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/internal/payment/zeroing_init.go:20
+  SAD zeroed before authorization call in Process -- authorization may use empty/corrupt data.
+  Fix: Move clear/zero call after authorization.
+
+[CRITICAL] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/internal/service/tokens/store.go:6
+  Sensitive data stored in persistent database without automatic expiry. PCI DSS 3.2.1 prohibits storing SAD after authorization.
+  Fix: Use time-limited storage or ensure data is purged after authorization.
+
+[CRITICAL] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/internal/storage/postgres/tokens.go:13
+  Sensitive data stored via ORM Create without automatic expiry. PCI DSS 3.2.1 prohibits storing SAD after authorization.
+  Fix: Use time-limited storage or ensure data is purged after authorization.
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/banking/mixed_pan_iban.go:4
+  Struct field 'AccountNumber' may expose cardholder data, requires manual review (LOW confidence)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/banking/mixed_pan_iban.go:8
+  Struct field 'CardNumber' may expose cardholder data, requires manual review (LOW confidence)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/retention/entry.go:10
+  Struct field 'Expiry' may expose cardholder data, requires manual review (LOW confidence)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/service/tokens/model/model.go:7
+  Struct field 'Expiry' may expose cardholder data, requires manual review (LOW confidence)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/model/leaked.go:5
+  Struct field 'CVV' may expose cardholder data, requires manual review (LOW confidence)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/model/leaked.go:6
+  Struct field 'PAN' may expose cardholder data, requires manual review (LOW confidence)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/model/token.go:9
+  Struct field 'CVV' may expose cardholder data, requires manual review (LOW confidence)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[HIGH] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/configs/cache.yaml:5
+  Sensitive data config group "cache.card_data" missing TTL/expiry setting. PCI DSS 3.2.1, 3.3.1 require data retention limits.
+  Fix: Add a TTL/expiry/retention setting alongside sensitive data configuration.
+
+[HIGH] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/configs/docker-compose.yml:3
+  Sensitive data config group "services.card_data" missing TTL/expiry setting. PCI DSS 3.2.1, 3.3.1 require data retention limits.
+  Fix: Add a TTL/expiry/retention setting alongside sensitive data configuration.
+
+[HIGH] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/internal/cache/keep_ttl.go:10
+  Redis Set with KeepTTL on sensitive data. KeepTTL preserves existing TTL but may be 0 if key is new. PCI DSS 3.2.1 prohibits storing SAD after authorization.
+  Fix: Set an explicit TTL instead of KeepTTL for sensitive data.
+
+[HIGH] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/internal/cache/no_expire_hset.go:10
+  Redis HSet on sensitive data without Expire call within 10 lines. PCI DSS 3.2.1 prohibits storing SAD after authorization.
+  Fix: Add rdb.Expire(ctx, key, ttl) after HSet for sensitive data.
+
+[HIGH] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/internal/http/handler/payment/charge.go:5
+  SAD zeroed after response in Charge -- persists during response transmission.
+  Fix: Move clear/zero call before response write.
+
+[HIGH] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/internal/retention/zeroing_elseif.go:7
+  SAD zeroed after response in HandleZeroingElseIf -- persists during response transmission.
+  Fix: Move clear/zero call before response write.
+
+[HIGH] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/internal/retention/zeroing_select.go:10
+  SAD zeroed after response in HandleZeroingSelect -- persists during response transmission.
+  Fix: Move clear/zero call before response write.
+
+[HIGH] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/internal/retention/zeroing_switch.go:7
+  SAD zeroed after response in HandleZeroingSwitch -- persists during response transmission.
+  Fix: Move clear/zero call before response write.
+
+[HIGH] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/internal/retention/zeroing_typeswitch.go:7
+  SAD zeroed after response in HandleZeroingTypeSwitch -- persists during response transmission.
+  Fix: Move clear/zero call before response write.
+
+[HIGH] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/internal/util/cardproc.go:5
+  defer zeroing in ProcessCardBuffer executes after response -- SAD persists in memory during response transmission.
+  Fix: Add explicit clear/zero call between authorization and response write, not just defer.
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/clean/readd_cycle/migrations/20240101000000_add_legacy_card.sql:3
+  Sensitive column "pan" declared in SQL schema. PCI DSS 3.3.1 forbids storing Sensitive Authentication Data (track data, CVV, PIN block) after authorization. For PAN, storage must be rendered unreadable per 3.5.1.
+  Fix: If this column stores SAD (CVV/track/PIN) drop it. If it stores PAN, change the column type to bytea and encrypt at the application layer via a BeforeCreate/BeforeSave hook.
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/clean/readd_cycle/migrations/20260301000000_readd_legacy_card.sql:1
+  Sensitive column "pan" declared in SQL schema. PCI DSS 3.3.1 forbids storing Sensitive Authentication Data (track data, CVV, PIN block) after authorization. For PAN, storage must be rendered unreadable per 3.5.1.
+  Fix: If this column stores SAD (CVV/track/PIN) drop it. If it stores PAN, change the column type to bytea and encrypt at the application layer via a BeforeCreate/BeforeSave hook.
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/migrations/0001_init.sql:4
+  Sensitive column "card_number" declared in SQL schema. PCI DSS 3.3.1 forbids storing Sensitive Authentication Data (track data, CVV, PIN block) after authorization. For PAN, storage must be rendered unreadable per 3.5.1.
+  Fix: If this column stores SAD (CVV/track/PIN) drop it. If it stores PAN, change the column type to bytea and encrypt at the application layer via a BeforeCreate/BeforeSave hook.
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/migrations/0001_init.sql:5
+  Sensitive column "cvv" declared in SQL schema. PCI DSS 3.3.1 forbids storing Sensitive Authentication Data (track data, CVV, PIN block) after authorization. For PAN, storage must be rendered unreadable per 3.5.1.
+  Fix: If this column stores SAD (CVV/track/PIN) drop it. If it stores PAN, change the column type to bytea and encrypt at the application layer via a BeforeCreate/BeforeSave hook.
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/migrations/0001_init.sql:14
+  Sensitive column "cvv" declared in SQL schema. PCI DSS 3.3.1 forbids storing Sensitive Authentication Data (track data, CVV, PIN block) after authorization. For PAN, storage must be rendered unreadable per 3.5.1.
+  Fix: If this column stores SAD (CVV/track/PIN) drop it. If it stores PAN, change the column type to bytea and encrypt at the application layer via a BeforeCreate/BeforeSave hook.
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/migrations/0001_init.sql:15
+  Sensitive column "pan" declared in SQL schema. PCI DSS 3.3.1 forbids storing Sensitive Authentication Data (track data, CVV, PIN block) after authorization. For PAN, storage must be rendered unreadable per 3.5.1.
+  Fix: If this column stores SAD (CVV/track/PIN) drop it. If it stores PAN, change the column type to bytea and encrypt at the application layer via a BeforeCreate/BeforeSave hook.
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/model/fake_encrypt_model.go:9
+  Struct FakeSecureToken field Number has sensitive DB column tag (gorm:"number"). Struct has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt.
+  Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
+
+[HIGH] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/storage/postgres/model/fake_encrypt_model.go:7
+  Struct FakeSecureToken stores sensitive cardholder columns but has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt. PCI DSS 3.5.1 requires PAN/SAD to be rendered unreadable at rest.
+  Fix: Add a (m *Struct) BeforeCreate(tx *gorm.DB) error hook that calls your Encrypt helper on sensitive fields before persistence.
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/model/leaked.go:5
+  Struct LeakedToken field CVV has sensitive DB column tag (gorm:"cvv"). Struct has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt.
+  Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/model/leaked.go:6
+  Struct LeakedToken field PAN has sensitive DB column tag (gorm:"pan"). Struct has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt.
+  Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
+
+[HIGH] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/storage/postgres/model/leaked.go:3
+  Struct LeakedToken stores sensitive cardholder columns but has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt. PCI DSS 3.5.1 requires PAN/SAD to be rendered unreadable at rest.
+  Fix: Add a (m *Struct) BeforeCreate(tx *gorm.DB) error hook that calls your Encrypt helper on sensitive fields before persistence.
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/model/token.go:8
+  Struct Token field Number has sensitive DB column tag (gorm:"card_number"). Struct has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt.
+  Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
+
+[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/model/token.go:9
+  Struct Token field CVV has sensitive DB column tag (gorm:"cvv"). Struct has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt.
+  Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
+
+[HIGH] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/storage/postgres/model/token.go:5
+  Struct Token stores sensitive cardholder columns but has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt. PCI DSS 3.5.1 requires PAN/SAD to be rendered unreadable at rest.
+  Fix: Add a (m *Struct) BeforeCreate(tx *gorm.DB) error hook that calls your Encrypt helper on sensitive fields before persistence.
+
+[MEDIUM] 3.4.1 -- PAN Masked When Displayed
+  <SCAN_ROOT>/internal/auth/process.go:6
+  String literal resembles a PAN (Luhn+IIN valid), requires manual review
+  Fix: Remove hardcoded card numbers. Use tokenized references or test card number constants.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/banking/mixed_pan_iban.go:4
+  Sensitive field 'AccountNumber' declared as string -- immutable strings cannot be zeroed in memory
+  Fix: Use []byte instead of string for sensitive cardholder data to enable secure memory clearing.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/banking/mixed_pan_iban.go:8
+  Sensitive field 'CardNumber' declared as string -- immutable strings cannot be zeroed in memory
+  Fix: Use []byte instead of string for sensitive cardholder data to enable secure memory clearing.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/cache/keep_ttl.go:9
+  Sensitive parameter 'cvv' declared as string in StoreCVV -- immutable strings cannot be zeroed in memory
+  Fix: Use []byte instead of string for sensitive cardholder data to enable secure memory clearing.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/cache/no_expire_hset.go:9
+  Sensitive parameter 'cardNumber' declared as string in CachePaymentCard -- immutable strings cannot be zeroed in memory
+  Fix: Use []byte instead of string for sensitive cardholder data to enable secure memory clearing.
+
+[MEDIUM] 3.4.1 -- PAN Masked When Displayed
+  <SCAN_ROOT>/internal/http/handler/payment/charge.go:6
+  String literal resembles a PAN (Luhn+IIN valid), requires manual review
+  Fix: Remove hardcoded card numbers. Use tokenized references or test card number constants.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/retention/entry.go:10
+  Sensitive field 'Expiry' declared as string -- immutable strings cannot be zeroed in memory
+  Fix: Use []byte instead of string for sensitive cardholder data to enable secure memory clearing.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/service/tokens/model/model.go:7
+  Sensitive field 'Expiry' declared as string -- immutable strings cannot be zeroed in memory
+  Fix: Use []byte instead of string for sensitive cardholder data to enable secure memory clearing.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/service/tokens/store.go:5
+  Sensitive parameter 'cvv' declared as string in StoreCVV -- immutable strings cannot be zeroed in memory
+  Fix: Use []byte instead of string for sensitive cardholder data to enable secure memory clearing.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/storage/postgres/model/leaked.go:5
+  Sensitive field 'CVV' declared as string -- immutable strings cannot be zeroed in memory
+  Fix: Use []byte instead of string for sensitive cardholder data to enable secure memory clearing.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/storage/postgres/model/leaked.go:6
+  Sensitive field 'PAN' declared as string -- immutable strings cannot be zeroed in memory
+  Fix: Use []byte instead of string for sensitive cardholder data to enable secure memory clearing.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/storage/postgres/model/token.go:9
+  Sensitive field 'CVV' declared as string -- immutable strings cannot be zeroed in memory
+  Fix: Use []byte instead of string for sensitive cardholder data to enable secure memory clearing.
+
+[MEDIUM] 3.4.1 -- PAN Masked When Displayed
+  <SCAN_ROOT>/internal/testseed/data/seed.go:4
+  String literal resembles a PAN (Luhn+IIN valid), requires manual review
+  Fix: Remove hardcoded card numbers. Use tokenized references or test card number constants.
+
+[MEDIUM] 3.4.1 -- PAN Masked When Displayed
+  <SCAN_ROOT>/internal/testseed/data/seed.go:5
+  String literal resembles a PAN (Luhn+IIN valid), requires manual review
+  Fix: Remove hardcoded card numbers. Use tokenized references or test card number constants.
+
+[MEDIUM] 3.4.1 -- PAN Masked When Displayed
+  <SCAN_ROOT>/internal/testseed/data/seed.go:6
+  String literal resembles a PAN (Luhn+IIN valid), requires manual review
+  Fix: Remove hardcoded card numbers. Use tokenized references or test card number constants.
+
+[MEDIUM] 3.4.1 -- PAN Masked When Displayed
+  <SCAN_ROOT>/internal/util/cardops.go:6
+  String literal resembles a PAN (Luhn+IIN valid), requires manual review
+  Fix: Remove hardcoded card numbers. Use tokenized references or test card number constants.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/util/cardops.go:6
+  Sensitive []byte data 'cardNumber' not explicitly zeroed after use
+  Fix: Add explicit zeroing: for i := range data { data[i] = 0 } or use clear(data) after use.
+
+[MEDIUM] 3.4.1 -- PAN Masked When Displayed
+  <SCAN_ROOT>/internal/util/cardproc.go:6
+  String literal resembles a PAN (Luhn+IIN valid), requires manual review
+  Fix: Remove hardcoded card numbers. Use tokenized references or test card number constants.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/clean/readd_cycle/migrations/20240101000000_add_legacy_card.sql:3
+  Sensitive column "pan" stored as plaintext type "text". PCI DSS 3.5.1 requires PAN/SAD to be rendered unreadable at rest (use bytea + application-level encryption).
+  Fix: Change the column type to bytea and encrypt at the application layer before insertion.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/storage/postgres/migrations/0001_init.sql:14
+  Sensitive column "cvv" stored as plaintext type "text". PCI DSS 3.5.1 requires PAN/SAD to be rendered unreadable at rest (use bytea + application-level encryption).
+  Fix: Change the column type to bytea and encrypt at the application layer before insertion.
+
+[MEDIUM] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/internal/storage/postgres/migrations/0001_init.sql:15
+  Sensitive column "pan" stored as plaintext type "text". PCI DSS 3.5.1 requires PAN/SAD to be rendered unreadable at rest (use bytea + application-level encryption).
+  Fix: Change the column type to bytea and encrypt at the application layer before insertion.
+
+[MEDIUM] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/model/token.go:11
+  Struct Token field ExpMonth has sensitive DB column tag (gorm:"exp_month"). Expiry field exposed alongside unprotected PAN.
+  Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
+
+[MEDIUM] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/model/token.go:12
+  Struct Token field ExpYear has sensitive DB column tag (gorm:"exp_year"). Expiry field exposed alongside unprotected PAN.
+  Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/clean/banking_struct/pure_banking.go:5
+  Struct field 'AccountNumber' may expose cardholder data, requires manual review (LOW confidence)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/banking/mixed_pan_iban.go:6
+  Struct field 'CVV' may expose cardholder data, requires manual review (LOW confidence) (taint: transit-only, non-persistent memory per PCI SSC FAQ)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/billing/handler.go:13
+  Struct field 'PAN' (json: 'pan') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/http/handler/tokens/models/requests/tokenize.go:4
+  Struct field 'CardNumber' (json: 'card_number') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/http/handler/tokens/models/requests/tokenize.go:5
+  Struct field 'CVV' (json: 'cvv') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/http/handler/tokens/models/responses/exchange_token.go:6
+  Struct field 'CVV' (json: 'cvv') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/integration/stripe_client.go:5
+  Struct field 'CardNumber' (json: 'card_number') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
+  Fix: Use tokenized or encrypted references instead of raw cardholder data.
+  Also satisfies: 3.3.1.2
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/order/submit.go:4
+  Struct field 'PAN' (json: 'pan') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/payment/core.go:14
+  Struct field 'CVV' may expose cardholder data, requires manual review (LOW confidence) (taint: transit-only, non-persistent memory per PCI SSC FAQ)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/service/tokens/model/model.go:5
+  Struct field 'CVV' may expose cardholder data, requires manual review (LOW confidence) (taint: transit-only, non-persistent memory per PCI SSC FAQ)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/pkg/mastercard/models/card/card.go:4
+  Struct field 'PrimaryAccountNumber' (json: 'primary_account_number') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/pkg/mastercard/models/card/card.go:6
+  Struct field 'SecurityCode' (json: 'security_code') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
+[INFO] 3.2.1 -- Data Retention and Disposal
+  <SCAN_ROOT>/clean/dev_compose/docker-compose.yml:3
+  Sensitive data config group "services.card_data" missing TTL/expiry setting. PCI DSS 3.2.1, 3.3.1 require data retention limits.
+  Fix: Add a TTL/expiry/retention setting alongside sensitive data configuration.
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/clean/migrations/20240101000000_add_legacy_card.sql:3
+  Sensitive column "pan" declared in SQL schema. PCI DSS 3.3.1 forbids storing Sensitive Authentication Data (track data, CVV, PIN block) after authorization. For PAN, storage must be rendered unreadable per 3.5.1.
+  Fix: If this column stores SAD (CVV/track/PIN) drop it. If it stores PAN, change the column type to bytea and encrypt at the application layer via a BeforeCreate/BeforeSave hook.
+
+[INFO] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/clean/migrations/20240101000000_add_legacy_card.sql:3
+  Sensitive column "pan" stored as plaintext type "text". PCI DSS 3.5.1 requires PAN/SAD to be rendered unreadable at rest (use bytea + application-level encryption).
+  Fix: Change the column type to bytea and encrypt at the application layer before insertion.
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/clean/gorm_encrypt_type/helper_encrypted/card_model.go:5
+  Struct CardData field Number has sensitive DB column tag (gorm:"number"). Struct has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt.
+  Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
+
+[INFO] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/clean/gorm_encrypt_type/helper_encrypted/card_model.go:3
+  Custom encrypted column type detected: Value() method body verified to call aes.NewCipher. Field-level encryption is wired via driver.Valuer instead of the BeforeCreate/BeforeSave hook pattern.
+  Fix: Verified-OK marker. No action required. Auditors: confirm the verified function performs PCI-compliant encryption (AES-GCM, NaCl secretbox, ChaCha20-Poly1305, or KMS-backed wrapping).
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/clean/gorm_encrypt_type/kms_encrypted/card_model.go:5
+  Struct VaultCard field Number has sensitive DB column tag (gorm:"number"). Struct has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt.
+  Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
+
+[INFO] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/clean/gorm_encrypt_type/kms_encrypted/card_model.go:3
+  Custom encrypted column type detected: Value() method body verified to call KMS:Encrypt. Field-level encryption is wired via driver.Valuer instead of the BeforeCreate/BeforeSave hook pattern.
+  Fix: Verified-OK marker. No action required. Auditors: confirm the verified function performs PCI-compliant encryption (AES-GCM, NaCl secretbox, ChaCha20-Poly1305, or KMS-backed wrapping).
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/clean/gorm_encrypt_type/real_encrypted/card_model.go:5
+  Struct CardToken field Number has sensitive DB column tag (gorm:"number"). Struct has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt.
+  Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
+
+[INFO] 3.5.1 -- PAN Rendered Unreadable in Storage
+  <SCAN_ROOT>/clean/gorm_encrypt_type/real_encrypted/card_model.go:3
+  Custom encrypted column type detected: Value() method body verified to call aes.NewCipher. Field-level encryption is wired via driver.Valuer instead of the BeforeCreate/BeforeSave hook pattern.
+  Fix: Verified-OK marker. No action required. Auditors: confirm the verified function performs PCI-compliant encryption (AES-GCM, NaCl secretbox, ChaCha20-Poly1305, or KMS-backed wrapping).
+
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/storage/postgres/model/card.go:5
+  Struct Card field Number has sensitive DB column tag (gorm:"number"). Encryption hook detected — field-level Encrypt/Decrypt wired for this field.
+  Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
+
+--- Requirement 4: Protect Cardholder Data with Strong Cryptography During Transmission ---
+
+[CRITICAL] 4.2.1 -- Strong Cryptography for PAN Transmission
+  <SCAN_ROOT>/internal/http/client.go:8
+  Plain HTTP URL detected: http://api.payment.example/charge -- data in transit is not encrypted
+  Fix: Use HTTPS instead of HTTP for all network communication to protect data in transit.
+
+[CRITICAL] 4.2.1 -- Strong Cryptography for PAN Transmission
+  <SCAN_ROOT>/internal/http/legacy_client.go:11
+  MinVersion set to VersionTLS10 which is below TLS 1.2
+  Fix: Set MinVersion to tls.VersionTLS12 or tls.VersionTLS13.
+
+[CRITICAL] 4.2.1 -- Strong Cryptography for PAN Transmission
+  <SCAN_ROOT>/internal/http/legacy_client.go:13
+  Prohibited cipher suite TLS_RSA_WITH_RC4_128_SHA
+  Fix: Remove prohibited cipher suite. Use AES-GCM or ChaCha20-Poly1305 cipher suites.
+
+[CRITICAL] 4.2.1 -- Strong Cryptography for PAN Transmission
+  <SCAN_ROOT>/pkg/visa/client.go:11
+  InsecureSkipVerify set to true disables TLS certificate verification
+  Fix: Remove InsecureSkipVerify: true. Use proper certificate validation in production.
+  Also satisfies: 4.2.1.1, 2.2.7
+
+[HIGH] 4.2.1 -- Strong Cryptography for PAN Transmission
+  <SCAN_ROOT>/pkg/mastercard/client.go:10
+  tls.Config without explicit MinVersion defaults to TLS 1.0
+  Fix: Set MinVersion: tls.VersionTLS12 to enforce minimum TLS 1.2.
+
+[HIGH] 4.2.1 -- Strong Cryptography for PAN Transmission
+  <SCAN_ROOT>/pkg/visa/client.go:10
+  tls.Config without explicit MinVersion defaults to TLS 1.0
+  Fix: Set MinVersion: tls.VersionTLS12 to enforce minimum TLS 1.2.
+
+--- Requirement 6: Develop and Maintain Secure Systems and Software ---
+
+[CRITICAL] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/clean/gorm_encrypt_type/real_encrypted/secure_string.go:13
+  Hardcoded secret in variable 'encryptionKey' -- key-related keyword detected
+  Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
+  Also satisfies: 3.6.1.2
+
+[CRITICAL] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/auth/admin.go:3
+  Hardcoded secret in variable 'AdminPassword' -- key-related keyword detected
+  Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
+  Also satisfies: 3.6.1.2
+
+[CRITICAL] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/crypto/hash.go:6
+  Weak algorithm MD5 used near sensitive data
+  Fix: Replace MD5 with SHA-256 or stronger for data integrity. For passwords, use bcrypt or argon2.
+
+[CRITICAL] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/crypto/keys.go:3
+  Hardcoded secret in variable 'AESKey' -- key-related keyword detected
+  Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
+  Also satisfies: 3.6.1.2
+
+[CRITICAL] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/crypto/real_hardcoded_aes.go:3
+  Hardcoded secret in variable 'aes256HexKey' -- key-related keyword detected
+  Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
+  Also satisfies: 3.6.1.2
+
+[CRITICAL] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/billing/encode_map.go:21
+  Error encoded as JSON via json.NewEncoder().Encode() in payment handler
+  Fix: Return a generic error message to the client and log the detailed error server-side.
+
+[CRITICAL] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/http/handler/tokens/exchange.go:7
+  Error details written via w.Write() in payment handler
+  Fix: Return a generic error message to the client and log the detailed error server-side.
+
+[CRITICAL] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/http/handler/tokens/metadata.go:11
+  Error encoded as JSON via json.NewEncoder().Encode() in payment handler
+  Fix: Return a generic error message to the client and log the detailed error server-side.
+
+[CRITICAL] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/http/handler/tokens/tokenize.go:21
+  Internal error details passed to http.Error() in payment handler
+  Fix: Return a generic error message to the client and log the detailed error server-side.
+
+[CRITICAL] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/http/handler/callback/mastercard.go:8
+  Webhook handler MastercardWebhook parses request body via Decode without prior signature verification. Forged-payload risk per PCI 6.2.4.
+  Fix: Verify request signature (HMAC, JWS, RSA, or brand SDK ConstructEvent) BEFORE body parse. Use crypto/hmac.Equal or subtle.ConstantTimeCompare for comparison.
+  Also satisfies: 4.2.1
+
+[CRITICAL] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/http/handler/webhook/bad_paypal_ipn.go:12
+  Webhook handler ExecutePaypalIPN parses request body via Decode without prior signature verification. Forged-payload risk per PCI 6.2.4.
+  Fix: Verify request signature (HMAC, JWS, RSA, or brand SDK ConstructEvent) BEFORE body parse. Use crypto/hmac.Equal or subtle.ConstantTimeCompare for comparison.
+  Also satisfies: 4.2.1
+
+[CRITICAL] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/http/handler/webhook/bad_stripe_webhook.go:12
+  Webhook handler HandleStripeWebhook parses request body via Decode without prior signature verification. Forged-payload risk per PCI 6.2.4.
+  Fix: Verify request signature (HMAC, JWS, RSA, or brand SDK ConstructEvent) BEFORE body parse. Use crypto/hmac.Equal or subtle.ConstantTimeCompare for comparison.
+  Also satisfies: 4.2.1
+
+[CRITICAL] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/templates/checkout.html:12
+  External script 'https://cdn.example.com/pay.js' loaded without integrity attribute (SRI) in payment page template. PCI DSS 6.4.3 requires script integrity verification on payment pages.
+  Fix: Add integrity='sha384-...' crossorigin='anonymous' to the script tag. Generate hash with: shasum -b -a 384 script.js | xxd -r -p | base64
+
+[CRITICAL] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/templates/checkout.html:13
+  Inline script without nonce attribute in payment page template. PCI DSS 6.4.3 requires script authorization via nonce or hash on payment pages.
+  Fix: Add nonce='<random-value>' to the script tag. Generate a unique nonce per request on the server side.
+
+[HIGH] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/auth/process.go:6
+  Possible hardcoded key in variable 'card' -- encoded string pattern detected (base64/hex)
+  Fix: Verify this is not a secret. Move sensitive values to environment variables or a secrets manager.
+  Also satisfies: 3.6.1.2
+
+[HIGH] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/config/constants_file.go:3
+  Hardcoded secret in variable 'defaultApiKey' -- key-related keyword detected
+  Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
+  Also satisfies: 3.6.1.2
+
+[HIGH] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/http/handler/payment/charge.go:6
+  Possible hardcoded key in variable 'card' -- encoded string pattern detected (base64/hex)
+  Fix: Verify this is not a secret. Move sensitive values to environment variables or a secrets manager.
+  Also satisfies: 3.6.1.2
+
+[HIGH] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/util/cardops.go:6
+  Possible hardcoded key in variable 'cardNumber' -- encoded string pattern detected (base64/hex)
+  Fix: Verify this is not a secret. Move sensitive values to environment variables or a secrets manager.
+  Also satisfies: 3.6.1.2
+
+[HIGH] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/util/cardproc.go:6
+  Possible hardcoded key in variable 'card' -- encoded string pattern detected (base64/hex)
+  Fix: Verify this is not a secret. Move sensitive values to environment variables or a secrets manager.
+  Also satisfies: 3.6.1.2
+
+[HIGH] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/billing/handler.go:18
+  Error variable passed to fmt.Fprintf() writing to response in payment handler
+  Fix: Return a generic error message to the client and log the detailed error server-side.
+
+[HIGH] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/exchange/handler.go:12
+  Error variable passed to fmt.Fprintf() writing to response in payment handler
+  Fix: Return a generic error message to the client and log the detailed error server-side.
+
+[HIGH] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/http/handler/tokens/detokenize.go:10
+  Error variable passed to fmt.Fprintf() writing to response in payment handler
+  Fix: Return a generic error message to the client and log the detailed error server-side.
+
+[HIGH] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/payment/core.go:21
+  Error variable passed to fmt.Fprintf() writing to response in payment handler
+  Fix: Return a generic error message to the client and log the detailed error server-side.
+
+[HIGH] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/clean/s2s_handler/generic_consensus_webhook.go:12
+  Webhook handler HandlePaymentNotificationCallback parses request body via Decode without prior signature verification. Forged-payload risk per PCI 6.2.4.
+  Fix: Verify request signature (HMAC, JWS, RSA, or brand SDK ConstructEvent) BEFORE body parse. Use crypto/hmac.Equal or subtle.ConstantTimeCompare for comparison.
+
+[HIGH] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/http/handler/admin/admin_panel.go:12
+  Webhook handler HandleAdminUserEventsCallback parses request body via Decode without prior signature verification. Forged-payload risk per PCI 6.2.4.
+  Fix: Verify request signature (HMAC, JWS, RSA, or brand SDK ConstructEvent) BEFORE body parse. Use crypto/hmac.Equal or subtle.ConstantTimeCompare for comparison.
+
+[HIGH] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/http/handler/webhook/bad_generic_webhook.go:12
+  Webhook handler ProcessPaymentHookCallback parses request body via json.Unmarshal without prior signature verification. Forged-payload risk per PCI 6.2.4.
+  Fix: Verify request signature (HMAC, JWS, RSA, or brand SDK ConstructEvent) BEFORE body parse. Use crypto/hmac.Equal or subtle.ConstantTimeCompare for comparison.
+
+[HIGH] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/http/handler/checkout/checkout.go:8
+  No Content-Security-Policy header found in payment handler body or same-file helpers of RenderCheckout. PCI DSS 6.4.3 is mandatory since April 1, 2025. Verify CSP is set via middleware, reverse proxy, or CDN. If not present anywhere -- direct violation of 6.4.3.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[HIGH] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/http/handler/checkout/eval.go:8
+  'unsafe-eval' in CSP script-src of RenderCheckoutEval allows eval() execution, undermining script integrity required by PCI DSS 6.4.3.
+  Fix: Remove 'unsafe-eval' from CSP. Refactor JavaScript to avoid eval(), new Function(), and similar constructs.
+
+[HIGH] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/http/handler/checkout/inline.go:8
+  'unsafe-inline' in CSP script-src of RenderCheckoutInline allows inline script execution, undermining XSS protection required by PCI DSS 6.4.3.
+  Fix: Remove 'unsafe-inline' from CSP. Use nonces or hashes for inline scripts instead.
+
+[HIGH] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/http/handler/checkout/noscript.go:8
+  CSP header present in RenderCheckoutNoScript but contains no script-src or default-src directive -- no script source restriction.
+  Fix: Add script-src directive to CSP. Minimal policy: script-src 'self'
+
+[HIGH] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/templates/meta_unsafe.html:5
+  Content-Security-Policy meta tag contains unsafe directives (unsafe-inline or unsafe-eval). PCI DSS 6.4.3 requires secure script execution policies on payment pages.
+  Fix: Remove 'unsafe-inline' and 'unsafe-eval' from CSP. Use nonces or hashes for inline scripts instead.
+
+[HIGH] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/templates/non_payment.html:8
+  External script 'https://cdn.example.com/util.js' loaded without integrity attribute (SRI). If this page handles payment data, this violates PCI DSS 6.4.3. If not a payment page, suppress with // pci-ignore: not-payment-page
+  Fix: Add integrity='sha384-...' crossorigin='anonymous' to the script tag.
+
+[HIGH] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/templates/non_payment.html:9
+  Inline script without nonce attribute. If this page handles payment data, this violates PCI DSS 6.4.3. If not a payment page, suppress with // pci-ignore: not-payment-page
+  Fix: Add nonce='<random-value>' to the script tag. Generate a unique nonce per request on the server side.
+
+[MEDIUM] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/templates/clean_checkout.html:5
+  CSP set via meta tag only. HTTP header is stronger: meta tag enforced after HTML parsing begins -- scripts before meta tag may execute. Also: frame-ancestors, sandbox directives not supported in meta tags. PCI DSS 6.4.3 recommends HTTP header for payment pages.
+  Fix: Set Content-Security-Policy via HTTP response header instead of (or in addition to) meta tag.
+
+[MEDIUM] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/templates/meta_only.html:5
+  CSP set via meta tag only. HTTP header is stronger: meta tag enforced after HTML parsing begins -- scripts before meta tag may execute. Also: frame-ancestors, sandbox directives not supported in meta tags. PCI DSS 6.4.3 recommends HTTP header for payment pages.
+  Fix: Set Content-Security-Policy via HTTP response header instead of (or in addition to) meta tag.
+
+[INFO] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/clean/crypto_filter_cases/header_const.go:3
+  Hardcoded secret in variable 'authTokenKey' -- key-related keyword detected
+  Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
+  Also satisfies: 3.6.1.2
+
+[INFO] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/clean/crypto_filter_cases/json_key.go:3
+  Hardcoded secret in variable 'tokenFieldKey' -- key-related keyword detected
+  Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
+  Also satisfies: 3.6.1.2
+
+[INFO] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/clean/crypto_filter_cases/log_field.go:3
+  Hardcoded secret in variable 'logFieldKey' -- key-related keyword detected
+  Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
+  Also satisfies: 3.6.1.2
+
+[INFO] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/clean/crypto_filter_cases/sentinel_error.go:5
+  Hardcoded secret in variable 'ErrInvalidToken' -- key-related keyword detected
+  Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
+  Also satisfies: 3.6.1.2
+
+[INFO] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/testseed/constants.go:3
+  Hardcoded secret in variable 'TestRawSecret' -- key-related keyword detected [dev-context]
+  Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
+  Also satisfies: 3.6.1.2
+
+[INFO] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/clean/s2s_handler/stripe_hmac_webhook.go:16
+  Webhook handler ProcessStripeEventWebhook verifies signature via hmac.Equal before body parse json.Unmarshal. Audit trail.
+  Fix: Verified-OK marker. Confirm secret loaded from env (not source) and signature compare uses constant-time API.
+
+[INFO] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/clean/webhook_signed/good_hmac_generic.go:16
+  Webhook handler HandleHMACGenericCallback verifies signature via hmac.Equal before body parse json.Unmarshal. Audit trail.
+  Fix: Verified-OK marker. Confirm secret loaded from env (not source) and signature compare uses constant-time API.
+
+[INFO] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/clean/webhook_signed/good_middleware_verified.go:22
+  Webhook handler HandleMiddlewareVerifiedCallback verifies signature via middleware:HasSignatureMiddlewareCoverage before body parse Decode. Audit trail.
+  Fix: Verified-OK marker. Confirm secret loaded from env (not source) and signature compare uses constant-time API.
+
+[INFO] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/clean/webhook_signed/good_stripe_constructevent.go:19
+  Webhook handler HandleVerifiedStripeWebhook verifies signature via webhook.ConstructEvent before body parse json.Unmarshal. Audit trail.
+  Fix: Verified-OK marker. Confirm secret loaded from env (not source) and signature compare uses constant-time API.
+
+[INFO] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/clean/webhook_signed/webhook_with_local_helper.go:15
+  Webhook handler HandleLocalHelperWebhook verifies signature via helper:verifyStripeSignature->hmac.Equal before body parse json.Unmarshal. Audit trail.
+  Fix: Verified-OK marker. Confirm secret loaded from env (not source) and signature compare uses constant-time API.
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/auth/process.go:5
+  Could not determine response type for payment handler AuthorizeCharge -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/billing/handler.go:16
+  Could not determine response type for payment handler HandleRequest -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/exchange/handler.go:10
+  Could not determine response type for payment handler Execute -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/http/handler/checkout/dynamic.go:8
+  CSP header set in RenderCheckoutDynamic but value is not a string literal -- cannot analyze directives statically. Manual review recommended.
+  Fix: Consider using a string literal for CSP value to enable static analysis.
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/http/handler/payment/charge.go:5
+  Could not determine response type for payment handler Charge -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/http/handler/payment/clean.go:8
+  CSP header found in RenderCheckoutClean. Note: CSP alone does NOT satisfy full 6.4.3 -- also required: SRI hashes on external scripts (see SCRIPT-03), script inventory documentation (manual verification required). CSP is necessary but not sufficient for 6.4.3 compliance.
+  Fix: Verify SRI attributes on external scripts and maintain a script inventory per PCI DSS 6.4.3.
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/http/handler/tokens/detokenize.go:8
+  Could not determine response type for payment handler Detokenize -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/http/handler/tokens/exchange.go:5
+  Could not determine response type for payment handler TokenizeCardExchange -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/http/handler/tokens/tokenize.go:11
+  Could not determine response type for payment handler Tokenize -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/http/handler/webhook/bad_paypal_ipn.go:12
+  Could not determine response type for payment handler ExecutePaypalIPN -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/payment/core.go:19
+  Could not determine response type for payment handler Execute -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/payment/zeroing_init.go:20
+  Could not determine response type for payment handler Process -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/retention/zeroing_elseif.go:7
+  Could not determine response type for payment handler HandleZeroingElseIf -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/retention/zeroing_select.go:10
+  Could not determine response type for payment handler HandleZeroingSelect -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/retention/zeroing_switch.go:7
+  Could not determine response type for payment handler HandleZeroingSwitch -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/retention/zeroing_typeswitch.go:7
+  Could not determine response type for payment handler HandleZeroingTypeSwitch -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/tokens/delegation/delegating.go:19
+  Could not determine response type for payment handler ServeHTTP -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/util/cardproc.go:5
+  Could not determine response type for payment handler ProcessCardBuffer -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+--- Requirement 8: Identify Users and Authenticate Access ---
+
+[CRITICAL] 8.6.2 -- Hardcoded Password Prohibition
+  <SCAN_ROOT>/configs/auth.toml:0
+  Hardcoded credential value in key "issuer.credential"
+  Fix: Remove hardcoded credential. Use a vault or environment variable injection.
+
+[CRITICAL] 8.6.2 -- Hardcoded Password Prohibition
+  <SCAN_ROOT>/configs/database.yaml:2
+  Connection string with embedded credentials in key "primary.dsn"
+  Fix: Remove credentials from connection string. Use separate credential injection.
+
+[CRITICAL] 8.6.2 -- Hardcoded Password Prohibition
+  <SCAN_ROOT>/configs/prod-api-key.json:0
+  Hardcoded credential value in key "api_key"
+  Fix: Remove hardcoded credential. Use a vault or environment variable injection.
+
+[CRITICAL] 8.6.2 -- Hardcoded Password Prohibition
+  <SCAN_ROOT>/configs/service.env:1
+  Hardcoded credential value in key "DATABASE_PASSWORD"
+  Fix: Remove hardcoded credential. Use a vault or environment variable injection.
+
+[CRITICAL] 8.6.2 -- Hardcoded Password Prohibition
+  <SCAN_ROOT>/configs/service.yaml:5
+  Possible Stripe Live Secret detected in key "api_key"
+  Fix: Remove hardcoded secret. Use a vault or environment variable injection.
+
+[CRITICAL] 8.6.2 -- Hardcoded Password Prohibition
+  <SCAN_ROOT>/configs/service.yaml:5
+  Hardcoded credential value in key "api_key"
+  Fix: Remove hardcoded credential. Use a vault or environment variable injection.
+
+[CRITICAL] 8.3.1 -- Strong Authentication for Users
+  <SCAN_ROOT>/internal/auth/admin.go:3
+  Hardcoded password in variable 'AdminPassword'
+  Fix: Move passwords to environment variables or a secrets manager. Never commit passwords to source code.
+  Also satisfies: 8.6.2
+
+[CRITICAL] 8.3.6 -- Password Complexity Requirements
+  <SCAN_ROOT>/internal/auth/policy.go:12
+  Password minimum length check uses threshold 8, PCI DSS v4.0 requires minimum 12 characters
+  Fix: Update password policy to require at least 12 characters (PCI DSS 8.3.6).
+
+[CRITICAL] 8.3.1 -- Strong Authentication for Users
+  <SCAN_ROOT>/internal/payment/hardcoded_admin.go:3
+  Hardcoded password in variable 'adminPasswd'
+  Fix: Move passwords to environment variables or a secrets manager. Never commit passwords to source code.
+  Also satisfies: 8.6.2
+
+[HIGH] 8.6.2 -- Hardcoded Password Prohibition
+  <SCAN_ROOT>/configs/service.yaml:5
+  High-entropy value in credential key "api_key" (possible secret)
+  Fix: Verify this is not a hardcoded secret. Use a vault or environment variable injection.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/auth/process.go:5
+  No MFA middleware detected on payment handler AuthorizeCharge. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/billing/encode_map.go:19
+  No MFA middleware detected on payment handler Submit. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/billing/handler.go:16
+  No MFA middleware detected on payment handler HandleRequest. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/exchange/handler.go:10
+  No MFA middleware detected on payment handler Execute. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/admin/admin_panel.go:9
+  No MFA middleware detected on payment route /admin/payments/events. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/callback/mastercard.go:8
+  No MFA middleware detected on payment handler MastercardWebhook. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/checkout/checkout.go:8
+  No MFA middleware detected on payment handler RenderCheckout. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/checkout/dynamic.go:8
+  No MFA middleware detected on payment handler RenderCheckoutDynamic. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/checkout/eval.go:8
+  No MFA middleware detected on payment handler RenderCheckoutEval. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/checkout/inline.go:8
+  No MFA middleware detected on payment handler RenderCheckoutInline. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/checkout/noscript.go:8
+  No MFA middleware detected on payment handler RenderCheckoutNoScript. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/payment/charge.go:5
+  No MFA middleware detected on payment handler Charge. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/payment/clean.go:8
+  No MFA middleware detected on payment handler RenderCheckoutClean. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/tokens/detokenize.go:8
+  No MFA middleware detected on payment handler Detokenize. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/tokens/exchange.go:5
+  No MFA middleware detected on payment handler TokenizeCardExchange. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/tokens/metadata.go:8
+  No MFA middleware detected on payment handler CardMetadata. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/tokens/tokenize.go:11
+  No MFA middleware detected on payment handler Tokenize. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler.go:10
+  No MFA middleware detected on payment route /tokenize. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/payment/core.go:19
+  No MFA middleware detected on payment handler Execute. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/payment/zeroing_init.go:20
+  No MFA middleware detected on payment handler Process. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/retention/zeroing_elseif.go:7
+  No MFA middleware detected on payment handler HandleZeroingElseIf. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/retention/zeroing_select.go:10
+  No MFA middleware detected on payment handler HandleZeroingSelect. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/retention/zeroing_switch.go:7
+  No MFA middleware detected on payment handler HandleZeroingSwitch. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/retention/zeroing_typeswitch.go:7
+  No MFA middleware detected on payment handler HandleZeroingTypeSwitch. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[HIGH] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/util/cardproc.go:5
+  No MFA middleware detected on payment handler ProcessCardBuffer. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh).
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+
+[MEDIUM] 8.3.6 -- Password Complexity Requirements
+  <SCAN_ROOT>/internal/auth/policy.go:12
+  Password length check uses len() which counts bytes, not characters
+  Fix: Replace len(password) with utf8.RuneCountInString(password) for correct Unicode character counting.
+
+[INFO] 8.6.2 -- Hardcoded Password Prohibition
+  <SCAN_ROOT>/clean/examples/api-example.env.json:0
+  Hardcoded credential value in key "api_key" [dev-context]
+  Fix: Remove hardcoded credential. Use a vault or environment variable injection.
+
+[INFO] 8.6.2 -- Hardcoded Password Prohibition
+  <SCAN_ROOT>/configs/dev/local.env:2
+  Hardcoded credential value in key "DATABASE_PASSWORD" [dev-context]
+  Fix: Remove hardcoded credential. Use a vault or environment variable injection.
+
+[INFO] 8.6.2 -- Hardcoded Password Prohibition
+  <SCAN_ROOT>/configs/dev/local.env:3
+  Hardcoded credential value in key "API_KEY" [dev-context]
+  Fix: Remove hardcoded credential. Use a vault or environment variable injection.
+
+[INFO] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/clean/s2s_handler/generic_consensus_webhook.go:9
+  No MFA middleware detected on payment route /hooks/payment. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh). [s2s_handler — machine-to-machine context, MFA per PCI 8.4.2 not applicable; verify machine auth per PCI 8.6.1/8.6.2]
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+  Also satisfies: 8.6.1, 8.6.2
+
+[INFO] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/clean/s2s_handler/stripe_hmac_webhook.go:13
+  No MFA middleware detected on payment route /payment/stripe/webhook. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh). [s2s_handler — machine-to-machine context, MFA per PCI 8.4.2 not applicable; verify machine auth per PCI 8.6.1/8.6.2]
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+  Also satisfies: 8.6.1, 8.6.2
+
+[INFO] 8.3.1 -- Strong Authentication for Users
+  <SCAN_ROOT>/clean/testutil/db_fixture.go:3
+  Hardcoded password in variable 'dbPasswd'
+  Fix: Move passwords to environment variables or a secrets manager. Never commit passwords to source code.
+  Also satisfies: 8.6.2
+
+[INFO] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/webhook/bad_generic_webhook.go:9
+  No MFA middleware detected on payment route /hooks/payment. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh). [s2s_handler — machine-to-machine context, MFA per PCI 8.4.2 not applicable; verify machine auth per PCI 8.6.1/8.6.2]
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+  Also satisfies: 8.6.1, 8.6.2
+
+[INFO] 8.4.2 -- MFA for CDE Access
+  <SCAN_ROOT>/internal/http/handler/webhook/bad_paypal_ipn.go:12
+  No MFA middleware detected on payment handler ExecutePaypalIPN. Verify MFA is enforced at application or infrastructure level (API gateway, reverse proxy, service mesh). [s2s_handler — machine-to-machine context, MFA per PCI 8.4.2 not applicable; verify machine auth per PCI 8.6.1/8.6.2]
+  Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
+  Also satisfies: 8.6.1, 8.6.2
+
+--- Requirement 10: Log and Monitor All Access to System Components and Cardholder Data ---
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/clean/s2s_handler/generic_consensus_webhook.go:12
+  No structured audit logging detected in handler body of HandlePaymentNotificationCallback. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/auth/process.go:5
+  No structured audit logging detected in handler body of AuthorizeCharge. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/callback/mastercard.go:8
+  No structured audit logging detected in handler body of MastercardWebhook. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/checkout/checkout.go:8
+  No structured audit logging detected in handler body of RenderCheckout. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/checkout/dynamic.go:8
+  No structured audit logging detected in handler body of RenderCheckoutDynamic. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/checkout/eval.go:8
+  No structured audit logging detected in handler body of RenderCheckoutEval. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/checkout/inline.go:8
+  No structured audit logging detected in handler body of RenderCheckoutInline. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/checkout/noscript.go:8
+  No structured audit logging detected in handler body of RenderCheckoutNoScript. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/payment/charge.go:5
+  No structured audit logging detected in handler body of Charge. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/payment/clean.go:8
+  No structured audit logging detected in handler body of RenderCheckoutClean. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/tokens/detokenize.go:8
+  Payment handler Detokenize uses unstructured logging (fmt/log package). Unstructured logging cannot satisfy PCI DSS 10.2.2 field requirements or automated SIEM review (10.4.1.1).
+  Fix: Replace fmt/log calls with structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/tokens/exchange.go:5
+  No structured audit logging detected in handler body of TokenizeCardExchange. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/tokens/metadata.go:8
+  No structured audit logging detected in handler body of CardMetadata. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/webhook/bad_generic_webhook.go:12
+  No structured audit logging detected in handler body of ProcessPaymentHookCallback. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/webhook/bad_paypal_ipn.go:12
+  No structured audit logging detected in handler body of ExecutePaypalIPN. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[CRITICAL] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/util/cardproc.go:5
+  No structured audit logging detected in handler body of ProcessCardBuffer. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/billing/encode_map.go:19
+  No structured audit logging detected in handler body of Submit. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/billing/handler.go:16
+  Payment handler HandleRequest uses unstructured logging (fmt/log package). Unstructured logging cannot satisfy PCI DSS 10.2.2 field requirements or automated SIEM review (10.4.1.1).
+  Fix: Replace fmt/log calls with structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/exchange/handler.go:10
+  Payment handler Execute uses unstructured logging (fmt/log package). Unstructured logging cannot satisfy PCI DSS 10.2.2 field requirements or automated SIEM review (10.4.1.1).
+  Fix: Replace fmt/log calls with structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/payment/core.go:19
+  Payment handler Execute uses unstructured logging (fmt/log package). Unstructured logging cannot satisfy PCI DSS 10.2.2 field requirements or automated SIEM review (10.4.1.1).
+  Fix: Replace fmt/log calls with structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/payment/zeroing_init.go:20
+  No structured audit logging detected in handler body of Process. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/retention/zeroing_elseif.go:7
+  No structured audit logging detected in handler body of HandleZeroingElseIf. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/retention/zeroing_select.go:10
+  No structured audit logging detected in handler body of HandleZeroingSelect. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/retention/zeroing_switch.go:7
+  No structured audit logging detected in handler body of HandleZeroingSwitch. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/retention/zeroing_typeswitch.go:7
+  No structured audit logging detected in handler body of HandleZeroingTypeSwitch. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/tokens/delegation/delegating.go:19
+  No structured audit logging detected in handler body of ServeHTTP. If logging is implemented in middleware, verify it captures required PCI DSS 10.2.1 fields: user_id, timestamp, action, outcome, resource. Manual verification recommended.
+  Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
+
+[INFO] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http/handler/tokens/tokenize.go:11
+  Structured audit logging detected in payment handler Tokenize. Verify log captures required PCI DSS 10.2.1 fields: user_id, timestamp, event_type, outcome, affected_resource. Not verifiable statically if using logger.With() context pattern.
+  Fix: Review log statements to ensure all PCI DSS 10.2.1 required fields are captured.
+
+--- Requirement 11: Test Security of Systems and Networks Regularly ---
+
+[MEDIUM] 11.6.1 -- Payment Page Change Detection
+  <SCAN_ROOT>/templates/checkout.html:1
+  PCI DSS 11.6.1 requires change and tamper detection for payment page scripts -- at minimum weekly, ideally real-time. Static analysis cannot verify runtime monitoring. Recommended: implement file integrity monitoring for JS files served on payment pages (Wazuh, OSSEC, or custom hash comparison in CI/CD pipeline). This finding requires manual verification.
+  Fix: Implement file integrity monitoring (FIM) for JavaScript files served on payment pages. Consider Wazuh, OSSEC, or hash-based verification in CI/CD.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requirements Summary
+Checked: 19 requirements | NOT_CHECKED: 231 requirements (manual QSA verification required)
+PASS: 1 | FAIL: 18 | WARNING: 0 | SUPPRESSED: 0
+
+NOT_CHECKED requirements (manual QSA verification required):
+  1.1.1: Network Security Policies and Procedures
+  1.1.2: Network Security Control Roles and Responsibilities
+  1.2.1: Network Security Control Configuration Standards
+  1.2.2: Network Security Control Change Approval
+  1.2.3: Network Diagram Accuracy
+  1.2.4: Data Flow Diagram Accuracy
+  1.2.5: Allowed Services and Protocols
+  1.2.6: Security Features for Insecure Services
+  1.2.7: NSC Configuration Review
+  1.2.8: NSC Configuration Files Security
+  1.3.1: Inbound Traffic Restriction to CDE
+  1.3.2: Outbound Traffic Restriction from CDE
+  1.3.3: NSC Between Wireless and CDE
+  1.4.1: NSC Between Trusted and Untrusted Networks
+  1.4.2: Inbound Traffic from Untrusted to Trusted
+  1.4.3: Anti-Spoofing Measures
+  1.4.4: System Component Isolation
+  1.4.5: Disclosure of Internal IPs
+  1.5.1: Security Controls on Computing Devices
+  2.1.1: Secure Configuration Policies and Procedures
+  2.1.2: Secure Configuration Roles and Responsibilities
+  2.2.1: Secure Configuration Standards
+  2.2.2: Vendor Default Accounts
+  2.2.3: Primary Function Security
+  2.2.4: Necessary Services Only
+  2.2.5: Insecure Services Security
+  2.2.6: System Security Parameters
+  2.3.1: Wireless Environment Management
+  2.3.2: Wireless Encryption Keys Changed
+  3.1.1: Stored Account Data Policies and Procedures
+  3.1.2: Stored Account Data Roles and Responsibilities
+  3.3.1.1: Full Track Data Not Retained (partially covered by 3.3.1)
+  3.3.1.3: PIN and PIN Block Not Retained (partially covered by 3.3.1)
+  3.3.2: SAD Not Stored Before Authorization Completion
+  3.3.3: SAD Stored by Issuers Encrypted
+  3.4.2: PAN Copy/Relocation Prevention for Remote Access
+  3.5.1.1: Hashes for PAN Rendering
+  3.5.1.2: Disk-Level Encryption for PAN
+  3.5.1.3: Cryptographic Key Management for PAN
+  3.6.1: Key Management Processes
+  3.6.1.1: Cryptographic Architecture Documentation
+  3.6.1.3: Secret Key Encrypted Storage
+  3.6.1.4: Key Storage Locations Minimized
+  3.7.1: Key Management Policies
+  3.7.2: Secure Key Distribution
+  3.7.3: Secure Key Storage
+  3.7.4: Key Changes at Cryptoperiod End
+  3.7.5: Retired Key Management
+  3.7.6: Manual Key Management Split Knowledge
+  3.7.7: Unauthorized Key Substitution Prevention
+  3.7.8: Key Custodian Acknowledgment
+  3.7.9: Service Provider Key Wrapping
+  4.1.1: Transmission Security Policies and Procedures
+  4.1.2: Transmission Security Roles and Responsibilities
+  4.2.1.2: Wireless Transmission Encryption
+  4.2.2: End-User Messaging PAN Protection
+  5.1.1: Anti-Malware Policies and Procedures
+  5.1.2: Anti-Malware Roles and Responsibilities
+  5.2.1: Anti-Malware Solution Deployed
+  5.2.2: Anti-Malware Detection Capability
+  5.2.3: Anti-Malware System Component Evaluation
+  5.2.3.1: Anti-Malware Evaluation Frequency
+  5.3.1: Anti-Malware Solution Current
+  5.3.2: Anti-Malware Periodic Scans and Active Scanning
+  5.3.2.1: Anti-Malware Scan Frequency
+  5.3.3: Anti-Malware for Removable Media
+  5.3.4: Anti-Malware Audit Logging
+  5.3.5: Anti-Malware Cannot Be Disabled
+  5.4.1: Phishing Attack Detection
+  6.1.1: Secure Development Policies and Procedures
+  6.1.2: Secure Development Roles and Responsibilities
+  6.2.1: Secure Development Practices
+  6.2.2: Developer Security Training
+  6.2.3: Software Review Before Release
+  6.2.3.1: Manual Code Review Process
+  6.3.1: Known Vulnerability Identification
+  6.3.2: Software Inventory Maintained
+  6.4.1: Public-Facing Web Application Protection
+  6.4.2: Automated Web Application Attack Detection
+  6.5.1: Change Control for System Components
+  6.5.2: Production Code Change Validation
+  6.5.3: Pre-Production Separation from Production
+  6.5.4: Role Separation Between Production and Pre-Production
+  6.5.5: Live PANs Not in Pre-Production
+  6.5.6: Test Data Removal
+  7.1.1: Access Control Policies and Procedures
+  7.1.2: Access Control Roles and Responsibilities
+  7.2.1: Access Control Model Defined
+  7.2.2: Access Assigned Based on Role
+  7.2.3: Required Privileges Approved
+  7.2.4: Access Reviews
+  7.2.5: Application and System Account Access
+  7.2.5.1: Application and System Account Review Frequency
+  7.2.6: Access Based on Need to Know
+  7.3.1: Access Control System Configuration
+  7.3.2: Access Control System Review
+  7.3.3: Default Deny All
+  8.1.1: Authentication Policies and Procedures
+  8.1.2: Authentication Roles and Responsibilities
+  8.2.1: Unique IDs for All Users
+  8.2.2: Shared Account Management
+  8.2.3: Service Provider Customer Account Isolation
+  8.2.4: User Lifecycle Management
+  8.2.5: Terminated User Access Revocation
+  8.2.6: Inactive Account Removal
+  8.2.7: Third-Party Remote Access Account Management
+  8.2.8: Idle Session Timeout
+  8.3.2: Strong Cryptography for Authentication Factors
+  8.3.3: User Identity Verification Before Credential Changes
+  8.3.4: Failed Authentication Lockout
+  8.3.5: Password Reset Security
+  8.3.7: New Password Cannot Match Previous
+  8.3.8: Authentication Policies Communication
+  8.3.9: Unique Password Per Application
+  8.3.10: Service Provider Customer Password Guidance
+  8.3.10.1: Service Provider Password Change Interval
+  8.3.11: Physical Token Usage
+  8.4.1: MFA for Administrative Access
+  8.4.3: MFA for Remote Network Access
+  8.5.1: MFA System Configuration
+  8.6.3: Application Password Protection
+  9.1.1: Physical Security Policies and Procedures
+  9.1.2: Physical Security Roles and Responsibilities
+  9.2.1: Facility Entry Controls
+  9.2.1.1: Individual Physical Access Monitoring
+  9.2.2: Publicly Accessible Area Controls
+  9.2.3: Wireless Access Point Physical Security
+  9.2.4: Console Physical Access Restriction
+  9.3.1: Visitor Physical Access Authorization
+  9.3.1.1: Visitor Access to CDE
+  9.3.2: Visitor Identification
+  9.3.3: Visitor Badge Surrender
+  9.3.4: Visitor Log Maintenance
+  9.4.1: Media Physical Security
+  9.4.1.1: Offline Media Storage Security
+  9.4.1.2: Offline Media Security Review
+  9.4.2: Media Classification
+  9.4.3: Secure Media Distribution
+  9.4.4: Management Approval for Media Distribution
+  9.4.5: Electronic Media Inventory
+  9.4.5.1: Electronic Media Inventory Frequency
+  9.4.6: Media Destruction
+  9.4.7: Electronic Media Destruction
+  9.5.1: POI Device Protection
+  9.5.1.1: POI Device List Maintenance
+  9.5.1.2: POI Device Inspection
+  9.5.1.2.1: POI Inspection Frequency
+  9.5.1.3: POI Device Training
+  10.1.1: Logging and Monitoring Policies and Procedures
+  10.1.2: Logging and Monitoring Roles and Responsibilities
+  10.2.1.1: Log All Individual User Access to CHD (partially covered by 10.2.1)
+  10.2.1.2: Log All Administrative Actions (partially covered by 10.2.1)
+  10.2.1.3: Log All Access to Audit Logs
+  10.2.1.4: Log All Invalid Authentication Attempts
+  10.2.1.5: Log All Changes to Credentials
+  10.2.1.6: Log Initialization of Audit Logs
+  10.2.1.7: Log Creation and Deletion of System-Level Objects
+  10.2.2: Audit Log Content Requirements
+  10.3.1: Audit Log Read Protection
+  10.3.2: Audit Log Modification Protection
+  10.3.3: Audit Log Backup
+  10.3.4: File Integrity Monitoring on Audit Logs
+  10.4.1: Audit Log Review
+  10.4.1.1: Automated Audit Log Review
+  10.4.2: Security Event Review
+  10.4.2.1: Security Event Review Frequency
+  10.4.3: Exception and Anomaly Follow-Up
+  10.5.1: Audit Log Retention
+  10.6.1: Time Synchronization
+  10.6.2: Time Synchronization Configuration
+  10.6.3: Time Synchronization Settings Protection
+  10.7.1: Critical Security Control Failure Detection
+  10.7.2: Critical Security Control Failure Response
+  10.7.3: Critical Security Control Failure Response for Service Providers
+  11.1.1: Security Testing Policies and Procedures
+  11.1.2: Security Testing Roles and Responsibilities
+  11.2.1: Authorized Wireless Access Points
+  11.2.2: Wireless Access Point Detection
+  11.3.1: Internal Vulnerability Scans
+  11.3.1.1: Internal Scan Management
+  11.3.1.2: Authenticated Internal Scanning
+  11.3.1.3: Internal Scan After Significant Changes
+  11.3.2: External Vulnerability Scans
+  11.3.2.1: External Scan After Significant Changes
+  11.4.1: Penetration Testing Methodology
+  11.4.2: Internal Penetration Testing
+  11.4.3: External Penetration Testing
+  11.4.4: Penetration Testing Remediation
+  11.4.5: Segmentation Verification
+  11.4.6: Service Provider Segmentation Testing
+  11.4.7: Multi-Tenant Service Provider Segmentation
+  11.5.1: Intrusion Detection/Prevention
+  11.5.1.1: IDS/IPS Configuration
+  11.5.2: Change Detection on Critical Files
+  12.1.1: Information Security Policy
+  12.1.2: Information Security Policy Review
+  12.1.3: Acceptable Use Policies
+  12.1.4: CISO Responsibility Assignment
+  12.2.1: Acceptable Use Policies for Technology
+  12.3.1: Targeted Risk Analysis
+  12.3.2: Targeted Risk Analysis for Customized Approach
+  12.3.3: Cryptographic Cipher Suites Review
+  12.3.4: Hardware and Software Technology Review
+  12.4.1: Service Provider Compliance Review
+  12.4.2: Service Provider Compliance Reviews
+  12.4.2.1: Service Provider Review Documentation
+  12.5.1: CDE Component Inventory
+  12.5.2: PCI DSS Scope Review
+  12.5.2.1: Scope Review Frequency for Service Providers
+  12.5.3: Significant Changes Scope Impact
+  12.6.1: Security Awareness Program
+  12.6.2: Security Awareness Review
+  12.6.3: Security Awareness Training Delivery
+  12.6.3.1: Security Awareness Training Content
+  12.6.3.2: Social Engineering Training
+  12.7.1: Personnel Screening
+  12.8.1: Service Provider List
+  12.8.2: Service Provider Agreements
+  12.8.3: Service Provider Engagement Process
+  12.8.4: Service Provider Compliance Monitoring
+  12.8.5: Service Provider Responsibility Mapping
+  12.9.1: Service Provider Acknowledgment
+  12.9.2: Service Provider Support for Assessments
+  12.10.1: Incident Response Plan
+  12.10.2: Incident Response Plan Review
+  12.10.3: Incident Response Personnel Availability
+  12.10.4: Incident Response Training
+  12.10.4.1: Incident Response Training Frequency
+  12.10.5: Incident Response Plan Includes Alerts
+  12.10.6: Incident Response Plan Evolution
+  12.10.7: Incident Response for Unexpected PAN
+
+Accuracy Notes (PASS requirements):
+  6.3.3: Statically verified: Queries OSV.dev for known vulnerabilities in go.mod dependencies Not verified: Vulnerability remediation process and timelines
+
+Cross-Referenced Requirements:
+  FAIL 2.2.7 -- Covered by same finding (see 4.2.1)
+  FAIL 3.3.1.2 -- Covered by same finding (see 3.3.1)
+  FAIL 3.6.1.2 -- Covered by same finding (see 6.2.4)
+  FAIL 4.2.1.1 -- Covered by same finding (see 4.2.1)
+  FAIL 8.6.1 -- Covered by same finding (see 8.4.2)
+
+NOTE: NOT_CHECKED != non-compliant. Static analysis cannot verify these controls.
+A Qualified Security Assessor (QSA) must review them.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

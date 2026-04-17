@@ -1,6 +1,10 @@
 package reportscanner
 
-import "github.com/shyshlakov/pci-dss-mcp/scanner"
+import (
+	"time"
+
+	"github.com/shyshlakov/pci-dss-mcp/scanner"
+)
 
 // ComplianceReport is the full JSON compliance report.
 type ComplianceReport struct {
@@ -96,4 +100,49 @@ type ReportSummary struct {
 	Medium            int `json:"medium_findings"`
 	Low               int `json:"low_findings"`
 	Info              int `json:"info_findings"`
+}
+
+type SummaryResponse struct {
+	ResponseShape       string                       `json:"response_shape"`
+	Metadata            ReportMetadata               `json:"metadata"`
+	Summary             ReportSummary                `json:"summary"`
+	RequirementStatuses map[string]RequirementStatus `json:"requirement_statuses"`
+	TopFindings         map[string][]ReportFinding   `json:"top_findings"`
+	Pagination          PaginationInfo               `json:"pagination"`
+}
+
+type FlatResponse struct {
+	ResponseShape string          `json:"response_shape"`
+	Metadata      ReportMetadata  `json:"metadata"`
+	Summary       ReportSummary   `json:"summary"`
+	Findings      []ReportFinding `json:"findings"`
+	Pagination    PaginationInfo  `json:"pagination"`
+}
+
+type PaginationInfo struct {
+	TotalFindings        int            `json:"total_findings"`
+	Returned             int            `json:"returned"`
+	RemainingPerSeverity map[string]int `json:"remaining_per_severity,omitempty"`
+	NextCursor           string         `json:"next_cursor,omitempty"`
+	Hint                 string         `json:"hint"`
+	AutoCapped           bool           `json:"auto_capped"`
+	TotalBeforeCap       int            `json:"total_before_cap,omitempty"`
+	Kept                 int            `json:"kept,omitempty"`
+}
+
+type CursorExpiredError struct {
+	ResponseShape string `json:"response_shape"`
+	Error         string `json:"error"`
+	Code          string `json:"code"`
+	Hint          string `json:"hint"`
+}
+
+type cacheEntry struct {
+	findings   []ReportFinding
+	scanMeta   ReportMetadata
+	summary    ReportSummary
+	reqStatus  map[string]RequirementStatus
+	filterHash string
+	createdAt  time.Time
+	expiresAt  time.Time
 }

@@ -22,6 +22,8 @@ type ScannerToolOutput struct {
 	Findings      []Finding     `json:"findings" jsonschema:"Findings detected by this scanner. May be empty."`
 	SeverityStats SeverityStats `json:"severity_stats" jsonschema:"Count of findings by severity tier"`
 	Metadata      ScanMetadata  `json:"metadata" jsonschema:"Scan execution metadata (files scanned, duration)"`
+	TotalFindings int           `json:"total_findings,omitempty" jsonschema:"Total findings for this scan (includes results beyond this page). Present when the scanner tool paginates."`
+	NextCursor    string        `json:"next_cursor,omitempty" jsonschema:"Opaque cursor token for resuming this scanner's pagination (10-minute TTL). Empty when no more pages remain or pagination is not active."`
 }
 
 // SeverityStats holds per-severity finding counts for an MCP tool output.

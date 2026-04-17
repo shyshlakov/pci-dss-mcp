@@ -5,6 +5,156 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## v0.2.0 - 2026-04-17
+
+### Breaking Changes
+- `generate_compliance_report` default response shape is now a summary-first
+  variant (`response_shape: "summary"`). Previously, unfiltered calls returned
+  a flat `findings: [...]` array wrapped in a `ComplianceReport` envelope.
+  The new default response carries severity totals, per-requirement statuses,
+  up to 10 top findings per severity, and a `pagination.next_cursor` that the
+  client uses to drill down into the full findings list.
+
+  **Before (v0.1.5):** unfiltered `generate_compliance_report` default response
+  ```json
+  {
+    "metadata": {"target_path": "...", "duration_ms": 1210, "total_files": 72},
+    "summary": {"critical": 49, "high": 89, "medium": 27, "low": 0, "info": 59},
+    "findings": [
+      {"rule_id": "PAN-KEYWORD", "severity": "HIGH", "file_path": "...", ...},
+      "... all 178 active findings inline ..."
+    ],
+    "requirement_status": [...14 entries + 213 NOT_CHECKED...],
+    "compliance_status": "FAIL",
+    "active_findings": 178
+  }
+  ```
+
+  **After (v0.2.0):** same call, default response
+  ```json
+  {
+    "response_shape": "summary",
+    "metadata": {"target_path": "...", "duration_ms": 1210, "total_files": 72},
+    "summary": {"critical": 49, "high": 89, "medium": 27, "low": 0, "info": 59},
+    "requirement_statuses": [...14 entries; NOT_CHECKED filtered out...],
+    "top_findings": {
+      "critical": ["...up to 10 findings (stripped code_snippet / fix_hint)..."],
+      "high":     ["...up to 10..."],
+      "medium":   ["...up to 10..."]
+    },
+    "pagination": {
+      "total_findings": 178,
+      "returned": 30,
+      "next_cursor": "eyJzaWQiOiI...",
+      "hint": "call generate_compliance_report with cursor for the full flat page; pass limit=-1 to get legacy flat shape (capped at 500)",
+      "auto_capped": false
+    }
+  }
+  ```
+
+- **Migration.** Pass `limit=-1` on the next call to `generate_compliance_report`
+  to restore the pre-v0.2.0 flat findings array (capped at 500 by safety net).
+  Alternatively, follow the `pagination.next_cursor` to page through findings
+  60 at a time.
+
+- New `cursor` input parameter on `generate_compliance_report`, `triage_findings`,
+  and `scan_pan_data`. Empty string or absent = fresh scan. Non-empty = resume
+  from server-side session cache (10-minute TTL). Cursors are tool-scoped;
+  reusing a `generate_compliance_report` cursor on `triage_findings` (or vice
+  versa) returns a `CURSOR_MALFORMED` error.
+
+- New error responses: clients must handle the structured error shape.
+  - `CURSOR_EXPIRED` — session cache entry expired (10-minute TTL) or server
+    restarted. Hint: re-run without cursor to start a fresh scan.
+  - `CURSOR_MALFORMED` — cursor failed to decode, or its embedded tool name
+    does not match the current tool.
+
+### Added
+- Three-layer hybrid response dispatcher for `generate_compliance_report`
+  (F-29, implemented via `SelectAndExecute`):
+  - **Layer B — summary-first.** Triggered on unfiltered calls
+    (`limit == 0 && min_severity == "" && rule_filter == "" && cursor == ""`).
+    Returns `SummaryResponse`: severity totals, requirement statuses,
+    up to 10 top findings per severity (CRITICAL / HIGH / MEDIUM),
+    `pagination.next_cursor` set for drill-down.
+  - **Layer A — cursor pagination.** Triggered when a cursor is present OR
+    any filter is set (`rule_filter`, `min_severity`, positive `limit`).
+    Returns `FlatResponse` with 60 findings per page plus `next_cursor`
+    when more pages remain.
+  - **Layer C — auto-cap safety net.** Triggered ONLY by explicit `limit=-1`.
+    Returns a flat `findings` array; if size exceeds 500 the response is
+    capped with `pagination.auto_capped: true, total_before_cap, kept, hint`.
+- `cursor` input parameter on `generate_compliance_report`, `triage_findings`,
+  `scan_pan_data`.
+- `OutputSchema` for `generate_compliance_report` is now a `oneOf` union of
+  `SummaryResponse`, `FlatResponse`, and `CursorExpiredError` variants with
+  a required `response_shape` const discriminator (`"summary"`, `"flat"`,
+  `"error"`).
+- Session caches for cursor-paginated follow-up — in-memory `sync.Map`,
+  10-minute TTL, 60-second lazy eviction sweep via background ticker. Each
+  tool owns a typed cache: `generate_compliance_report` stores
+  `[]ReportFinding` in `scanner/reportscanner`; `scan_pan_data` and
+  `triage_findings` share `[]scanner.Finding` via `scanner/hybridcache`.
+  Both caches follow the same TTL, eviction, and fake-clock test contract.
+
+### Internal
+- New `scanner/reportscanner/session.go` — package-level `sync.Map`, injected
+  `Clock` interface, `sync.Once`-gated background evictor. Mirrors the
+  `internal/taint/engine.go` session-cache pattern.
+- New `scanner/reportscanner/cursor.go` — opaque `base64.RawURLEncoding` JSON
+  cursor (`{sid, off, tool}`) with cross-tool namespace guard.
+- New `scanner/reportscanner/hybrid.go` — D-01 layer selector
+  `SelectAndExecute`; Layer A/B/C builders `buildSummary`,
+  `buildFlatPage`, `buildAutoCapFlat`; top-finding stripping
+  (`stripSummaryFindings` drops `code_snippet` / `fix_hint` /
+  `related_requirements` for the summary panel).
+- New `scanner/reportscanner/output_schema.go` — `buildOutputSchemaUnion`
+  + `pinResponseShape` helper that overrides the inferred property's
+  `const` field per variant (jsonschema-go has no const struct tag).
+- New `scanner/hybridcache/hybridcache.go` — cross-package cursor + session
+  cache for the single-scanner tools (`scan_pan_data`, `triage_findings`).
+  Introduced to break the `reportscanner ↔ panscanner` import cycle that
+  would otherwise arise from sharing reportscanner's Wave 1 primitives
+  with the two single-scanner tools. `generate_compliance_report` keeps
+  its own typed cache in `scanner/reportscanner/session.go` because the
+  payload type (`[]ReportFinding`) diverges from the shared cache's
+  `[]scanner.Finding` shape.
+- New `scanner/reportscanner/format_stability_test.go` +
+  `scanner/reportscanner/testdata/format_golden.txt` — byte-identical CLI
+  output regression guard. `FormatHumanReadable` is unchanged by this
+  release and must remain unchanged going forward.
+- Extended `scanner/tool_output_schema_test.go` with
+  `TestOutputSchema_GenerateReport_HasOneOfUnion` — walks registered
+  tools, asserts the union is declared with exactly three variants.
+- `scanner/tooloutput.go`: `ScannerToolOutput` grows `TotalFindings` and
+  `NextCursor` fields so single-scanner tools can paginate through the
+  `hybridcache` session store.
+- `scanner/triagescanner/types.go`: `TriageResult` grows a `NextCursor`
+  field (omitempty) for paginated responses.
+
+### Docs
+- `docs/tools.md` updated with a top-of-file v0.2.0 migration note and
+  per-tool "Pagination and cursor" subsections for
+  `generate_compliance_report`, `triage_findings`, and `scan_pan_data`.
+
+### Known limitations
+- Persistent disk cache is deferred (tracked as backlog item F-30).
+  Process restart invalidates all outstanding cursors; clients see
+  `CURSOR_EXPIRED` and must re-run without a cursor.
+- HMAC-signed cursors are an optional defense-in-depth item; this release
+  ships opaque-but-unsigned cursors. The threat surface is a
+  single-process stdio MCP server, which is low exposure.
+- `chi`-style inline middleware (`r.With(...).Post(...)`) is not yet
+  recognised by the shared hybrid middleware crawler; use route-group
+  registration via `r.Use(...)` to remain detectable.
+
+### Metrics
+- Layer B response size on the golden fixture: **19,986 bytes** (budget
+  25,600). `TestLayerB_FixtureBudget25KB` locks this invariant.
+- Golden fixture `make test-fixture` counts unchanged
+  (CRITICAL=49 HIGH=89 MEDIUM=27 LOW=0 INFO=59) — this release adds no
+  detection logic, only reshapes how findings are wrapped on the wire.
+
 ## v0.1.5 - 2026-04-17
 
 ### Fixed

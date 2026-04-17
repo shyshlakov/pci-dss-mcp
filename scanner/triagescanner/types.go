@@ -8,8 +8,9 @@ import "github.com/shyshlakov/pci-dss-mcp/scanner"
 
 // TriageResult is the complete output of the triage tool.
 type TriageResult struct {
-	Findings []EnrichedFinding `json:"findings"`
-	Metadata TriageMetadata    `json:"metadata"`
+	Findings   []EnrichedFinding `json:"findings"`
+	Metadata   TriageMetadata    `json:"metadata"`
+	NextCursor string            `json:"next_cursor,omitempty" jsonschema:"Opaque cursor token for resuming triage enrichment across pages. Empty when no more pages remain."`
 }
 
 // EnrichedFinding wraps a scanner.Finding with contextual evidence for AI triage.
