@@ -5,6 +5,15 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+### Fixed
+- `AUTH-MISSING-MFA` downgrades to INFO on service-to-service / webhook handlers via consensus multi-signal classifier. Strong T1 signals include `hmac.Equal`, `subtle.ConstantTimeCompare`, `rsa.Verify*`, `ecdsa.Verify*`, `ed25519.Verify`, `jwt.Parse`/`ParseWithClaims`, `jose.ParseSigned`, brand-SDK calls (`webhook.ConstructEvent`, `hmacvalidator.ValidateHmac*`, `client.VerifyWebhookSignature`). Medium T2 signals are handler-name regex match plus webhook route path plus POST/PUT method. Weak T3 signals are absence of Authorization header read and the raw-body-then-parse pattern. Rule: `is_s2s = strong >= 1 OR (medium >= 2 AND weak >= 1)`. Negative kill-switch: any of `session.Save`/`session.Set`, gin `c.SetCookie` 7-arg, stdlib `http.SetCookie` 2-arg, or raw `w.Header().Set("Set-Cookie", ...)` keeps the finding at HIGH (OAuth callback recall guard). Downgraded findings carry TriageHint `downgrade:s2s_handler | <signal reason>` and add PCI DSS 8.6.1 + 8.6.2 to RelatedRequirements (machine-auth context per PCI 8.4.2 Applicability Notes). Eliminates ~75% of HIGH AUTH-MISSING-MFA false positives observed on real-world payment microservices.
+
+### Internal
+- New `scanner/authscanner/s2s_handler.go` — per-file fixup wired into `authscanner.scanGoFileInRoot` immediately after `detectMissingMFA`. Mirrors `sqlscanner.applyVerifiedTypeFixup` architecture.
+- 2 clean fixture files under `testdata/vulnerable-payment-service/clean/s2s_handler/` covering T1-strong (HMAC verification before parse) and T2+T3 consensus.
+- 1 adversarial fixture `testdata/vulnerable-payment-service/internal/http/handler/admin/admin_panel.go` locks the D-03 negative-signal rule (handler with webhook-shaped name but Set-Cookie write stays HIGH).
+- Triage output budget bumped from 176 KB to 184 KB to accommodate the four additional active findings on the s2s fixtures (2 INFO downgrades + 1 HIGH adversarial + 1 CRITICAL incidental AUDIT-NO-LOG).
+
 ## v0.1.4 — 2026-04-16
 
 ### Fixed
