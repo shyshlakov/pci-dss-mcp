@@ -5,6 +5,206 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## v0.3.0 - 2026-04-17
+
+### Breaking Changes
+- `triage_findings` default response shape is now a summary-first variant
+  (`response_shape: "summary"`). Previously, unfiltered calls returned a flat
+  `TriageResult` with up to 60 enriched findings. The new default response
+  carries severity totals, a per-rule histogram, up to 2 enriched findings
+  per severity (CRITICAL / HIGH / MEDIUM / LOW / INFO), and a
+  `pagination.next_cursor` that the client uses to drill down into the full
+  enriched list.
+
+  **Before (v0.2.0):** unfiltered `triage_findings` default response
+  ```json
+  {
+    "findings": [
+      {"finding": {...}, "context": {...}, "triage_hint": "..."},
+      "... up to 60 enriched findings inline (~85 KB on a ~73-finding project) ..."
+    ],
+    "metadata": {"findings_total": 73, "findings_triaged": 71, "duration_ms": 2183, "files_analyzed": 41},
+    "next_cursor": "eyJzaWQiOiI..."
+  }
+  ```
+
+  **After (v0.3.0):** same call, default response
+  ```json
+  {
+    "response_shape": "summary",
+    "metadata": {"findings_total": 73, "findings_triaged": 71, "duration_ms": 2183, "files_analyzed": 41},
+    "summary": {
+      "by_severity": {"critical": 1, "high": 13, "medium": 30, "low": 0, "info": 29},
+      "by_rule": [
+        {"rule_id": "RET-CONFIG-NO-TTL", "count": 18},
+        {"rule_id": "AUTH-MISSING-MFA", "count": 9}
+      ]
+    },
+    "top_findings": {
+      "critical": ["... up to 2 enriched findings ..."],
+      "high":     ["... up to 2 ..."],
+      "medium":   ["... up to 2 ..."],
+      "low":      [],
+      "info":     ["... up to 2 ..."]
+    },
+    "pagination": {
+      "total_findings": 73,
+      "returned": 8,
+      "next_cursor": "eyJzaWQiOiI...",
+      "hint": "Call again with cursor to page through full enriched findings, or use min_severity / rule_filter to narrow."
+    }
+  }
+  ```
+
+- `scan_pan_data` default response shape is now a summary-first variant
+  (`response_shape: "summary"`). Previously, unfiltered calls returned a flat
+  `ScannerToolOutput` with all findings inline (paginated only when > 60 total).
+  The new default response carries severity totals, a per-rule histogram, up
+  to 3 findings per severity, and a `pagination.next_cursor` for drill-down.
+
+  **Before (v0.2.0):** unfiltered `scan_pan_data` default response
+  ```json
+  {
+    "scanner": "pan_data",
+    "findings": ["... all PAN findings inline ..."],
+    "severity_stats": {"critical": 1, "high": 11, "medium": 15, "low": 0, "info": 12},
+    "metadata": {"scanned_files": 72, "scanned_lines": 5600, "duration_ms": 890}
+  }
+  ```
+
+  **After (v0.3.0):** same call, default response
+  ```json
+  {
+    "response_shape": "summary",
+    "scanner": "pan_data",
+    "metadata": {"scanned_files": 72, "scanned_lines": 5600, "duration_ms": 890},
+    "summary": {
+      "by_severity": {"critical": 1, "high": 11, "medium": 15, "low": 0, "info": 12},
+      "by_rule": [
+        {"rule_id": "PAN-KEYWORD", "count": 23},
+        {"rule_id": "PAN-TYPE", "count": 8},
+        {"rule_id": "PAN-LITERAL", "count": 6},
+        {"rule_id": "PAN-LOGGER", "count": 1},
+        {"rule_id": "PAN-ZEROING", "count": 1}
+      ]
+    },
+    "top_findings": {
+      "critical": ["... up to 3 findings ..."],
+      "high":     ["... up to 3 ..."],
+      "medium":   ["... up to 3 ..."],
+      "low":      [],
+      "info":     ["... up to 3 ..."]
+    },
+    "pagination": {
+      "total_findings": 39,
+      "returned": 12,
+      "next_cursor": "eyJzaWQiOiI...",
+      "hint": "Call again with cursor to page through full findings, or use include_tests / exclude_patterns to narrow scope."
+    }
+  }
+  ```
+
+- **Migration.** Pass `limit=-1` on the next call to `triage_findings` or
+  `scan_pan_data` to restore the pre-v0.3.0 flat response shape (auto-capped
+  at 500 findings). Alternatively, follow the `pagination.next_cursor` to page
+  through findings 60 at a time. Passing any of `min_severity`, `rule_filter`,
+  or (for `scan_pan_data`) `exclude_patterns` / `include_tests` /
+  `include_untracked` / `include_taint` also continues to return the flat
+  shape with pagination support.
+
+- `triage_findings` and `scan_pan_data` responses now include a
+  `response_shape` discriminator field at the top level of `StructuredContent`.
+  Valid values: `"summary"` (Layer B), `"flat"` (Layer A / Layer C), `"error"`
+  (cursor error variants). Clients that dispatch on this field should handle
+  all three.
+
+- `scanner.ScannerToolOutput` (shared typed output for every single-scanner
+  tool) grew a `response_shape` field set to `"flat"` by `BuildScannerToolOutput`.
+  Downstream callers that unmarshal `ScannerToolOutput` must tolerate the extra
+  field; callers that pin the full struct shape in a test snapshot should
+  update their fixtures.
+
+### Added
+- Three-layer hybrid response dispatcher for `triage_findings` and
+  `scan_pan_data`:
+  - **Layer B -- summary-first.** Default for unfiltered, cursor-less calls.
+  - **Layer A -- cursor pagination.** Triggered on cursor resume OR when any
+    filter / scope input is set.
+  - **Layer C -- auto-cap safety net.** Triggered only on explicit `limit=-1`.
+- `triage_findings` summary response: top-N = 2 enriched findings per severity
+  bucket (max 10 enriched inline). Empty severity buckets ship as `[]`.
+- `scan_pan_data` summary response: top-N = 3 findings per severity bucket
+  (max 15 inline). Empty severity buckets ship as `[]`.
+- Both tools declare `_meta.anthropic/maxResultSizeChars: 20000` so MCP
+  clients supporting the annotation (e.g. Claude Code) know the soft
+  character ceiling in advance.
+- Both tools' `OutputSchema` is a `oneOf` union of three variants
+  (`*SummaryResponse`, flat response, `*CursorError`) with a `response_shape`
+  const discriminator per variant.
+- Cross-tool cursor guard: a cursor issued by `triage_findings` is rejected
+  by `scan_pan_data` and vice versa with a structured `CURSOR_MALFORMED`
+  error. Already enforced for `generate_compliance_report` as of v0.2.0.
+
+### Internal
+- New `scanner/hybrid/` package exposing a generic
+  `SelectAndExecute[TFinding, TSummary, TFlat any]` selector with injected
+  `Scan`, `Filter`, `BuildSummary`, `BuildFlat`, `Cacher[TFinding]` callbacks.
+  Shared by both single-scanner tools migrated in this release; reportscanner
+  keeps its private `SelectAndExecute` as-is (migration is optional and
+  deferred). Import graph stays acyclic:
+  `scanner/hybrid -> scanner/hybridcache -> scanner`.
+- `scanner/triagescanner/summary.go` -- new `TriageSummaryResponse` +
+  `buildTriageSummaryInternal` + `pickTopNTriage` with deterministic
+  severity -> rule_id -> file_path ordering.
+- `scanner/panscanner/summary.go` -- new `PANSummaryResponse` +
+  `buildPANSummaryInternal` + `pickTopNPAN` with the same deterministic
+  ordering.
+- `scanner/triagescanner/output_schema.go` + `scanner/panscanner/output_schema.go`
+  -- `oneOf` union schema builders mirroring the v0.2.0
+  `scanner/reportscanner/output_schema.go` pattern.
+- `scanner/tooloutput.go` -- `ScannerToolOutput` grows a `ResponseShape`
+  field set to `"flat"` by `BuildScannerToolOutput` so the union schema
+  validates a discriminator at the top level.
+- New cross-tool integration test in `scanner/hybrid/layerb_crosstool_test.go`
+  -- spins up both tools through an in-memory MCP transport and asserts
+  both Layer B wire sizes stay under 20480 bytes on the golden fixture.
+- New smoke script at `scripts/pci-layerb-smoke.go` (`go run -tags smoke`)
+  measures Layer B wire size via an in-memory MCP transport for
+  operator-driven UAT on any target path.
+
+### Docs
+- `docs/tools.md` updated with a v0.3.0 migration note and per-tool
+  Pagination and cursor subsections for `triage_findings` and `scan_pan_data`
+  mirroring the v0.2.0 pattern for `generate_compliance_report`.
+
+### Known limitations
+- `anthropic/maxResultSizeChars` is currently honoured by Claude Code
+  (verified against v2.1.91, April 2026). Claude Desktop and Cursor
+  treatment is undocumented; the 20000 declaration is intended as an
+  informational hint for any client that recognises the `_meta` key.
+- Claude Desktop's exact 2026 character ceiling remains unconfirmed; top-N
+  caps (2 / 3) target a conservative 20K binding so Layer B fits within any
+  plausible client display window.
+- `generate_compliance_report` continues to use its private
+  `SelectAndExecute` in `scanner/reportscanner/`. Migration to the shared
+  `scanner/hybrid/` helper is a nice-to-have deferred to a follow-up phase;
+  behaviour is unchanged.
+
+### Metrics
+- `triage_findings` Layer B wire size on the golden fixture:
+  **under the 20480-byte budget with headroom** (see
+  `scanner/triagescanner/layerb_test.go:TestTriageLayerB_SizeBudget20KB`).
+- `scan_pan_data` Layer B wire size on the golden fixture:
+  **under the 20480-byte budget with headroom** (see
+  `scanner/panscanner/layerb_test.go:TestPANLayerB_SizeBudget20KB`).
+- Live-path UAT on a real-world Go payment service workload (~50+ active
+  findings): both tools render inline in Claude Code; no "read in chunks"
+  fallback banner. Pre-v0.3.0 reference for the same workload:
+  `triage_findings` returned ~85 KB and triggered chunked-read mode.
+- Golden fixture `make test-fixture` severity counts unchanged
+  (CRITICAL=49 HIGH=89 MEDIUM=27 LOW=0 INFO=59) -- this release adds no
+  detection logic, only reshapes how findings are wrapped on the wire.
+
 ## v0.2.0 - 2026-04-17
 
 ### Breaking Changes
