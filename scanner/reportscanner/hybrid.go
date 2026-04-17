@@ -12,7 +12,7 @@ import (
 
 const (
 	autoCapThreshold = 500
-	flatPageSize     = 60
+	flatPageSize     = 24
 	topPerSeverity   = 10
 )
 

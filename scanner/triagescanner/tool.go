@@ -158,6 +158,7 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 			IncludeTaint:  includeTaint,
 			ScanTimestamp: scanTS,
 			ToolName:      toolNameTriage,
+			FlatPageSize:  12,
 		}
 		res, err := hybrid.SelectAndExecute[scanner.Finding, TriageSummaryResponse, TriageResult](
 			ctx, in, scan, filterFn, buildSummary, buildFlat, triageCacher{},

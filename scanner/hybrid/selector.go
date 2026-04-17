@@ -8,6 +8,13 @@ import (
 	"github.com/shyshlakov/pci-dss-mcp/scanner/hybridcache"
 )
 
+func effectivePageSize(in Input) int {
+	if in.FlatPageSize > 0 {
+		return in.FlatPageSize
+	}
+	return FlatPageSize
+}
+
 func SelectAndExecute[TFinding, TSummary, TFlat any](
 	ctx context.Context,
 	in Input,
@@ -34,7 +41,8 @@ func SelectAndExecute[TFinding, TSummary, TFlat any](
 		if off < 0 {
 			off = 0
 		}
-		end := off + FlatPageSize
+		pageSize := effectivePageSize(in)
+		end := off + pageSize
 		if end > total {
 			end = total
 		}
@@ -51,7 +59,7 @@ func SelectAndExecute[TFinding, TSummary, TFlat any](
 				next = encoded
 			}
 		}
-		flat := buildFlat(page, off, FlatPageSize, total, meta, payload.SID, next, false)
+		flat := buildFlat(page, off, pageSize, total, meta, payload.SID, next, false)
 		return &Result[TSummary, TFlat]{Flat: flat}, nil
 	}
 
@@ -79,7 +87,7 @@ func SelectAndExecute[TFinding, TSummary, TFlat any](
 		fh := hybridcache.FilterHash(in.MinSeverity, in.RuleFilter, in.IncludeTests)
 		sid := hybridcache.SessionKey(in.AbsPath+"|"+in.ToolName, in.ScanTimestamp, fh, in.IncludeTaint)
 		cache.Put(sid, filtered, meta)
-		pageSize := FlatPageSize
+		pageSize := effectivePageSize(in)
 		if in.Limit > 0 {
 			pageSize = in.Limit
 		}

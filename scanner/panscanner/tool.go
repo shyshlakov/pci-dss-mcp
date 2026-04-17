@@ -156,7 +156,7 @@ func RegisterTools(server *mcp.Server) {
 		effectiveMinSev := strings.TrimSpace(input.MinSeverity)
 		effectiveRule := strings.TrimSpace(input.RuleFilter)
 		if scopeFilterSet && effectiveLimit == 0 && effectiveMinSev == "" && effectiveRule == "" && input.Cursor == "" {
-			effectiveLimit = hybrid.FlatPageSize
+			effectiveLimit = 30
 		}
 
 		in := hybrid.Input{
@@ -169,6 +169,7 @@ func RegisterTools(server *mcp.Server) {
 			IncludeTaint:  input.IncludeTaint,
 			ScanTimestamp: scanTS,
 			ToolName:      toolNameScanPAN,
+			FlatPageSize:  30,
 		}
 
 		res, sErr := hybrid.SelectAndExecute[scanner.Finding, PANSummaryResponse, scanner.ScannerToolOutput](

@@ -16,6 +16,7 @@ type Input struct {
 	IncludeTaint  bool
 	ScanTimestamp string
 	ToolName      string
+	FlatPageSize  int `json:"flat_page_size,omitempty"`
 }
 
 type Result[TSummary, TFlat any] struct {
