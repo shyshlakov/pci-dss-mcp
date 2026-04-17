@@ -9,6 +9,28 @@ All tools declare a typed `OutputSchema` auto-inferred from Go struct
 both a 1-line `content.text` summary AND a validated `structuredContent`
 payload on every call.
 
+## v0.2.0 migration note (breaking)
+
+As of **v0.2.0**, the default response shape of `generate_compliance_report`
+changed from a flat `findings: [...]` array to a summary-first variant
+tagged `response_shape: "summary"`. The three tools
+`generate_compliance_report`, `triage_findings`, and `scan_pan_data`
+now accept an optional `cursor` input parameter for paginated follow-ups.
+
+**To restore the pre-v0.2.0 shape on the next call**, pass `limit: -1` to
+`generate_compliance_report`. The server returns a flat findings array
+(capped at 500 entries; over-cap responses surface
+`pagination.auto_capped: true` with `total_before_cap` / `kept` hints).
+
+**To drill into the full findings list progressively**, follow the
+`pagination.next_cursor` returned in the default summary response. Each
+follow-up call returns 60 findings per page (`FlatResponse`) plus a new
+cursor when more pages remain. Cursors are tool-scoped — a cursor issued
+by `generate_compliance_report` cannot be replayed against `triage_findings`
+(the server returns `CURSOR_MALFORMED`). Session cache TTL is 10 minutes;
+expired cursors return `CURSOR_EXPIRED` and the client re-runs without a
+cursor to start a fresh scan.
+
 ## generate_compliance_report
 
 Run all PCI DSS v4.0.1 compliance scanners and generate a comprehensive report.
@@ -22,11 +44,31 @@ Run all PCI DSS v4.0.1 compliance scanners and generate a comprehensive report.
 | `include_taint` | bool | no | flow-based severity adjustment via `go/packages`. **Default `true`** (production precision, as of ). Set `false` for fast dev iteration (adds 5-30s otherwise). Requires `go` binary on `PATH`; falls back to AST-only on failure |
 | `min_severity` | string | no | Scope the response to findings at or above this severity. One of `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` / `INFO` (case-insensitive). Default: no filter |
 | `rule_filter` | string | no | Comma-separated list of rule IDs (`PAN-KEYWORD,PAN-TYPE`) OR a single regex between slashes (`/PAN-.*/`). Default: no filter |
-| `limit` | int | no | Maximum number of findings to return after filtering. Default `0` (unlimited) |
+| `limit` | int | no | Maximum number of findings to return after filtering. Default `0` (summary-first). Pass `-1` to request the legacy flat findings array (auto-capped at 500) |
+| `cursor` | string | no | Opaque pagination cursor. Empty = fresh scan. Non-empty = resume from session cache (10-minute TTL) |
 
 All four filter/scope parameters (..) apply **before**
 serialization, so they genuinely shrink the response size rather than
 just hiding content client-side.
+
+**Pagination and cursor (v0.2.0+):**
+
+The response is one of three variants, tagged by `response_shape`:
+
+- `response_shape: "summary"` — default, returned when no filter/cursor is
+  present. Carries severity totals, per-requirement statuses, up to 10 top
+  findings per severity (CRITICAL / HIGH / MEDIUM), and
+  `pagination.next_cursor` for follow-up.
+- `response_shape: "flat"` — returned on cursor follow-up OR when any of
+  `min_severity` / `rule_filter` / positive `limit` is set. Up to 60
+  findings per page, plus `next_cursor` when more pages remain.
+- `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
+  `CURSOR_MALFORMED` (decode failure / cross-tool replay). Client retries
+  without a cursor.
+
+**Legacy flat response:** pass `limit: -1` to restore the pre-v0.2.0 flat
+shape. If `len(findings) > 500`, the response is capped and surfaces
+`pagination.auto_capped: true` with `total_before_cap` + `kept` counts.
 
 **PCI DSS Requirements:** All 14 covered requirements (3.2.1, 3.3.1, 3.4.1, 3.5.1, 4.2.1, 6.2.4, 6.3.3, 6.4.3, 8.3.1, 8.3.6, 8.4.2, 8.6.2, 10.2.1, 11.6.1)
 
@@ -58,6 +100,14 @@ Detect PAN/CVV exposure in Go source files and .env configuration.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `path` | string | yes | Path to scan |
+| `cursor` | string | no | Opaque pagination cursor (v0.2.0+). Empty = fresh scan. Non-empty = resume from `scanner/hybridcache` (10-minute TTL; cursors are tool-scoped and not interchangeable with `generate_compliance_report` / `triage_findings`) |
+
+**Pagination and cursor (v0.2.0+):** when the finding count exceeds 60,
+the first response returns 60 findings plus `next_cursor`. Re-invoke
+with `cursor` set to the previous `next_cursor` to fetch the next page.
+Cursors are tool-scoped — a `scan_pan_data` cursor is rejected by the
+other two tools with `CURSOR_MALFORMED`. Expired cursors (10-minute TTL)
+return `CURSOR_EXPIRED`; re-run without a cursor to start fresh.
 
 **PCI DSS Requirements:** 3.3.1, 3.4.1, 3.5.1
 
@@ -336,6 +386,19 @@ triage payload on real projects.
 | `min_severity` | string | no | Same as `generate_compliance_report` — applied BEFORE enrichment to avoid paying the per-finding context-collection cost on filtered-out findings |
 | `rule_filter` | string | no | Same as `generate_compliance_report` |
 | `limit` | int | no | Same as `generate_compliance_report` |
+| `cursor` | string | no | Opaque pagination cursor (v0.2.0+). Empty = fresh scan. Non-empty = resume from session cache (10-minute TTL) |
+
+**Pagination and cursor (v0.2.0+):** the first response caches the full
+filtered finding slice in the `scanner/hybridcache` session store (shared
+with `scan_pan_data`, but cursors are tool-scoped and not interchangeable),
+enriches the first 60 findings with `ResourceLink` context, and sets
+`next_cursor` when more pages remain. Follow-up calls with `cursor` set
+read from the cache, enrich the next 60 findings, and update
+`next_cursor`. `findings_total` always reports the pre-pagination count
+so `generate_compliance_report` and `triage_findings` agree on scope
+(parity contract preserved). Cursors are tool-scoped; cross-tool replay
+returns `CURSOR_MALFORMED`. Expired cursors (10-minute TTL) return
+`CURSOR_EXPIRED`.
 
 **PCI DSS Requirements:** spans all requirements covered by
 `generate_compliance_report`
