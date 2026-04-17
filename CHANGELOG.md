@@ -5,6 +5,27 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## v0.3.1 - 2026-04-17
+
+### Fixed
+- `triage_findings` Layer B default response size on projects with many
+  unique rule IDs. The `top_findings` budget now returns 1 enriched
+  finding per severity (down from 2) so the serialized response stays
+  inside the Claude Code / Claude Desktop inline-render ceiling on
+  larger projects. `scan_pan_data` top-N remains 3 per severity.
+- `by_rule` histogram in both `triage_findings` and `scan_pan_data`
+  Layer B responses is now capped at the 10 highest-count rules. When
+  more than 10 rules fire, the omitted count surfaces as `more_rules:
+  N` on `summary`. Deterministic ordering (count desc, rule_id asc)
+  within the retained 10 is preserved.
+
+### Docs
+- `triage_findings` and `scan_pan_data` tool descriptions now open with
+  a summary-first framing and flag `limit: -1` as an advanced escape
+  hatch that can return >100 KB of JSON. `docs/tools.md` Pagination
+  subsections carry the same preamble plus a one-line note about the
+  `by_rule` top-10 cap and `more_rules` counter.
+
 ## v0.3.0 - 2026-04-17
 
 ### Breaking Changes
