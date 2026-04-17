@@ -31,6 +31,25 @@ by `generate_compliance_report` cannot be replayed against `triage_findings`
 expired cursors return `CURSOR_EXPIRED` and the client re-runs without a
 cursor to start a fresh scan.
 
+## v0.3.0 migration note (breaking)
+
+As of **v0.3.0**, the default response shape of `triage_findings` and
+`scan_pan_data` is now a summary-first variant (`response_shape: "summary"`)
+mirroring the v0.2.0 change to `generate_compliance_report`. Unfiltered,
+cursor-less calls return severity counts, a per-rule histogram, and a small
+`top_findings` map (2 per severity for `triage_findings`, 3 per severity for
+`scan_pan_data`), plus a `pagination.next_cursor` for drill-down.
+
+**To restore the pre-v0.3.0 shape on the next call**, pass `limit: -1` to
+either tool (response is a flat findings array, auto-capped at 500). Any
+filter or scope parameter (`min_severity`, `rule_filter`, `include_tests`,
+`include_untracked`, `include_taint`, `exclude_patterns`) also continues to
+return the flat shape with cursor pagination.
+
+Both tools declare `_meta["anthropic/maxResultSizeChars"]: 20000` so MCP
+clients that recognise the annotation (Claude Code >= v2.1.91) can size
+inline rendering in advance.
+
 ## generate_compliance_report
 
 Run all PCI DSS v4.0.1 compliance scanners and generate a comprehensive report.
@@ -102,12 +121,25 @@ Detect PAN/CVV exposure in Go source files and .env configuration.
 | `path` | string | yes | Path to scan |
 | `cursor` | string | no | Opaque pagination cursor (v0.2.0+). Empty = fresh scan. Non-empty = resume from `scanner/hybridcache` (10-minute TTL; cursors are tool-scoped and not interchangeable with `generate_compliance_report` / `triage_findings`) |
 
-**Pagination and cursor (v0.2.0+):** when the finding count exceeds 60,
-the first response returns 60 findings plus `next_cursor`. Re-invoke
-with `cursor` set to the previous `next_cursor` to fetch the next page.
-Cursors are tool-scoped — a `scan_pan_data` cursor is rejected by the
-other two tools with `CURSOR_MALFORMED`. Expired cursors (10-minute TTL)
-return `CURSOR_EXPIRED`; re-run without a cursor to start fresh.
+**Pagination and cursor (v0.3.0+):**
+
+`scan_pan_data` now implements the three-layer hybrid response shape:
+
+- `response_shape: "summary"` — default, returned when no filter / scope
+  parameter is set and no cursor is supplied. Carries `summary.by_severity`
+  counts, `summary.by_rule` histogram (sorted by count desc), and
+  `top_findings` with up to 3 findings per severity (CRITICAL / HIGH /
+  MEDIUM / LOW / INFO) plus `pagination.next_cursor` for drill-down.
+- `response_shape: "flat"` — returned on cursor follow-up OR when any of
+  `min_severity`, `rule_filter`, `include_tests`, `include_untracked`,
+  `include_taint`, `exclude_patterns` is set. 60 findings per page plus
+  `next_cursor` when more pages remain.
+- `response_shape: "error"` with `code: "CURSOR_EXPIRED"` — session cache
+  entry expired (10-minute TTL) or server restarted. Re-run without a
+  cursor. Cross-tool cursor replay also returns `CURSOR_MALFORMED`.
+
+**Legacy flat response:** pass `limit: -1` to restore the pre-v0.3.0 flat
+findings array (auto-capped at 500).
 
 **PCI DSS Requirements:** 3.3.1, 3.4.1, 3.5.1
 
@@ -388,17 +420,26 @@ triage payload on real projects.
 | `limit` | int | no | Same as `generate_compliance_report` |
 | `cursor` | string | no | Opaque pagination cursor (v0.2.0+). Empty = fresh scan. Non-empty = resume from session cache (10-minute TTL) |
 
-**Pagination and cursor (v0.2.0+):** the first response caches the full
-filtered finding slice in the `scanner/hybridcache` session store (shared
-with `scan_pan_data`, but cursors are tool-scoped and not interchangeable),
-enriches the first 60 findings with `ResourceLink` context, and sets
-`next_cursor` when more pages remain. Follow-up calls with `cursor` set
-read from the cache, enrich the next 60 findings, and update
-`next_cursor`. `findings_total` always reports the pre-pagination count
-so `generate_compliance_report` and `triage_findings` agree on scope
-(parity contract preserved). Cursors are tool-scoped; cross-tool replay
-returns `CURSOR_MALFORMED`. Expired cursors (10-minute TTL) return
-`CURSOR_EXPIRED`.
+**Pagination and cursor (v0.3.0+):**
+
+`triage_findings` now implements the three-layer hybrid response shape:
+
+- `response_shape: "summary"` — default, returned when no filter and no
+  cursor are supplied. Carries `summary.by_severity` counts,
+  `summary.by_rule` histogram (post verified-OK skip), and `top_findings`
+  with up to 2 enriched findings per severity (CRITICAL / HIGH / MEDIUM /
+  LOW / INFO) plus `pagination.next_cursor` for drill-down.
+- `response_shape: "flat"` — returned on cursor follow-up OR when any of
+  `min_severity`, `rule_filter`, `limit > 0` is set. Up to 60 enriched
+  findings per page plus `next_cursor` when more pages remain.
+  `metadata.findings_total` always reports the pre-pagination count so
+  `generate_compliance_report` and `triage_findings` agree on scope.
+- `response_shape: "error"` with `code: "CURSOR_EXPIRED"` — session cache
+  entry expired (10-minute TTL) or server restarted. Re-run without a
+  cursor. Cross-tool cursor replay also returns `CURSOR_MALFORMED`.
+
+**Legacy flat response:** pass `limit: -1` to restore the pre-v0.3.0 flat
+enriched-findings array (auto-capped at 500).
 
 **PCI DSS Requirements:** spans all requirements covered by
 `generate_compliance_report`
