@@ -69,7 +69,8 @@ func RegisterTools(server *mcp.Server) {
 
 	mcp.AddTool(server, tool, func(ctx context.Context, req *mcp.CallToolRequest, input ScanPANInput) (*mcp.CallToolResult, any, error) {
 		scopeFilterSet := len(input.ExcludePatterns) > 0 || input.IncludeTests || input.IncludeUntracked || input.IncludeTaint
-		if input.Cursor != "" && scopeFilterSet {
+		qualityFilterSet := strings.TrimSpace(input.MinSeverity) != "" || strings.TrimSpace(input.RuleFilter) != ""
+		if input.Cursor != "" && (scopeFilterSet || qualityFilterSet) {
 			return panErrorResult("scan_pan_data cursor_malformed: cursor + filter/scope params is not supported; re-run without cursor to apply new filters"), nil, nil
 		}
 

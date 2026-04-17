@@ -212,6 +212,43 @@ func TestPANLayerB_CursorRejectsFilterCombo(t *testing.T) {
 	}
 }
 
+func TestPANLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
+	session := newPANSessionForLayerB(t)
+	tt := []struct {
+		name string
+		args map[string]any
+	}{
+		{
+			"cursor+min_severity",
+			map[string]any{
+				"cursor":       "eyJzaWQiOiJhYmMiLCJvZmYiOjAsInRvb2wiOiJzY2FuX3Bhbl9kYXRhIn0",
+				"min_severity": "HIGH",
+			},
+		},
+		{
+			"cursor+rule_filter",
+			map[string]any{
+				"cursor":      "eyJzaWQiOiJhYmMiLCJvZmYiOjAsInRvb2wiOiJzY2FuX3Bhbl9kYXRhIn0",
+				"rule_filter": "PAN-KEYWORD",
+			},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+				Name:      "scan_pan_data",
+				Arguments: tc.args,
+			})
+			if err != nil {
+				t.Fatalf("CallTool: %v", err)
+			}
+			if !result.IsError {
+				t.Fatalf("expected IsError=true for %s; got %+v", tc.name, result)
+			}
+		})
+	}
+}
+
 func TestPANLayerB_FilterSet_StillFlat(t *testing.T) {
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForPAN(t, fixtureRoot)
