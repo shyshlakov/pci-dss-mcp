@@ -56,12 +56,13 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 
 	tool := &mcp.Tool{
 		Name: toolNameTriage,
-		Description: "Collect contextual code evidence for PCI DSS compliance findings " +
-			"to enable AI-assisted triage. Default returns a summary-first response " +
-			"with severity counts, a rule histogram, and up to 2 enriched findings per " +
-			"severity. Use the returned cursor to page through the full enriched list. " +
-			"Apply min_severity / rule_filter for a filtered flat response; pass " +
-			"limit=-1 for a full flat response (auto-capped at 500).",
+		Description: "Default: returns response_shape \"summary\" with by_severity counts, a " +
+			"capped by_rule histogram (top 10 + more_rules), and top 1 per severity " +
+			"enriched finding - plus a pagination.next_cursor for drill-down. " +
+			"Follow the cursor for the full enriched list. " +
+			"limit: -1 is an advanced escape hatch that can return >100 KB of JSON; " +
+			"use only for CI/batch pipelines, not interactive UX. " +
+			"Apply min_severity / rule_filter for a filtered flat response.",
 		Meta:         mcp.Meta{"anthropic/maxResultSizeChars": 20000},
 		OutputSchema: json.RawMessage(schema),
 	}

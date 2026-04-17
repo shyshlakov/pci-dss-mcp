@@ -48,7 +48,9 @@ return the flat shape with cursor pagination.
 
 Both tools declare `_meta["anthropic/maxResultSizeChars"]: 20000` so MCP
 clients that recognise the annotation (Claude Code >= v2.1.91) can size
-inline rendering in advance.
+inline rendering in advance. As of v0.3.1 the triage top-N is 1 per severity
+and the by_rule histogram is capped at 10 entries (omitted rules counted in
+`more_rules`).
 
 ## generate_compliance_report
 
@@ -130,6 +132,8 @@ Detect PAN/CVV exposure in Go source files and .env configuration.
   counts, `summary.by_rule` histogram (sorted by count desc), and
   `top_findings` with up to 3 findings per severity (CRITICAL / HIGH /
   MEDIUM / LOW / INFO) plus `pagination.next_cursor` for drill-down.
+  by_rule is capped at 10 entries sorted by count desc; omitted rules
+  surface as `more_rules: N`.
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
   `min_severity`, `rule_filter`, `include_tests`, `include_untracked`,
   `include_taint`, `exclude_patterns` is set. 60 findings per page plus
@@ -139,7 +143,7 @@ Detect PAN/CVV exposure in Go source files and .env configuration.
   cursor. Cross-tool cursor replay also returns `CURSOR_MALFORMED`.
 
 **Legacy flat response:** pass `limit: -1` to restore the pre-v0.3.0 flat
-findings array (auto-capped at 500).
+findings array (auto-capped at 500) — this is an advanced escape hatch, avoid for interactive UX.
 
 **PCI DSS Requirements:** 3.3.1, 3.4.1, 3.5.1
 
@@ -427,8 +431,10 @@ triage payload on real projects.
 - `response_shape: "summary"` — default, returned when no filter and no
   cursor are supplied. Carries `summary.by_severity` counts,
   `summary.by_rule` histogram (post verified-OK skip), and `top_findings`
-  with up to 2 enriched findings per severity (CRITICAL / HIGH / MEDIUM /
+  with up to 1 enriched finding per severity (CRITICAL / HIGH / MEDIUM /
   LOW / INFO) plus `pagination.next_cursor` for drill-down.
+  by_rule is capped at 10 entries sorted by count desc; omitted rules
+  surface as `more_rules: N`.
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
   `min_severity`, `rule_filter`, `limit > 0` is set. Up to 60 enriched
   findings per page plus `next_cursor` when more pages remain.
@@ -439,7 +445,7 @@ triage payload on real projects.
   cursor. Cross-tool cursor replay also returns `CURSOR_MALFORMED`.
 
 **Legacy flat response:** pass `limit: -1` to restore the pre-v0.3.0 flat
-enriched-findings array (auto-capped at 500).
+enriched-findings array (auto-capped at 500) — this is an advanced escape hatch, avoid for interactive UX.
 
 **PCI DSS Requirements:** spans all requirements covered by
 `generate_compliance_report`

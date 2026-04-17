@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -295,6 +296,37 @@ func TestPANLayerB_FilterSet_HasCursor(t *testing.T) {
 	}
 	if got := m["response_shape"]; got != "flat" {
 		t.Errorf("response_shape=%v, want flat", got)
+	}
+}
+
+func TestPANToolDescription_SummaryFirstBias(t *testing.T) {
+	session := newPANSessionForLayerB(t)
+	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	var desc string
+	var found bool
+	for _, tool := range tools.Tools {
+		if tool.Name != "scan_pan_data" {
+			continue
+		}
+		found = true
+		desc = tool.Description
+	}
+	if !found {
+		t.Fatalf("scan_pan_data not in ListTools")
+	}
+	needles := []string{
+		"summary",
+		"cursor",
+		"limit: -1 is an advanced",
+		"top 3 per severity",
+	}
+	for _, n := range needles {
+		if !strings.Contains(desc, n) {
+			t.Errorf("scan_pan_data description missing substring %q; got: %s", n, desc)
+		}
 	}
 }
 

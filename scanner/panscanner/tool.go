@@ -58,11 +58,14 @@ func RegisterTools(server *mcp.Server) {
 
 	tool := &mcp.Tool{
 		Name: toolNameScanPAN,
-		Description: "Scan Go source and .env files for PAN/CVV data exposure. Default returns " +
-			"a summary-first response with severity counts, rule histogram, and up to 3 findings " +
-			"per severity. Follow the cursor for the full paginated list. Use include_tests / " +
-			"exclude_patterns for a filtered flat response; pass limit=-1 for a full flat " +
-			"response (auto-capped at 500). Maps findings to PCI DSS 3.3.1, 3.4.1, 3.5.1.",
+		Description: "Default: returns response_shape \"summary\" with by_severity counts, a " +
+			"capped by_rule histogram (top 10 + more_rules), and top 3 per severity " +
+			"findings - plus a pagination.next_cursor for drill-down. " +
+			"Follow the cursor for the full paginated list. " +
+			"limit: -1 is an advanced escape hatch that can return >100 KB of JSON; " +
+			"use only for CI/batch pipelines, not interactive UX. " +
+			"Use include_tests / exclude_patterns for a filtered flat response. " +
+			"Maps findings to PCI DSS 3.3.1, 3.4.1, 3.5.1.",
 		Meta:         mcp.Meta{"anthropic/maxResultSizeChars": 20000},
 		OutputSchema: json.RawMessage(schema),
 	}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -242,6 +243,41 @@ func TestTriageLayerB_FilterSet_StillFlat(t *testing.T) {
 	m := structuredMap(t, result)
 	if got := m["response_shape"]; got != "flat" {
 		t.Errorf("response_shape=%v, want flat (filtered call)", got)
+	}
+}
+
+func TestTriageToolDescription_SummaryFirstBias(t *testing.T) {
+	db, err := pcidb.New()
+	if err != nil {
+		t.Fatalf("pcidb.New: %v", err)
+	}
+	session := newTriageSessionForLayerB(t, db)
+	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	var desc string
+	var found bool
+	for _, tool := range tools.Tools {
+		if tool.Name != "triage_findings" {
+			continue
+		}
+		found = true
+		desc = tool.Description
+	}
+	if !found {
+		t.Fatalf("triage_findings not in ListTools")
+	}
+	needles := []string{
+		"summary",
+		"cursor",
+		"limit: -1 is an advanced",
+		"top 1 per severity",
+	}
+	for _, n := range needles {
+		if !strings.Contains(desc, n) {
+			t.Errorf("triage_findings description missing substring %q; got: %s", n, desc)
+		}
 	}
 }
 
