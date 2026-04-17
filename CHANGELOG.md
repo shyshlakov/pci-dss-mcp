@@ -5,14 +5,30 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## v0.1.5 - 2026-04-17
+
 ### Fixed
 - `AUTH-MISSING-MFA` downgrades to INFO on service-to-service / webhook handlers via consensus multi-signal classifier. Strong T1 signals include `hmac.Equal`, `subtle.ConstantTimeCompare`, `rsa.Verify*`, `ecdsa.Verify*`, `ed25519.Verify`, `jwt.Parse`/`ParseWithClaims`, `jose.ParseSigned`, brand-SDK calls (`webhook.ConstructEvent`, `hmacvalidator.ValidateHmac*`, `client.VerifyWebhookSignature`). Medium T2 signals are handler-name regex match plus webhook route path plus POST/PUT method. Weak T3 signals are absence of Authorization header read and the raw-body-then-parse pattern. Rule: `is_s2s = strong >= 1 OR (medium >= 2 AND weak >= 1)`. Negative kill-switch: any of `session.Save`/`session.Set`, gin `c.SetCookie` 7-arg, stdlib `http.SetCookie` 2-arg, or raw `w.Header().Set("Set-Cookie", ...)` keeps the finding at HIGH (OAuth callback recall guard). Downgraded findings carry TriageHint `downgrade:s2s_handler | <signal reason>` and add PCI DSS 8.6.1 + 8.6.2 to RelatedRequirements (machine-auth context per PCI 8.4.2 Applicability Notes). Eliminates ~75% of HIGH AUTH-MISSING-MFA false positives observed on real-world payment microservices.
 
+### Added
+- New detection rule `AUTH-WEBHOOK-NO-SIGNATURE` for webhook handlers parsing request payloads without prior signature verification. Severity is `CRITICAL` when the route path contains a payment brand keyword (`stripe`, `adyen`, `mdes`, `mastercard`, `paypal`, `visa`, `cybersource`, `apple-pay`, `applepay`, `google-pay`, `googlepay`, `checkout`, `worldpay`, `square`, `braintree`, `fiserv`) and `HIGH` for generic webhook paths. Maps to PCI DSS 6.2.4 (input validation); brand-path findings additionally cite 4.2.1 (CHD transmission authentication).
+- New `AUTH-WEBHOOK-VERIFIED` verified-OK INFO marker. Emitted when a handler verifies the webhook signature via T1 strong selectors (`hmac.Equal`, `subtle.ConstantTimeCompare`, `rsa.Verify*`, `ecdsa.Verify*`, `ed25519.Verify`, `jwt.Parse`, `jose.ParseSigned`, brand SDKs `webhook.ConstructEvent` / `hmacvalidator.ValidateHmac*` / `client.VerifyWebhookSignature`) BEFORE the first body-parser call (`token.Pos` ordering), or via a 1-level local helper recursion (`verify*` / `validate*` / `authenticate*` / `check*Sig*` named helpers, cycle-guarded), or via a route-middleware chain containing `VerifyHMAC` / `VerifyWebhookSignature` / `WebhookAuth`-shaped wrappers. TriageHint `webhook_signature_verified | <hit>`. Auto-skipped by the triage engine via the existing `HasSuffix("-VERIFIED")` rule.
+
 ### Internal
 - New `scanner/authscanner/s2s_handler.go` — per-file fixup wired into `authscanner.scanGoFileInRoot` immediately after `detectMissingMFA`. Mirrors `sqlscanner.applyVerifiedTypeFixup` architecture.
+- New `scanner/authscanner/webhook_signature.go` — `WebhookSignatureScan` tracks first body-parser call via `token.Pos`, checks for signature-verify signals strictly before the parser, supports 1-level cycle-guarded helper recursion, and applies brand-path segment scoping (brand keyword must appear after `/webhooks/`, `/callbacks/`, `/notifications/`, `/hooks/`, `/cb/`, `/ipn/`, or `/events/`).
+- New `scanner/authscanner/webhookmiddleware.go` — forked from `scanner/auditscanner/pkgmiddleware.go` (~420 LOC; Pass A + parent-walk; `InstallRoutes` Pass B intentionally dropped for this release). Predicate substituted from `argLooksLikeLogger` to `argLooksLikeSignatureMiddleware` (regex `(?i)(hmac|signature|webhook|verify|auth)`). Independent cache `webhookCachePackages` reset per scan via `ResetWebhookMiddlewareCache()` invoked at top of `authscanner.ScanFull` (mirroring `auditscanner.ResetPackageCache()` arrangement; reportscanner is unchanged).
 - 2 clean fixture files under `testdata/vulnerable-payment-service/clean/s2s_handler/` covering T1-strong (HMAC verification before parse) and T2+T3 consensus.
 - 1 adversarial fixture `testdata/vulnerable-payment-service/internal/http/handler/admin/admin_panel.go` locks the D-03 negative-signal rule (handler with webhook-shaped name but Set-Cookie write stays HIGH).
-- Triage output budget bumped from 176 KB to 184 KB to accommodate the four additional active findings on the s2s fixtures (2 INFO downgrades + 1 HIGH adversarial + 1 CRITICAL incidental AUDIT-NO-LOG).
+- 3 bad webhook fixtures under `testdata/vulnerable-payment-service/internal/http/handler/webhook/` (`bad_stripe_webhook.go`, `bad_generic_webhook.go`, `bad_paypal_ipn.go`) that fire `AUTH-WEBHOOK-NO-SIGNATURE` at CRITICAL/HIGH severities per D-05.
+- 4 good webhook fixtures under `testdata/vulnerable-payment-service/clean/webhook_signed/` (`good_stripe_constructevent.go`, `good_hmac_generic.go`, `good_middleware_verified.go`, `webhook_with_local_helper.go`) that emit `AUTH-WEBHOOK-VERIFIED` INFO.
+- Existing `testdata/vulnerable-payment-service/internal/http/handler/callback/mastercard.go` now also fires `AUTH-WEBHOOK-NO-SIGNATURE` CRITICAL alongside its existing `AUTH-MISSING-MFA` finding (real Mastercard card-update callback canonical anti-pattern).
+- Triage output budget bumped from 184 KB to 240 KB to accommodate the additional webhook-related findings and their triage context payloads.
+
+### Known limitations
+- chi-style inline middleware `r.With(VerifyMW).Post(...)` is NOT detected by this release's webhookmiddleware crawler. Use `r.Use(VerifyMW)` group registration to be detected.
+- PayPal `VerifyWebhookSignature` is treated as a T1 strong signal even though it is a network call to PayPal (not a local crypto check). Real-world handlers using this pattern are generally safe; offline test environments will not exercise this path.
+- Replay-attack timestamp checks (`Stripe-Signature` `t=` tolerance enforcement) are out of this release's scope.
 
 ## v0.1.4 — 2026-04-16
 
