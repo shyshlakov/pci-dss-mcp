@@ -2,6 +2,7 @@ package panscanner
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -11,80 +12,64 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/shyshlakov/pci-dss-mcp/scanner"
+	"github.com/shyshlakov/pci-dss-mcp/scanner/hybrid"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/hybridcache"
 )
 
-const scanPANPageSize = 60
 const toolNameScanPAN = "scan_pan_data"
 
 type ScanPANInput struct {
 	Path             string   `json:"path" jsonschema:"required,Path to the Go project directory to scan for PAN/CVV data exposure"`
 	ExcludePatterns  []string `json:"exclude_patterns,omitempty" jsonschema:"Optional glob patterns to exclude. Supports directory patterns (vendor/) and file globs (*.pb.go). Default: vendor/ generated/ *.pb.go testdata/ mocks/"`
-	IncludeTests     bool     `json:"include_tests,omitempty" jsonschema:"Include _test.go files in scan results. Default false excludes test files per industry SAST consensus "`
-	IncludeUntracked bool     `json:"include_untracked,omitempty" jsonschema:"Scan all files including .gitignored. Default false scans only git-tracked files "`
-	IncludeTaint     bool     `json:"include_taint,omitempty" jsonschema:"Enable flow-based severity adjustment using go/packages type analysis . When true, PAN-KEYWORD/PAN-TYPE findings on transit-only struct fields (request/response DTOs, API client models) are downgraded or suppressed per . Adds 5-30 seconds. Default false (opt-in for accuracy vs speed per)"`
-	Cursor           string   `json:"cursor,omitempty" jsonschema:"Opaque cursor token from a prior scan_pan_data response. When set, resumes pagination from the stored session cache (10-minute TTL). Leave empty for a fresh scan."`
+	IncludeTests     bool     `json:"include_tests,omitempty" jsonschema:"Include _test.go files in scan results. Default false excludes test files per industry SAST consensus"`
+	IncludeUntracked bool     `json:"include_untracked,omitempty" jsonschema:"Scan all files including .gitignored. Default false scans only git-tracked files"`
+	IncludeTaint     bool     `json:"include_taint,omitempty" jsonschema:"Enable flow-based severity adjustment using go/packages type analysis. When true PAN-KEYWORD/PAN-TYPE findings on transit-only struct fields are downgraded or suppressed. Adds 5-30 seconds. Default false (opt-in for accuracy vs speed)"`
+	Cursor           string   `json:"cursor,omitempty" jsonschema:"Opaque cursor token from a prior scan_pan_data response. When set resumes pagination from the stored session cache (10-minute TTL). Leave empty for a fresh scan."`
+	Limit            int      `json:"limit,omitempty" jsonschema:"Pass -1 for the full flat findings array (auto-capped at 500). Default 0 returns the summary-first Layer B response."`
+	MinSeverity      string   `json:"min_severity,omitempty" jsonschema:"Filter by minimum severity (CRITICAL/HIGH/MEDIUM/LOW/INFO). Setting this forces the flat response shape."`
+	RuleFilter       string   `json:"rule_filter,omitempty" jsonschema:"Filter by rule ID, comma list or /regex/. Setting this forces the flat response shape."`
 }
 
 var defaultExcludes = []string{"vendor/", "generated/", "*.pb.go", "testdata/", "mocks/"}
 
+type panCacher struct{}
+
+func (panCacher) Put(sid string, findings []scanner.Finding, meta hybridcache.ScanMeta) {
+	cp := make([]scanner.Finding, len(findings))
+	copy(cp, findings)
+	hybridcache.Put(sid, &hybridcache.Entry{Findings: cp, Meta: meta})
+}
+
+func (panCacher) Get(sid string) ([]scanner.Finding, hybridcache.ScanMeta, bool) {
+	e, ok := hybridcache.Get(sid)
+	if !ok {
+		return nil, hybridcache.ScanMeta{}, false
+	}
+	return e.Findings, e.Meta, true
+}
+
 func RegisterTools(server *mcp.Server) {
 	s := New()
+	schema, err := buildPANOutputSchemaUnion()
+	if err != nil {
+		slog.Warn("buildPANOutputSchemaUnion failed", "err", err)
+	}
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scan_pan_data",
-		Description: "Scan Go source and .env files for PAN/CVV data exposure. Detects sensitive variable names, struct fields, function parameters, hardcoded card numbers (Luhn+IIN), string-typed sensitive fields, missing zeroing of []byte data, and logger calls with sensitive arguments. Maps findings to PCI DSS 3.3.1, 3.4.1, 3.5.1. Supports cursor pagination (10-minute TTL) for large projects.",
-	}, func(ctx context.Context, req *mcp.CallToolRequest, input ScanPANInput) (*mcp.CallToolResult, *scanner.ScannerToolOutput, error) {
-		if input.Cursor != "" {
-			if len(input.ExcludePatterns) > 0 || input.IncludeTests || input.IncludeUntracked || input.IncludeTaint {
-				return panErrorResult("scan_pan_data cursor_malformed: cursor + filter/scope params is not supported; re-run without cursor to apply new filters"), nil, nil
-			}
-			payload, err := hybridcache.DecodeCursor(input.Cursor)
-			if err != nil {
-				return panErrorResult("scan_pan_data cursor_malformed: " + err.Error()), nil, nil
-			}
-			if payload.Tool != "" && payload.Tool != toolNameScanPAN {
-				return panErrorResult("scan_pan_data cursor_malformed: tool mismatch"), nil, nil
-			}
-			entry, ok := hybridcache.Get(payload.SID)
-			if !ok {
-				return panErrorResult("scan_pan_data cursor_expired"), nil, nil
-			}
-			cached := entry.Findings
-			off := payload.Off
-			if off < 0 {
-				off = 0
-			}
-			end := off + scanPANPageSize
-			if end > len(cached) {
-				end = len(cached)
-			}
-			var page []scanner.Finding
-			if off < len(cached) {
-				page = cached[off:end]
-			}
-			out := &scanner.ScannerToolOutput{
-				Scanner:       s.Name(),
-				Findings:      append([]scanner.Finding{}, page...),
-				SeverityStats: countSeverity(page),
-				Metadata: scanner.ScanMetadata{
-					ScannedFiles: entry.Meta.TotalFiles,
-					ScannedLines: entry.Meta.TotalLines,
-					DurationMS:   entry.Meta.DurationMS,
-				},
-				TotalFindings: len(cached),
-			}
-			if end < len(cached) {
-				next, err := hybridcache.EncodeCursor(hybridcache.CursorPayload{SID: payload.SID, Off: end, Tool: toolNameScanPAN})
-				if err != nil {
-					slog.Warn("scan_pan_data encodeCursor failed", "err", err, "sid", payload.SID, "off", end)
-				} else {
-					out.NextCursor = next
-				}
-			}
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("scan_pan_data: resumed page (%d findings, off=%d/%d)", len(page), off, len(cached))}},
-			}, out, nil
+	tool := &mcp.Tool{
+		Name: toolNameScanPAN,
+		Description: "Scan Go source and .env files for PAN/CVV data exposure. Default returns " +
+			"a summary-first response with severity counts, rule histogram, and up to 3 findings " +
+			"per severity. Follow the cursor for the full paginated list. Use include_tests / " +
+			"exclude_patterns for a filtered flat response; pass limit=-1 for a full flat " +
+			"response (auto-capped at 500). Maps findings to PCI DSS 3.3.1, 3.4.1, 3.5.1.",
+		Meta:         mcp.Meta{"anthropic/maxResultSizeChars": 20000},
+		OutputSchema: json.RawMessage(schema),
+	}
+
+	mcp.AddTool(server, tool, func(ctx context.Context, req *mcp.CallToolRequest, input ScanPANInput) (*mcp.CallToolResult, any, error) {
+		scopeFilterSet := len(input.ExcludePatterns) > 0 || input.IncludeTests || input.IncludeUntracked || input.IncludeTaint
+		if input.Cursor != "" && scopeFilterSet {
+			return panErrorResult("scan_pan_data cursor_malformed: cursor + filter/scope params is not supported; re-run without cursor to apply new filters"), nil, nil
 		}
 
 		excludes := defaultExcludes
@@ -92,81 +77,168 @@ func RegisterTools(server *mcp.Server) {
 			excludes = input.ExcludePatterns
 		}
 
-		var result *scanner.ScanResult
-		var err error
-		if input.IncludeTaint {
-			result, err = s.ScanFullWithTaint(ctx, input.Path, excludes, input.IncludeTests, input.IncludeUntracked, true)
-		} else {
-			result, err = s.ScanFull(ctx, input.Path, excludes, input.IncludeTests, input.IncludeUntracked)
+		absPath, aerr := filepath.Abs(filepath.Clean(input.Path))
+		if aerr != nil {
+			absPath = input.Path
 		}
-		if err != nil {
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: fmt.Sprintf("scan_pan_data error: %s", err.Error())},
-				},
-				IsError: true,
-			}, nil, nil
-		}
+		scanTS := time.Now().UTC().Format(time.RFC3339)
 
-		out := scanner.BuildScannerToolOutput(s.Name(), result)
-
-		if len(out.Findings) > scanPANPageSize {
-			absPath, aerr := filepath.Abs(filepath.Clean(input.Path))
-			if aerr != nil {
-				absPath = input.Path
+		scan := func(ctx context.Context, _ hybrid.Input) ([]scanner.Finding, hybridcache.ScanMeta, error) {
+			var result *scanner.ScanResult
+			var serr error
+			if input.IncludeTaint {
+				result, serr = s.ScanFullWithTaint(ctx, input.Path, excludes, input.IncludeTests, input.IncludeUntracked, true)
+			} else {
+				result, serr = s.ScanFull(ctx, input.Path, excludes, input.IncludeTests, input.IncludeUntracked)
 			}
-			scanTS := time.Now().UTC().Format(time.RFC3339)
-			fh := hybridcache.FilterHash("", strings.Join(excludes, ","), input.IncludeTests)
-			sid := hybridcache.SessionKey(absPath+"|scan_pan", scanTS, fh, input.IncludeTaint)
-			meta := hybridcache.ScanMeta{
+			if serr != nil {
+				return nil, hybridcache.ScanMeta{}, serr
+			}
+			out := scanner.BuildScannerToolOutput(s.Name(), result)
+			return append([]scanner.Finding{}, out.Findings...), hybridcache.ScanMeta{
 				TotalFiles: out.Metadata.ScannedFiles,
 				TotalLines: out.Metadata.ScannedLines,
 				DurationMS: out.Metadata.DurationMS,
-			}
-			cached := make([]scanner.Finding, len(out.Findings))
-			copy(cached, out.Findings)
-			hybridcache.Put(sid, &hybridcache.Entry{Findings: cached, Meta: meta})
-
-			total := len(out.Findings)
-			out.TotalFindings = total
-			next, err := hybridcache.EncodeCursor(hybridcache.CursorPayload{SID: sid, Off: scanPANPageSize, Tool: toolNameScanPAN})
-			if err != nil {
-				slog.Warn("scan_pan_data encodeCursor failed", "err", err, "sid", sid, "off", scanPANPageSize)
-			} else {
-				out.NextCursor = next
-			}
-			out.Findings = append([]scanner.Finding{}, out.Findings[:scanPANPageSize]...)
-			out.SeverityStats = countSeverity(out.Findings)
+			}, nil
 		}
 
-		summary := fmt.Sprintf("scan_pan_data: %d findings (%d CRITICAL, %d HIGH, %d MEDIUM, %d LOW, %d INFO) in %dms",
-			len(out.Findings),
-			out.SeverityStats.Critical, out.SeverityStats.High, out.SeverityStats.Medium,
-			out.SeverityStats.Low, out.SeverityStats.Info,
-			out.Metadata.DurationMS)
-		if out.NextCursor != "" {
-			summary += fmt.Sprintf(" (total %d, next_cursor available)", out.TotalFindings)
+		filterFunc := func(findings []scanner.Finding, minSev, ruleFilter string) ([]scanner.Finding, error) {
+			if minSev == "" && ruleFilter == "" {
+				return findings, nil
+			}
+			out := make([]scanner.Finding, 0, len(findings))
+			for _, f := range findings {
+				if minSev != "" && !severityMeets(f.Severity, minSev) {
+					continue
+				}
+				if ruleFilter != "" && !ruleMatches(f.RuleID, ruleFilter) {
+					continue
+				}
+				out = append(out, f)
+			}
+			return out, nil
+		}
+
+		buildSummary := func(findings []scanner.Finding, meta hybridcache.ScanMeta, sid, nextCursor string) *PANSummaryResponse {
+			return buildPANSummaryInternal(findings, meta, sid, nextCursor)
+		}
+
+		buildFlat := func(findings []scanner.Finding, off, pageSize, total int, meta hybridcache.ScanMeta, sid, nextCursor string, autoCapped bool) *scanner.ScannerToolOutput {
+			counts := scanner.CountBySeverity(findings)
+			out := &scanner.ScannerToolOutput{
+				ResponseShape: "flat",
+				Scanner:       s.Name(),
+				Findings:      append([]scanner.Finding{}, findings...),
+				SeverityStats: scanner.SeverityStats{
+					Critical: counts[scanner.SeverityCritical],
+					High:     counts[scanner.SeverityHigh],
+					Medium:   counts[scanner.SeverityMedium],
+					Low:      counts[scanner.SeverityLow],
+					Info:     counts[scanner.SeverityInfo],
+				},
+				Metadata: scanner.ScanMetadata{
+					ScannedFiles: meta.TotalFiles,
+					ScannedLines: meta.TotalLines,
+					DurationMS:   meta.DurationMS,
+				},
+				TotalFindings: total,
+				NextCursor:    nextCursor,
+			}
+			return out
+		}
+
+		effectiveLimit := input.Limit
+		effectiveMinSev := strings.TrimSpace(input.MinSeverity)
+		effectiveRule := strings.TrimSpace(input.RuleFilter)
+		if scopeFilterSet && effectiveLimit == 0 && effectiveMinSev == "" && effectiveRule == "" && input.Cursor == "" {
+			effectiveLimit = hybrid.FlatPageSize
+		}
+
+		in := hybrid.Input{
+			AbsPath:       absPath,
+			Cursor:        input.Cursor,
+			MinSeverity:   effectiveMinSev,
+			RuleFilter:    effectiveRule,
+			Limit:         effectiveLimit,
+			IncludeTests:  input.IncludeTests,
+			IncludeTaint:  input.IncludeTaint,
+			ScanTimestamp: scanTS,
+			ToolName:      toolNameScanPAN,
+		}
+
+		res, sErr := hybrid.SelectAndExecute[scanner.Finding, PANSummaryResponse, scanner.ScannerToolOutput](
+			ctx, in, scan, filterFunc, buildSummary, buildFlat, panCacher{},
+		)
+		if sErr != nil {
+			return panErrorResult(fmt.Sprintf("scan_pan_data error: %s", sErr.Error())), nil, nil
+		}
+		if res.Err != nil {
+			cerr := &PANCursorError{
+				ResponseShape: "error",
+				Error:         strings.ToLower(res.Err.Code),
+				Code:          res.Err.Code,
+				Hint:          res.Err.Hint,
+			}
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: res.Err.Code}},
+				IsError: true,
+			}, cerr, nil
+		}
+		if res.Summary != nil {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("scan_pan_data: %d findings (summary with top %d per severity)", res.Summary.Pagination.TotalFindings, TopNPerSeverityPAN)}},
+			}, res.Summary, nil
 		}
 		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: summary}},
-		}, out, nil
+			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("scan_pan_data: %d findings returned (flat page)", len(res.Flat.Findings))}},
+		}, res.Flat, nil
 	})
+}
+
+func severityMeets(sev scanner.Severity, minSev string) bool {
+	min, ok := parseSeverity(minSev)
+	if !ok {
+		return true
+	}
+	return sev <= min
+}
+
+func parseSeverity(s string) (scanner.Severity, bool) {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
+	case "CRITICAL":
+		return scanner.SeverityCritical, true
+	case "HIGH":
+		return scanner.SeverityHigh, true
+	case "MEDIUM":
+		return scanner.SeverityMedium, true
+	case "LOW":
+		return scanner.SeverityLow, true
+	case "INFO":
+		return scanner.SeverityInfo, true
+	}
+	return scanner.SeverityInfo, false
+}
+
+func ruleMatches(ruleID, filter string) bool {
+	f := strings.TrimSpace(filter)
+	if f == "" {
+		return true
+	}
+	if strings.HasPrefix(f, "/") && strings.HasSuffix(f, "/") && len(f) >= 2 {
+		pat := strings.Trim(f, "/")
+		return strings.Contains(ruleID, pat)
+	}
+	for _, id := range strings.Split(f, ",") {
+		if strings.TrimSpace(id) == ruleID {
+			return true
+		}
+	}
+	return false
 }
 
 func panErrorResult(msg string) *mcp.CallToolResult {
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: msg}},
 		IsError: true,
-	}
-}
-
-func countSeverity(findings []scanner.Finding) scanner.SeverityStats {
-	counts := scanner.CountBySeverity(findings)
-	return scanner.SeverityStats{
-		Critical: counts[scanner.SeverityCritical],
-		High:     counts[scanner.SeverityHigh],
-		Medium:   counts[scanner.SeverityMedium],
-		Low:      counts[scanner.SeverityLow],
-		Info:     counts[scanner.SeverityInfo],
 	}
 }
