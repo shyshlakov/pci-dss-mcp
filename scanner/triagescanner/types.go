@@ -1,7 +1,3 @@
-// Package triagescanner provides AI-assisted finding triage by collecting
-// contextual evidence (source links, imports, middleware chains) for each
-// scanner finding, enabling the user's AI to classify confirmed violations
-// vs false positives.
 package triagescanner
 
 import "github.com/shyshlakov/pci-dss-mcp/scanner"
