@@ -7,7 +7,8 @@ import (
 	"github.com/shyshlakov/pci-dss-mcp/scanner/hybridcache"
 )
 
-const TopNPerSeverityTriage = 2
+const TopNPerSeverityTriage = 1
+const MaxByRuleEntries = 10
 
 const hintTriageSummary = "Call again with cursor to page through full enriched findings, or use min_severity / rule_filter to narrow."
 
@@ -29,6 +30,7 @@ type TriageLayerBMetadata struct {
 type TriageSummaryCounts struct {
 	BySeverity map[string]int       `json:"by_severity"`
 	ByRule     []RuleHistogramEntry `json:"by_rule"`
+	MoreRules  int                  `json:"more_rules,omitempty"`
 }
 
 type RuleHistogramEntry struct {
@@ -111,6 +113,11 @@ func buildTriageSummaryInternal(
 		}
 		return hist[i].RuleID < hist[j].RuleID
 	})
+	moreRules := 0
+	if len(hist) > MaxByRuleEntries {
+		moreRules = len(hist) - MaxByRuleEntries
+		hist = hist[:MaxByRuleEntries]
+	}
 	top := map[string][]EnrichedFinding{
 		"critical": pickTopNTriage(enriched, "critical", TopNPerSeverityTriage),
 		"high":     pickTopNTriage(enriched, "high", TopNPerSeverityTriage),
@@ -128,6 +135,7 @@ func buildTriageSummaryInternal(
 		Summary: TriageSummaryCounts{
 			BySeverity: bySev,
 			ByRule:     hist,
+			MoreRules:  moreRules,
 		},
 		TopFindings: top,
 		Pagination: TriagePaginationInfo{

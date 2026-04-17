@@ -8,6 +8,7 @@ import (
 )
 
 const TopNPerSeverityPAN = 3
+const MaxByRuleEntries = 10
 const scannerNamePAN = "pan_data"
 const hintPANSummary = "Call again with cursor to page through full findings, or use include_tests / exclude_patterns to narrow scope."
 
@@ -23,6 +24,7 @@ type PANSummaryResponse struct {
 type PANSummaryCounts struct {
 	BySeverity scanner.SeverityStats   `json:"by_severity"`
 	ByRule     []PANRuleHistogramEntry `json:"by_rule"`
+	MoreRules  int                     `json:"more_rules,omitempty"`
 }
 
 type PANRuleHistogramEntry struct {
@@ -94,6 +96,11 @@ func buildPANSummaryInternal(findings []scanner.Finding, meta hybridcache.ScanMe
 		}
 		return hist[i].RuleID < hist[j].RuleID
 	})
+	moreRules := 0
+	if len(hist) > MaxByRuleEntries {
+		moreRules = len(hist) - MaxByRuleEntries
+		hist = hist[:MaxByRuleEntries]
+	}
 	top := map[string][]scanner.Finding{
 		"critical": pickTopNPAN(findings, "critical", TopNPerSeverityPAN),
 		"high":     pickTopNPAN(findings, "high", TopNPerSeverityPAN),
@@ -126,7 +133,8 @@ func buildPANSummaryInternal(findings []scanner.Finding, meta hybridcache.ScanMe
 				Low:      counts[scanner.SeverityLow],
 				Info:     counts[scanner.SeverityInfo],
 			},
-			ByRule: hist,
+			ByRule:    hist,
+			MoreRules: moreRules,
 		},
 		TopFindings: top,
 		Pagination: PANPaginationInfo{
