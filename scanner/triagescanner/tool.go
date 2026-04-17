@@ -116,7 +116,7 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 			result, terr := engine.Triage(ctx, path, findings)
 			if terr != nil {
 				slog.Warn("triage enrichment failed inside buildSummary", "err", terr)
-				return nil
+				return buildTriageSummaryInternal(nil, TriageLayerBMetadata{FindingsTotal: total}, meta, total, sid, nextCursor)
 			}
 			layerBMeta := TriageLayerBMetadata{
 				FindingsTotal:   total,
@@ -174,6 +174,9 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("triage_findings: %d findings analyzed (summary with top %d per severity)", res.Summary.Pagination.TotalFindings, TopNPerSeverityTriage)}},
 			}, res.Summary, nil
+		}
+		if res.Flat == nil {
+			return triageErrorResult("triage_findings: enrichment failed (context cancelled or internal error)"), nil, nil
 		}
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("triage_findings: %d findings returned (flat page)", len(res.Flat.Findings))}},

@@ -347,3 +347,25 @@ func TestSelectAndExecute_FilterError(t *testing.T) {
 		t.Fatal("expected filter error, got nil")
 	}
 }
+
+func TestSelectAndExecute_BuildSummaryNil(t *testing.T) {
+	ctx := context.Background()
+	buildNilSummary := func(_ []fakeFinding, _ hybridcache.ScanMeta, _, _ string) *fakeSummary {
+		return nil
+	}
+	res, err := SelectAndExecute[fakeFinding, fakeSummary, fakeFlat](
+		ctx,
+		Input{AbsPath: "/tmp/x", ToolName: "triage_findings", ScanTimestamp: "2026-04-17T00:00:00Z"},
+		newFakeScan(mkFindings(5), nil),
+		noopFilter,
+		buildNilSummary,
+		buildFlatFake,
+		newMemCache(),
+	)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if res.Summary != nil {
+		t.Errorf("expected nil summary from nil buildSummary, got non-nil")
+	}
+}
