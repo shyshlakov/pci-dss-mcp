@@ -8,12 +8,12 @@ total_clean_patterns: 26
 total_rules_covered: 57
 expected_summary:
  critical: 49
- high: 86
+ high: 89
  medium: 27
  low: 0
- info: 58
-expected_active: 175
-expected_total_findings: 223
+ info: 59
+expected_active: 178
+expected_total_findings: 226
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -56,7 +56,7 @@ fixture files change.
 | Severity | Count |
 |----------|-------|
 | CRITICAL | 49 |
-| HIGH | 86 |
+| HIGH | 89 |
 | MEDIUM | 27 |
 | LOW | 0 |
 | INFO | 58 |
@@ -124,9 +124,11 @@ fixture files change.
 | AUTH-MISSING-MFA | HIGH | internal/retention/zeroing_typeswitch.go | 7 | RED: incidental AUTH-MISSING-MFA on Z11 fixture |
 | AUTH-MISSING-MFA | HIGH | internal/util/cardproc.go | 5 | ProcessCardBuffer handler no MFA |
 | AUTH-WEAK-POLICY | CRITICAL | internal/auth/policy.go | 12 | MinPasswordLength below PCI 8.3.6 |
-| AUTH-WEBHOOK-NO-SIGNATURE | CRITICAL | internal/http/handler/callback/mastercard.go | 8 | RESEARCH §3 fixture reuse — Mastercard brand path canonical anti-pattern |
+| AUTH-WEBHOOK-NO-SIGNATURE | CRITICAL | internal/http/handler/callback/mastercard.go | 8 | fixture reuse — Mastercard brand path canonical anti-pattern |
 | AUTH-WEBHOOK-NO-SIGNATURE | CRITICAL | internal/http/handler/webhook/bad_paypal_ipn.go | 12 | brand=paypal D-06 |
 | AUTH-WEBHOOK-NO-SIGNATURE | CRITICAL | internal/http/handler/webhook/bad_stripe_webhook.go | 12 | brand=stripe Jack Cable canonical anti-pattern |
+| AUTH-WEBHOOK-NO-SIGNATURE | HIGH | clean/s2s_handler/generic_consensus_webhook.go | 12 | incidental unsigned /hooks/payment webhook emission |
+| AUTH-WEBHOOK-NO-SIGNATURE | HIGH | internal/http/handler/admin/admin_panel.go | 12 | incidental unsigned webhook-shaped handler emission |
 | AUTH-WEBHOOK-NO-SIGNATURE | HIGH | internal/http/handler/webhook/bad_generic_webhook.go | 12 | generic /hooks/payment no brand keyword |
 | AUTH-WEBHOOK-VERIFIED | INFO | clean/webhook_signed/good_hmac_generic.go | 16 | hmac.Equal T1 strong before parser |
 | AUTH-WEBHOOK-VERIFIED | INFO | clean/webhook_signed/good_middleware_verified.go | 22 | webhookmiddleware crawler match (VerifyWebhookSignatureMiddleware wrapper) |

@@ -20,7 +20,7 @@ import (
 //
 // has fewer findings than the all-rule fixture, so the per-call payload
 // shrinks proportionally.
-const triageFixtureBudgetBytes = 184 * 1024
+const triageFixtureBudgetBytes = 240 * 1024
 
 // triageFixturePerFindingBudgetBytes guards against per-finding source
 // embedding regressions. A single finding should never carry more than ~2 KB

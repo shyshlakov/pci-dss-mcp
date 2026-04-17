@@ -145,5 +145,7 @@ func (s *AuthScanner) scanGoFileInRoot(path, projectRoot string) ([]scanner.Find
 
 	findings = ApplyS2SDowngrade(findings, file, fset, path)
 
+	findings = append(findings, WebhookSignatureScan(file, fset, path, projectRoot)...)
+
 	return findings, lineCount, nil
 }
