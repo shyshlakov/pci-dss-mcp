@@ -184,7 +184,7 @@ var secretKey = "mysupersecretkey123" // pci-ignore: integration test
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "generate_compliance_report",
 		Arguments: map[string]any{
-			"path":      dir,
+			"path":         dir,
 			"min_severity": "INFO",
 		},
 	})

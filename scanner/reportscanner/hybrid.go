@@ -331,4 +331,3 @@ func pickTopN(findings []ReportFinding, sev scanner.Severity, n int) []ReportFin
 	}
 	return out
 }
-

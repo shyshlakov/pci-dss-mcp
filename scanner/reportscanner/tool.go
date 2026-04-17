@@ -11,34 +11,6 @@ import (
 	"github.com/shyshlakov/pci-dss-mcp/pcidb"
 )
 
-// CompactReport remains importable for legacy callers; the MCP handler no
-// longer emits it (the three-layer hybrid response replaces it).
-type CompactReport struct {
-	Metadata          ReportMetadata               `json:"metadata"`
-	Summary           ReportSummary                `json:"summary"`
-	ScanSummary       *ScanSummary                 `json:"scan_summary,omitempty"`
-	RequirementStatus map[string]RequirementStatus `json:"requirement_status"`
-	Findings          []ReportFinding              `json:"findings"`
-	Suppressions      []SuppressionEntry           `json:"suppressions"`
-}
-
-func compactReportForMCP(r *ComplianceReport) *CompactReport {
-	checked := make(map[string]RequirementStatus, len(r.RequirementStatus))
-	for id, rs := range r.RequirementStatus {
-		if rs.Status != "NOT_CHECKED" {
-			checked[id] = rs
-		}
-	}
-	return &CompactReport{
-		Metadata:          r.Metadata,
-		Summary:           r.Summary,
-		ScanSummary:       r.ScanSummary,
-		RequirementStatus: checked,
-		Findings:          r.Findings,
-		Suppressions:      r.Suppressions,
-	}
-}
-
 type ReportInput struct {
 	Path         string `json:"path" jsonschema:"Path to the Go project to scan for PCI DSS compliance. If empty, uses current directory (.)"`
 	DepScanMode  string `json:"dep_scan_mode,omitempty" jsonschema:"Dependency scanner mode: auto (default), online, offline. Controls network behavior for vulnerability checking"`

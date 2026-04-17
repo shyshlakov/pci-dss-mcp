@@ -46,12 +46,12 @@ type ScanMeta struct {
 }
 
 var (
-	mu           sync.Mutex
-	cache        sync.Map
-	clockPtr     atomic.Pointer[Clock]
-	evictorOnce  sync.Once
-	evictorStop  chan struct{}
-	evictorDone  chan struct{}
+	mu          sync.Mutex
+	cache       sync.Map
+	clockPtr    atomic.Pointer[Clock]
+	evictorOnce sync.Once
+	evictorStop chan struct{}
+	evictorDone chan struct{}
 )
 
 func init() {
