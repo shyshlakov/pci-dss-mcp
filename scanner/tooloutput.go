@@ -18,6 +18,7 @@ import (
 // tool gets an identical output shape, making it trivial for MCP
 // clients to generalize over "any scanner tool result".
 type ScannerToolOutput struct {
+	ResponseShape string        `json:"response_shape" jsonschema:"Response-shape discriminator (flat for ScannerToolOutput)"`
 	Scanner       string        `json:"scanner" jsonschema:"Scanner identifier (e.g. pan_data, encryption)"`
 	Findings      []Finding     `json:"findings" jsonschema:"Findings detected by this scanner. May be empty."`
 	SeverityStats SeverityStats `json:"severity_stats" jsonschema:"Count of findings by severity tier"`
@@ -41,8 +42,9 @@ type SeverityStats struct {
 func BuildScannerToolOutput(scannerName string, result *ScanResult) *ScannerToolOutput {
 	if result == nil {
 		return &ScannerToolOutput{
-			Scanner:  scannerName,
-			Findings: []Finding{},
+			ResponseShape: "flat",
+			Scanner:       scannerName,
+			Findings:      []Finding{},
 		}
 	}
 	findings := result.Findings
@@ -51,8 +53,9 @@ func BuildScannerToolOutput(scannerName string, result *ScanResult) *ScannerTool
 	}
 	counts := CountBySeverity(findings)
 	return &ScannerToolOutput{
-		Scanner:  scannerName,
-		Findings: findings,
+		ResponseShape: "flat",
+		Scanner:       scannerName,
+		Findings:      findings,
 		SeverityStats: SeverityStats{
 			Critical: counts[SeverityCritical],
 			High:     counts[SeverityHigh],

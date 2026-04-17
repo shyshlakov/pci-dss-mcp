@@ -109,7 +109,8 @@ type Payment struct {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "scan_pan_data",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":             tmpDir,
+			"exclude_patterns": []any{"vendor/"},
 		},
 	})
 	if err != nil {
@@ -170,7 +171,8 @@ func HandleRequest(id string) error {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "scan_pan_data",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":             tmpDir,
+			"exclude_patterns": []any{"vendor/"},
 		},
 	})
 	if err != nil {
