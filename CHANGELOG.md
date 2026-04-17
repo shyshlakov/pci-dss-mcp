@@ -5,6 +5,29 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## v0.3.2 - 2026-04-17
+
+### Fixed
+- Tool descriptions for `triage_findings` and `generate_compliance_report`
+  now cross-reference each other so MCP clients can pick the right tool
+  for the prompt in one call. `triage_findings` is explicitly flagged as
+  the recommended entry point for interactive "scan this project"
+  prompts; `generate_compliance_report` is flagged as the plain-report
+  alternative for audit artifacts and CI gates. Resolves an observed
+  behavior where LLMs double-invoked both tools for "scan, then triage"
+  prompts, running the scanner pipeline twice.
+- `generate_compliance_report` description now carries the same
+  `limit: -1` escape-hatch warning already present on `triage_findings`
+  and `scan_pan_data` — symmetrical guidance across all three tools.
+
+### Docs
+- README Use Case 2 rewritten as a one-shot `triage_findings` prompt
+  with a short note on when to reach for `generate_compliance_report`
+  instead.
+- `docs/tools.md` sections for both tools now open with tool-selection
+  guidance; the legacy-flat-response note for
+  `generate_compliance_report` matches the pan/triage variants.
+
 ## v0.3.1 - 2026-04-17
 
 ### Fixed
