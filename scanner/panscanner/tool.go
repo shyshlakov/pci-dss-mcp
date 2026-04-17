@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -226,7 +227,12 @@ func ruleMatches(ruleID, filter string) bool {
 	}
 	if strings.HasPrefix(f, "/") && strings.HasSuffix(f, "/") && len(f) >= 2 {
 		pat := strings.Trim(f, "/")
-		return strings.Contains(ruleID, pat)
+		re, err := regexp.Compile(pat)
+		if err != nil {
+			slog.Warn("ruleMatches: invalid regex in rule_filter", "pattern", pat, "err", err)
+			return false
+		}
+		return re.MatchString(ruleID)
 	}
 	for _, id := range strings.Split(f, ",") {
 		if strings.TrimSpace(id) == ruleID {
