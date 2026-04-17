@@ -36,9 +36,7 @@ type SeverityStats struct {
 	Info     int `json:"info"`
 }
 
-// BuildScannerToolOutput converts a ScanResult into the typed MCP tool
-// output shape used by every single-scanner tool.go handler. Returns a
-// non-nil struct even for zero findings so the output schema is stable.
+// Returns non-nil even for zero findings so the OutputSchema is stable.
 func BuildScannerToolOutput(scannerName string, result *ScanResult) *ScannerToolOutput {
 	if result == nil {
 		return &ScannerToolOutput{
@@ -67,13 +65,6 @@ func BuildScannerToolOutput(scannerName string, result *ScanResult) *ScannerTool
 	}
 }
 
-// ParseScannerToolOutput re-marshals the StructuredContent of a MCP
-// CallToolResult into a typed *ScannerToolOutput. The MCP client receives
-// StructuredContent as map[string]any after JSON-RPC transport; this helper
-// round-trips it through json.Marshal/Unmarshal to recover the typed form.
-// Returns an error instead of the parsed output only when StructuredContent
-// cannot be marshaled or the result shape does not match ScannerToolOutput.
-// Intended for integration tests that previously parsed text blobs.
 func ParseScannerToolOutput(result *mcp.CallToolResult) (*ScannerToolOutput, error) {
 	if result == nil {
 		return nil, fmt.Errorf("nil CallToolResult")
