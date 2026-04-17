@@ -312,9 +312,6 @@ func isSessionCookieWrite(call *ast.CallExpr, sel *ast.SelectorExpr) bool {
 			}
 		}
 	}
-	if method == "Save" && len(call.Args) == 2 {
-		return true
-	}
 	if method == "SetCookie" && len(call.Args) == 7 {
 		return true
 	}
