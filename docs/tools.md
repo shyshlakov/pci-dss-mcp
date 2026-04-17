@@ -86,8 +86,8 @@ The response is one of three variants, tagged by `response_shape`:
   findings per severity (CRITICAL / HIGH / MEDIUM), and
   `pagination.next_cursor` for follow-up.
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
-  `min_severity` / `rule_filter` / positive `limit` is set. Up to 60
-  findings per page, plus `next_cursor` when more pages remain.
+  `min_severity` / `rule_filter` / positive `limit` is set. Up to 24
+  per page with cursor, plus `next_cursor` when more pages remain.
 - `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
   `CURSOR_MALFORMED` (decode failure / cross-tool replay). Client retries
   without a cursor.
@@ -96,6 +96,11 @@ The response is one of three variants, tagged by `response_shape`:
 shape. If `len(findings) > 500`, the response is capped and surfaces
 `pagination.auto_capped: true` with `total_before_cap` + `kept` counts —
 this is an advanced escape hatch, avoid for interactive UX.
+
+As of v0.3.3 the default page size is tuned per tool (triage=12,
+pan=30, report=24) so a filtered flat response fits inline in AI
+clients without file-dump fallback. Pass `limit: -1` to fetch up to
+500 findings in a single auto-capped response (CI/batch use only).
 
 **PCI DSS Requirements:** All 14 covered requirements (3.2.1, 3.3.1, 3.4.1, 3.5.1, 4.2.1, 6.2.4, 6.3.3, 6.4.3, 8.3.1, 8.3.6, 8.4.2, 8.6.2, 10.2.1, 11.6.1)
 
@@ -142,7 +147,7 @@ Detect PAN/CVV exposure in Go source files and .env configuration.
   surface as `more_rules: N`.
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
   `min_severity`, `rule_filter`, `include_tests`, `include_untracked`,
-  `include_taint`, `exclude_patterns` is set. 60 findings per page plus
+  `include_taint`, `exclude_patterns` is set. 30 findings per page plus
   `next_cursor` when more pages remain.
 - `response_shape: "error"` with `code: "CURSOR_EXPIRED"` — session cache
   entry expired (10-minute TTL) or server restarted. Re-run without a
@@ -150,6 +155,11 @@ Detect PAN/CVV exposure in Go source files and .env configuration.
 
 **Legacy flat response:** pass `limit: -1` to restore the pre-v0.3.0 flat
 findings array (auto-capped at 500) — this is an advanced escape hatch, avoid for interactive UX.
+
+As of v0.3.3 the default page size is tuned per tool (triage=12,
+pan=30, report=24) so a filtered flat response fits inline in AI
+clients without file-dump fallback. Pass `limit: -1` to fetch up to
+500 findings in a single auto-capped response (CI/batch use only).
 
 **PCI DSS Requirements:** 3.3.1, 3.4.1, 3.5.1
 
@@ -444,7 +454,7 @@ triage payload on real projects.
   by_rule is capped at 10 entries sorted by count desc; omitted rules
   surface as `more_rules: N`.
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
-  `min_severity`, `rule_filter`, `limit > 0` is set. Up to 60 enriched
+  `min_severity`, `rule_filter`, `limit > 0` is set. Up to 12 enriched
   findings per page plus `next_cursor` when more pages remain.
   `metadata.findings_total` always reports the pre-pagination count so
   `generate_compliance_report` and `triage_findings` agree on scope.
@@ -454,6 +464,11 @@ triage payload on real projects.
 
 **Legacy flat response:** pass `limit: -1` to restore the pre-v0.3.0 flat
 enriched-findings array (auto-capped at 500) — this is an advanced escape hatch, avoid for interactive UX.
+
+As of v0.3.3 the default page size is tuned per tool (triage=12,
+pan=30, report=24) so a filtered flat response fits inline in AI
+clients without file-dump fallback. Pass `limit: -1` to fetch up to
+500 findings in a single auto-capped response (CI/batch use only).
 
 **PCI DSS Requirements:** spans all requirements covered by
 `generate_compliance_report`

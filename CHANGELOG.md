@@ -5,6 +5,30 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## v0.3.3 - 2026-04-17
+
+### Fixed
+
+- **Per-tool Layer A page size (G-05):** filtered flat responses now stay
+  under the 20 KB Meta ceiling on real-world Go payment services. Default
+  page sizes tuned per tool: `triage_findings` = 12 enriched findings,
+  `scan_pan_data` = 30 findings, `generate_compliance_report` = 24
+  findings. Previously the shared default of 60 per page produced
+  ~70 KB responses for enriched triage output, triggering client-side
+  file-dump fallback on projects with many MEDIUM+ findings.
+- New optional `flat_page_size` field on the internal hybrid selector
+  input struct (`scanner/hybrid`); zero value preserves the legacy
+  60-per-page default for backward compatibility.
+
+### Unchanged
+
+- Layer B (summary) response shape and content — `by_severity`,
+  `by_rule` (top 10 + `more_rules`), and `top_findings` top-N are
+  byte-identical to v0.3.2.
+- `limit: -1` escape hatch still returns up to 500 findings in one
+  auto-capped flat response for CI/batch pipelines.
+- No breaking changes. Semver PATCH.
+
 ## v0.3.2 - 2026-04-17
 
 ### Fixed
