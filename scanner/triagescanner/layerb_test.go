@@ -281,6 +281,45 @@ func TestTriageToolDescription_SummaryFirstBias(t *testing.T) {
 	}
 }
 
+func TestTriageLayerA_SizeBudget(t *testing.T) {
+	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
+	scanRoot := copyFixtureTreeForTriage(t, fixtureRoot)
+	db, err := pcidb.New()
+	if err != nil {
+		t.Fatalf("pcidb.New: %v", err)
+	}
+	session := newTriageSessionForLayerB(t, db)
+	includeTaint := true
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "triage_findings",
+		Arguments: map[string]any{
+			"path":          scanRoot,
+			"dep_scan_mode": "offline",
+			"min_severity":  "MEDIUM",
+			"include_taint": includeTaint,
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("triage_findings Layer A returned IsError: %+v", result)
+	}
+	m := structuredMap(t, result)
+	if got := m["response_shape"]; got != "flat" {
+		t.Fatalf("response_shape=%v, want flat (min_severity=MEDIUM Layer A)", got)
+	}
+	raw, err := json.Marshal(result.StructuredContent)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	const budget = 20480
+	t.Logf("triage Layer A wire size on golden fixture (min_severity=MEDIUM) = %d bytes (budget %d)", len(raw), budget)
+	if len(raw) >= budget {
+		t.Fatalf("triage Layer A wire size %d bytes exceeds budget %d", len(raw), budget)
+	}
+}
+
 func TestTriageLayerB_MaxResultSizeChars(t *testing.T) {
 	db, err := pcidb.New()
 	if err != nil {

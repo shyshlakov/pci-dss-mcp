@@ -348,6 +348,96 @@ func TestSelectAndExecute_FilterError(t *testing.T) {
 	}
 }
 
+func TestSelectAndExecute_PerToolPageSize(t *testing.T) {
+	ctx := context.Background()
+	findings := make([]fakeFinding, 40)
+	for i := range findings {
+		findings[i] = fakeFinding{ID: "R-" + strconv.Itoa(i), Sev: "HIGH"}
+	}
+	cache := newMemCache()
+
+	res, err := SelectAndExecute[fakeFinding, fakeSummary, fakeFlat](
+		ctx,
+		Input{FlatPageSize: 12, MinSeverity: "HIGH", AbsPath: "/tmp/x", ToolName: "triage_findings", ScanTimestamp: "2026-04-17T00:00:00Z"},
+		newFakeScan(findings, nil),
+		noopFilter,
+		buildSummaryFake,
+		buildFlatFake,
+		cache,
+	)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if res.Flat == nil {
+		t.Fatalf("expected Flat, got %+v", res)
+	}
+	if len(res.Flat.Page) != 12 {
+		t.Errorf("first page len=%d, want 12", len(res.Flat.Page))
+	}
+	if res.Flat.Cursor == "" {
+		t.Fatalf("expected non-empty cursor; 40 findings at page=12 leaves more pages")
+	}
+
+	payload, err := hybridcache.DecodeCursor(res.Flat.Cursor)
+	if err != nil {
+		t.Fatalf("DecodeCursor: %v", err)
+	}
+	if payload.Off != 12 {
+		t.Errorf("cursor Off=%d, want 12 (per-tool page size)", payload.Off)
+	}
+
+	res2, err := SelectAndExecute[fakeFinding, fakeSummary, fakeFlat](
+		ctx,
+		Input{FlatPageSize: 12, Cursor: res.Flat.Cursor, ToolName: "triage_findings"},
+		newFakeScan(nil, errors.New("scan must not be called on cursor resume")),
+		noopFilter,
+		buildSummaryFake,
+		buildFlatFake,
+		cache,
+	)
+	if err != nil {
+		t.Fatalf("cursor resume err: %v", err)
+	}
+	if res2.Flat == nil {
+		t.Fatalf("expected Flat on cursor resume, got %+v", res2)
+	}
+	if len(res2.Flat.Page) != 12 {
+		t.Errorf("second page len=%d, want 12", len(res2.Flat.Page))
+	}
+	if res2.Flat.Cursor == "" {
+		t.Fatalf("expected non-empty cursor; 40-24=16 findings remain")
+	}
+	payload2, err := hybridcache.DecodeCursor(res2.Flat.Cursor)
+	if err != nil {
+		t.Fatalf("DecodeCursor p2: %v", err)
+	}
+	if payload2.Off != 24 {
+		t.Errorf("cursor Off=%d, want 24 (12+12 per-tool page size)", payload2.Off)
+	}
+
+	resDefault, err := SelectAndExecute[fakeFinding, fakeSummary, fakeFlat](
+		ctx,
+		Input{FlatPageSize: 0, MinSeverity: "HIGH", AbsPath: "/tmp/y", ToolName: "scan_pan_data", ScanTimestamp: "2026-04-17T00:00:00Z"},
+		newFakeScan(findings, nil),
+		noopFilter,
+		buildSummaryFake,
+		buildFlatFake,
+		newMemCache(),
+	)
+	if err != nil {
+		t.Fatalf("default-size err: %v", err)
+	}
+	if resDefault.Flat == nil {
+		t.Fatalf("expected Flat on default-size call, got %+v", resDefault)
+	}
+	if len(resDefault.Flat.Page) != 40 {
+		t.Errorf("default page len=%d, want 40 (legacy FlatPageSize=60 covers all 40)", len(resDefault.Flat.Page))
+	}
+	if resDefault.Flat.Cursor != "" {
+		t.Errorf("expected empty cursor on legacy default; got %q", resDefault.Flat.Cursor)
+	}
+}
+
 func TestSelectAndExecute_BuildSummaryNil(t *testing.T) {
 	ctx := context.Background()
 	buildNilSummary := func(_ []fakeFinding, _ hybridcache.ScanMeta, _, _ string) *fakeSummary {

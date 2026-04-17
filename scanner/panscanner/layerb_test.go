@@ -330,6 +330,38 @@ func TestPANToolDescription_SummaryFirstBias(t *testing.T) {
 	}
 }
 
+func TestPANLayerA_SizeBudget(t *testing.T) {
+	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
+	scanRoot := copyFixtureTreeForPAN(t, fixtureRoot)
+	session := newPANSessionForLayerB(t)
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "scan_pan_data",
+		Arguments: map[string]any{
+			"path":          scanRoot,
+			"include_tests": true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("scan_pan_data Layer A returned IsError: %+v", result)
+	}
+	m := panStructuredMap(t, result)
+	if got := m["response_shape"]; got != "flat" {
+		t.Fatalf("response_shape=%v, want flat (include_tests=true forces Layer A)", got)
+	}
+	raw, err := json.Marshal(result.StructuredContent)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	const budget = 20480
+	t.Logf("pan Layer A wire size on golden fixture (include_tests=true) = %d bytes (budget %d)", len(raw), budget)
+	if len(raw) >= budget {
+		t.Fatalf("pan Layer A wire size %d bytes exceeds budget %d", len(raw), budget)
+	}
+}
+
 func TestPANLayerB_MaxResultSizeChars(t *testing.T) {
 	session := newPANSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
