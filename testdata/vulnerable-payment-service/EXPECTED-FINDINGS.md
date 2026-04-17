@@ -298,4 +298,3 @@ fixture files change.
 | clean/gorm_encrypt_type/helper_encrypted/card_model.go | F-26 helper recursion verified — GORM-ENCRYPT-OK |
 | clean/gorm_encrypt_type/kms_encrypted/card_model.go | F-26 KMS client in Value() body — GORM-ENCRYPT-OK |
 | clean/s2s_handler/stripe_hmac_webhook.go | B-21 T1 strong: hmac.Equal before json.Unmarshal — AUTH-MISSING-MFA downgrades to INFO |
-| clean/s2s_handler/generic_consensus_webhook.go | B-21 T2+T3 consensus: /hooks/ path + Callback name + POST + no Authorization read — AUTH-MISSING-MFA downgrades to INFO |

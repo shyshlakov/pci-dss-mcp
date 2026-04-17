@@ -142,5 +142,7 @@ func (s *AuthScanner) scanGoFileInRoot(path, projectRoot string) ([]scanner.Find
 	// 3. Check missing MFA on payment routes/handlers.
 	findings = append(findings, detectMissingMFA(file, fset, path)...)
 
+	findings = ApplyS2SDowngrade(findings, file, fset, path)
+
 	return findings, lineCount, nil
 }
