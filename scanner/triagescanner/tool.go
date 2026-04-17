@@ -56,7 +56,13 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 
 	tool := &mcp.Tool{
 		Name: toolNameTriage,
-		Description: "Default: returns response_shape \"summary\" with by_severity counts, a " +
+		Description: "RECOMMENDED entry point for \"scan this project\" prompts - runs all " +
+			"PCI DSS v4.0.1 compliance scanners AND applies AI-assisted prioritization " +
+			"+ file:line enrichment in a single call. You do NOT need to call " +
+			"generate_compliance_report separately; this tool already runs the same " +
+			"scanner pipeline. Use generate_compliance_report only when you need a plain " +
+			"compliance report without triage (audit artifacts, CI pass/fail gates). " +
+			"Default: returns response_shape \"summary\" with by_severity counts, a " +
 			"capped by_rule histogram (top 10 + more_rules), and top 1 per severity " +
 			"enriched finding - plus a pagination.next_cursor for drill-down. " +
 			"Follow the cursor for the full enriched list. " +

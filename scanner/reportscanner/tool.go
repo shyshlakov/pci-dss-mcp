@@ -50,13 +50,20 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 
 	tool := &mcp.Tool{
 		Name: "generate_compliance_report",
-		Description: "Run all PCI DSS v4.0.1 compliance scanners against a Go project and generate " +
+		Description: "Plain compliance report. For scan + AI triage + file:line enrichment " +
+			"in a single call, prefer triage_findings - it is the recommended entry point " +
+			"for interactive \"scan this project\" prompts. Use this tool when you need " +
+			"audit-artifact output (requirement-level pass/fail without triage) or CI " +
+			"pass/fail gates. " +
+			"Run all PCI DSS v4.0.1 compliance scanners against a Go project and generate " +
 			"a three-layer hybrid compliance report. Default unfiltered call returns a compact " +
 			"summary (metadata, totals, requirement_statuses, top 20 findings per severity, and a " +
 			"cursor for follow-up). Supply min_severity / rule_filter / limit to get a paged flat " +
-			"list (60 per page with cursor), limit=-1 for the legacy auto-capped flat list (max 500), " +
-			"or cursor=<token> to resume a prior session (10-minute TTL). Taint analysis is ON by " +
-			"default; set include_taint=false for fast dev iteration.",
+			"list (60 per page with cursor), or cursor=<token> to resume a prior session " +
+			"(10-minute TTL). Taint analysis is ON by default; set include_taint=false for " +
+			"fast dev iteration. limit: -1 is an advanced escape hatch that returns the " +
+			"legacy auto-capped flat list (max 500) - avoid for interactive UX, use only " +
+			"for CI/batch pipelines.",
 	}
 	if schema, err := buildOutputSchemaUnion(); err == nil {
 		tool.OutputSchema = schema
