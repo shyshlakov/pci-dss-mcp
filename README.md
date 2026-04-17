@@ -161,13 +161,19 @@ were detected.
 ### 2. Full compliance scan + AI-verified triage (recommended)
 
 ```
-Run a full PCI DSS compliance scan on this project, then run AI triage
-on the MEDIUM+ findings and classify each as CONFIRMED, FALSE POSITIVE,
-or NEEDS MANUAL REVIEW. For each CONFIRMED finding, explain the attack
-path and suggest a concrete fix.
+Run AI triage on this project and classify each MEDIUM+ finding as
+CONFIRMED, FALSE POSITIVE, or NEEDS MANUAL REVIEW. For each CONFIRMED
+finding, explain the attack path and suggest a concrete fix.
 ```
 
-Claude will chain `generate_compliance_report` -> `triage_findings` -> its own `Read`/`Grep` tools and produce a classification for each finding.
+`triage_findings` runs all scanners + AI enrichment + file:line context in one call — the recommended entry point for "scan this project" prompts. You do NOT need to call `generate_compliance_report` separately.
+
+**When to use `generate_compliance_report` instead:** audit artifacts, CI pass/fail gates, or a plain requirement-level pass/fail view without triage. Example prompt:
+
+```
+Generate a PCI DSS compliance report for this project — requirement-level
+pass/fail only, no triage.
+```
 
 ### 3. CI-style gate (fail fast)
 

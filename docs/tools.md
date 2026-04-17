@@ -54,7 +54,12 @@ and the by_rule histogram is capped at 10 entries (omitted rules counted in
 
 ## generate_compliance_report
 
-Run all PCI DSS v4.0.1 compliance scanners and generate a comprehensive report.
+Run all PCI DSS v4.0.1 compliance scanners and generate a plain compliance report
+**without triage enrichment**. For interactive "scan this project" prompts, prefer
+[`triage_findings`](#triage_findings) instead — it runs the same scanners plus
+AI-assisted prioritization and file:line context in one call. Use this tool when
+you need audit artifacts, CI pass/fail gates, or a requirement-level view without
+triage labels.
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -89,7 +94,8 @@ The response is one of three variants, tagged by `response_shape`:
 
 **Legacy flat response:** pass `limit: -1` to restore the pre-v0.2.0 flat
 shape. If `len(findings) > 500`, the response is capped and surfaces
-`pagination.auto_capped: true` with `total_before_cap` + `kept` counts.
+`pagination.auto_capped: true` with `total_before_cap` + `kept` counts —
+this is an advanced escape hatch, avoid for interactive UX.
 
 **PCI DSS Requirements:** All 14 covered requirements (3.2.1, 3.3.1, 3.4.1, 3.5.1, 4.2.1, 6.2.4, 6.3.3, 6.4.3, 8.3.1, 8.3.6, 8.4.2, 8.6.2, 10.2.1, 11.6.1)
 
@@ -400,11 +406,13 @@ network access.
 
 ## triage_findings
 
-Run a full compliance scan and enrich each active finding with AI-triage
-context: file/line `ResourceLink` hints for on-demand source reading,
-imports, package declarations, detected middleware chains, framework
-hints, and a per-finding triage hint. Designed to be chained after
-`generate_compliance_report` or called standalone.
+**Recommended entry point** for "scan this project" prompts. Runs all PCI DSS
+v4.0.1 compliance scanners AND enriches each active finding with AI-triage
+context in a single call: file/line `ResourceLink` hints for on-demand source
+reading, imports, package declarations, detected middleware chains, framework
+hints, and a per-finding triage hint. Call this **standalone** — you do NOT need
+to call `generate_compliance_report` first; this tool already includes everything
+it does plus triage enrichment.
 
 Verified-OK markers (rule IDs ending in `-OK`, currently `AUDIT-LOG-OK`
 and `CSP-OK`) are **skipped before enrichment** per — they appear
