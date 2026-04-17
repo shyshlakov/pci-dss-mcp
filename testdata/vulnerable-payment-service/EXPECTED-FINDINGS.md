@@ -1,26 +1,26 @@
 ---
-fixture_version: 1.9
+fixture_version: 1.10
 last_updated: 2026-04-17
 phase: 19.9
-plan: 01
-total_intentional_violations: 149
-total_clean_patterns: 22
-total_rules_covered: 55
+plan: 02
+total_intentional_violations: 157
+total_clean_patterns: 26
+total_rules_covered: 57
 expected_summary:
- critical: 44
+ critical: 49
  high: 86
  medium: 27
  low: 0
- info: 51
-expected_active: 167
-expected_total_findings: 208
+ info: 58
+expected_active: 175
+expected_total_findings: 223
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
  tlsscanner: [TLS-INSECURE-SKIP-VERIFY, TLS-MISSING-MIN-VERSION, TLS-WEAK-VERSION, TLS-WEAK-CIPHER]
  secretscanner: [SEC-PREFIX, SEC-HIGH-ENTROPY, SEC-CONNSTR, SEC-CREDENTIAL-KEY]
  errorscanner: [ERR-LEAK-DIRECT, ERR-LEAK-FORMAT, ERR-LEAK-WRITE, ERR-LEAK-ENCODE]
- authscanner: [AUTH-HARDCODED-PWD, AUTH-WEAK-POLICY, AUTH-MISSING-MFA, AUTH-BYTE-COUNT]
+ authscanner: [AUTH-HARDCODED-PWD, AUTH-WEAK-POLICY, AUTH-MISSING-MFA, AUTH-BYTE-COUNT, AUTH-WEBHOOK-NO-SIGNATURE, AUTH-WEBHOOK-VERIFIED]
  auditscanner: [AUDIT-NO-LOG, AUDIT-UNSTRUCTURED, AUDIT-LOG-OK]
  retentionscanner: [RET-DB-SENSITIVE-STORE, RET-GORM-SENSITIVE-STORE, RET-REDIS-NO-TTL, RET-REDIS-KEEP-TTL, RET-REDIS-NO-EXPIRE, RET-CONFIG-NO-TTL, RET-ZERO-BEFORE-AUTH, RET-ZERO-AFTER-RESPONSE, RET-ZERO-DEFER-ONLY]
  scriptscanner: [CSP-MISSING, CSP-OK, CSP-UNSAFE-INLINE, CSP-UNSAFE-EVAL, CSP-NO-SCRIPT-SRC, CSP-VALUE-UNANALYZABLE, META-CSP-ONLY, META-CSP-UNSAFE, SRI-MISSING, SRI-MISSING-PAYMENT, NONCE-MISSING, NONCE-MISSING-PAYMENT, FIM-REQUIRED]
@@ -55,11 +55,11 @@ fixture files change.
 
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 44 |
+| CRITICAL | 49 |
 | HIGH | 86 |
 | MEDIUM | 27 |
 | LOW | 0 |
-| INFO | 51 |
+| INFO | 58 |
 
 ## Violations
 
@@ -78,6 +78,8 @@ fixture files change.
 | AUDIT-NO-LOG | CRITICAL | internal/http/handler/payment/clean.go | 8 | RenderCheckoutClean handler no log calls |
 | AUDIT-NO-LOG | CRITICAL | internal/http/handler/tokens/exchange.go | 5 | TokenizeCardExchange handler no log calls |
 | AUDIT-NO-LOG | CRITICAL | internal/http/handler/tokens/metadata.go | 8 | CardMetadata handler no log calls |
+| AUDIT-NO-LOG | CRITICAL | internal/http/handler/webhook/bad_generic_webhook.go | 12 | incidental AUDIT-NO-LOG on webhook bad fixture |
+| AUDIT-NO-LOG | CRITICAL | internal/http/handler/webhook/bad_paypal_ipn.go | 12 | incidental AUDIT-NO-LOG on webhook bad fixture |
 | AUDIT-NO-LOG | HIGH | internal/billing/encode_map.go | 19 | EncodeHandler no log calls after fixture-shortcut removal |
 | AUDIT-NO-LOG | HIGH | internal/payment/zeroing_init.go | 20 | incidental tier-2 AUDIT-NO-LOG on fixture |
 | AUDIT-NO-LOG | HIGH | internal/retention/zeroing_elseif.go | 7 | RED: incidental tier-2 AUDIT-NO-LOG on Z9 fixture |
@@ -122,6 +124,14 @@ fixture files change.
 | AUTH-MISSING-MFA | HIGH | internal/retention/zeroing_typeswitch.go | 7 | RED: incidental AUTH-MISSING-MFA on Z11 fixture |
 | AUTH-MISSING-MFA | HIGH | internal/util/cardproc.go | 5 | ProcessCardBuffer handler no MFA |
 | AUTH-WEAK-POLICY | CRITICAL | internal/auth/policy.go | 12 | MinPasswordLength below PCI 8.3.6 |
+| AUTH-WEBHOOK-NO-SIGNATURE | CRITICAL | internal/http/handler/callback/mastercard.go | 8 | RESEARCH §3 fixture reuse — Mastercard brand path canonical anti-pattern |
+| AUTH-WEBHOOK-NO-SIGNATURE | CRITICAL | internal/http/handler/webhook/bad_paypal_ipn.go | 12 | brand=paypal D-06 |
+| AUTH-WEBHOOK-NO-SIGNATURE | CRITICAL | internal/http/handler/webhook/bad_stripe_webhook.go | 12 | brand=stripe Jack Cable canonical anti-pattern |
+| AUTH-WEBHOOK-NO-SIGNATURE | HIGH | internal/http/handler/webhook/bad_generic_webhook.go | 12 | generic /hooks/payment no brand keyword |
+| AUTH-WEBHOOK-VERIFIED | INFO | clean/webhook_signed/good_hmac_generic.go | 16 | hmac.Equal T1 strong before parser |
+| AUTH-WEBHOOK-VERIFIED | INFO | clean/webhook_signed/good_middleware_verified.go | 22 | webhookmiddleware crawler match (VerifyWebhookSignatureMiddleware wrapper) |
+| AUTH-WEBHOOK-VERIFIED | INFO | clean/webhook_signed/good_stripe_constructevent.go | 19 | webhook.ConstructEvent T1 strong before parser |
+| AUTH-WEBHOOK-VERIFIED | INFO | clean/webhook_signed/webhook_with_local_helper.go | 15 | D-07 1-level recursion verifyStripeSignature -> hmac.Equal |
 | CRYPTO-HARDCODED-KEY | HIGH | internal/config/constants_file.go | 3 | F-25 Layer 4 path downgrade CRITICAL to HIGH tag crypto_key_constants_file |
 | CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/header_const.go | 3 | F-25 Layer 2 header pattern downgrades to INFO tag hardcoded_header_name |
 | CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/json_key.go | 3 | F-25 Layer 2 camelCase pattern downgrades to INFO tag hardcoded_json_key |
@@ -298,3 +308,7 @@ fixture files change.
 | clean/gorm_encrypt_type/helper_encrypted/card_model.go | F-26 helper recursion verified — GORM-ENCRYPT-OK |
 | clean/gorm_encrypt_type/kms_encrypted/card_model.go | F-26 KMS client in Value() body — GORM-ENCRYPT-OK |
 | clean/s2s_handler/stripe_hmac_webhook.go | B-21 T1 strong: hmac.Equal before json.Unmarshal — AUTH-MISSING-MFA downgrades to INFO |
+| clean/webhook_signed/good_stripe_constructevent.go | B-22 T1 strong: webhook.ConstructEvent before json.Unmarshal — AUTH-WEBHOOK-VERIFIED INFO |
+| clean/webhook_signed/good_hmac_generic.go | B-22 T1 strong: hmac.Equal before json.Unmarshal — AUTH-WEBHOOK-VERIFIED INFO |
+| clean/webhook_signed/good_middleware_verified.go | B-22 middleware chain: VerifyWebhookSignatureMiddleware wrapper — AUTH-WEBHOOK-VERIFIED INFO |
+| clean/webhook_signed/webhook_with_local_helper.go | B-22 1-level recursion: local verifyStripeSignature helper with hmac.Equal — AUTH-WEBHOOK-VERIFIED INFO |
