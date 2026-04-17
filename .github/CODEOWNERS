@@ -1,0 +1,6 @@
+# Code ownership for pci-dss-mcp
+# Every PR requires approval from listed owners per branch protection rules.
+# See: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+*       @shyshlakov
