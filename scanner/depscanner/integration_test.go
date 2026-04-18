@@ -225,8 +225,9 @@ func TestIntegrationCheckDepsOfflineWithCache(t *testing.T) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_dependencies",
 		Arguments: map[string]any{
-			"path": projectDir,
-			"mode": "offline",
+			"path":         projectDir,
+			"mode":         "offline",
+			"min_severity": "INFO",
 		},
 	})
 	if err != nil {
@@ -473,8 +474,9 @@ func TestIntegrationCheckDepsStaleCacheWarning(t *testing.T) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_dependencies",
 		Arguments: map[string]any{
-			"path": projectDir,
-			"mode": "offline",
+			"path":         projectDir,
+			"mode":         "offline",
+			"min_severity": "MEDIUM",
 		},
 	})
 	if err != nil {
