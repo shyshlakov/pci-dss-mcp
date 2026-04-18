@@ -27,7 +27,7 @@ type TriageInput struct {
 	IncludeTaint *bool  `json:"include_taint,omitempty" jsonschema:"Enable flow-based severity adjustment via go/packages type analysis. When true, panscanner downgrades PAN-KEYWORD and suppresses PAN-TYPE findings for transit-only CHD fields. Adds 5-30 seconds to scan time. Default true (production-grade precision, matches generate_compliance_report). Set false for fast dev iteration. Requires 'go' binary on PATH; falls back to AST-only scanning on failure."`
 	MinSeverity  string `json:"min_severity,omitempty" jsonschema:"Filter findings by minimum severity. One of CRITICAL / HIGH / MEDIUM / LOW / INFO (case-insensitive). Default: no severity filter. Applied BEFORE enrichment to save context-collection cost."`
 	RuleFilter   string `json:"rule_filter,omitempty" jsonschema:"Filter findings by rule ID. Comma-separated list for exact match (e.g. PAN-KEYWORD,PAN-TYPE) OR a single regex in leading/trailing slashes (e.g. /PAN-.*/). Default: no rule filter."`
-	Limit        int    `json:"limit,omitempty" jsonschema:"Maximum number of findings to enrich after filtering. Default 0 (unlimited). Use to cap triage cost on noisy projects. Pass -1 for a full flat response (auto-capped at 500)."`
+	Limit        int    `json:"limit,omitempty" jsonschema:"Maximum number of findings to enrich after filtering. Default 0 (summary-first). Positive integer for an exact cap. -1 is NO LONGER ACCEPTED (returns error) as of v0.4.0; use cursor pagination instead."`
 	Cursor       string `json:"cursor,omitempty" jsonschema:"Opaque cursor token from a prior triage_findings response. When set, resumes pagination from the stored session cache (10-minute TTL). Leave empty for a fresh scan."`
 }
 
@@ -66,8 +66,6 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 			"capped by_rule histogram (top 10 + more_rules), and top 1 per severity " +
 			"enriched finding - plus a pagination.next_cursor for drill-down. " +
 			"Follow the cursor for the full enriched list. " +
-			"limit: -1 is an advanced escape hatch that can return >100 KB of JSON; " +
-			"use only for CI/batch pipelines, not interactive UX. " +
 			"Apply min_severity / rule_filter for a filtered flat response.",
 		Meta:         mcp.Meta{"anthropic/maxResultSizeChars": 20000},
 		OutputSchema: json.RawMessage(schema),

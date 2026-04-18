@@ -26,7 +26,7 @@ type ScanPANInput struct {
 	IncludeUntracked bool     `json:"include_untracked,omitempty" jsonschema:"Scan all files including .gitignored. Default false scans only git-tracked files"`
 	IncludeTaint     bool     `json:"include_taint,omitempty" jsonschema:"Enable flow-based severity adjustment using go/packages type analysis. When true PAN-KEYWORD/PAN-TYPE findings on transit-only struct fields are downgraded or suppressed. Adds 5-30 seconds. Default false (opt-in for accuracy vs speed)"`
 	Cursor           string   `json:"cursor,omitempty" jsonschema:"Opaque cursor token from a prior scan_pan_data response. When set resumes pagination from the stored session cache (10-minute TTL). Leave empty for a fresh scan."`
-	Limit            int      `json:"limit,omitempty" jsonschema:"Pass -1 for the full flat findings array (auto-capped at 500). Default 0 returns the summary-first Layer B response."`
+	Limit            int      `json:"limit,omitempty" jsonschema:"Maximum number of findings to return after filtering. Default 0 (summary-first). Positive integer for an exact cap. -1 is NO LONGER ACCEPTED (returns error) as of v0.4.0; use cursor pagination instead."`
 	MinSeverity      string   `json:"min_severity,omitempty" jsonschema:"Filter by minimum severity (CRITICAL/HIGH/MEDIUM/LOW/INFO). Setting this forces the flat response shape."`
 	RuleFilter       string   `json:"rule_filter,omitempty" jsonschema:"Filter by rule ID, comma list or /regex/. Setting this forces the flat response shape."`
 }
@@ -62,8 +62,6 @@ func RegisterTools(server *mcp.Server) {
 			"capped by_rule histogram (top 10 + more_rules), and top 3 per severity " +
 			"findings - plus a pagination.next_cursor for drill-down. " +
 			"Follow the cursor for the full paginated list. " +
-			"limit: -1 is an advanced escape hatch that can return >100 KB of JSON; " +
-			"use only for CI/batch pipelines, not interactive UX. " +
 			"Use include_tests / exclude_patterns for a filtered flat response. " +
 			"Maps findings to PCI DSS 3.3.1, 3.4.1, 3.5.1.",
 		Meta:         mcp.Meta{"anthropic/maxResultSizeChars": 20000},

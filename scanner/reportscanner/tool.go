@@ -18,7 +18,7 @@ type ReportInput struct {
 	IncludeTaint *bool  `json:"include_taint,omitempty" jsonschema:"Enable flow-based severity adjustment via go/packages type analysis. When true, panscanner downgrades PAN-KEYWORD and suppresses PAN-TYPE findings for transit-only CHD fields (request/response DTOs, API client models) per and the PCI SSC FAQ on non-persistent memory. Adds 5-30 seconds to scan time. Default true (production-grade precision). Set false for fast dev iteration. Requires 'go' binary on PATH; falls back to AST-only scanning on failure."`
 	MinSeverity  string `json:"min_severity,omitempty" jsonschema:"Filter findings by minimum severity. One of CRITICAL / HIGH / MEDIUM / LOW / INFO (case-insensitive). Default: no severity filter. Useful for AI clients that only need HIGH-or-above results."`
 	RuleFilter   string `json:"rule_filter,omitempty" jsonschema:"Filter findings by rule ID. Comma-separated list for exact match (e.g. PAN-KEYWORD,PAN-TYPE) OR a single regex in leading/trailing slashes (e.g. /PAN-.*/). Default: no rule filter."`
-	Limit        int    `json:"limit,omitempty" jsonschema:"Maximum number of findings to return after filtering. Default 0 (unlimited, summary-first Layer B). Use a positive integer for an exact cap; use -1 for the legacy auto-capped flat list (escape hatch, max 500)."`
+	Limit        int    `json:"limit,omitempty" jsonschema:"Maximum number of findings to return after filtering. Default 0 (summary-first). Positive integer for an exact cap. -1 is NO LONGER ACCEPTED (returns error) as of v0.4.0; use cursor pagination instead."`
 	Cursor       string `json:"cursor,omitempty" jsonschema:"Opaque cursor token from a prior response. When set, resumes pagination from the stored session cache (10-minute TTL). Leave empty for a fresh scan."`
 }
 
@@ -61,9 +61,7 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 			"cursor for follow-up). Supply min_severity / rule_filter / limit to get a paged flat " +
 			"list (60 per page with cursor), or cursor=<token> to resume a prior session " +
 			"(10-minute TTL). Taint analysis is ON by default; set include_taint=false for " +
-			"fast dev iteration. limit: -1 is an advanced escape hatch that returns the " +
-			"legacy auto-capped flat list (max 500) - avoid for interactive UX, use only " +
-			"for CI/batch pipelines.",
+			"fast dev iteration.",
 	}
 	if schema, err := buildOutputSchemaUnion(); err == nil {
 		tool.OutputSchema = schema

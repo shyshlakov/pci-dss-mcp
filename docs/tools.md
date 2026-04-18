@@ -17,11 +17,6 @@ tagged `response_shape: "summary"`. The three tools
 `generate_compliance_report`, `triage_findings`, and `scan_pan_data`
 now accept an optional `cursor` input parameter for paginated follow-ups.
 
-**To restore the pre-v0.2.0 shape on the next call**, pass `limit: -1` to
-`generate_compliance_report`. The server returns a flat findings array
-(capped at 500 entries; over-cap responses surface
-`pagination.auto_capped: true` with `total_before_cap` / `kept` hints).
-
 **To drill into the full findings list progressively**, follow the
 `pagination.next_cursor` returned in the default summary response. Each
 follow-up call returns 60 findings per page (`FlatResponse`) plus a new
@@ -40,17 +35,26 @@ cursor-less calls return severity counts, a per-rule histogram, and a small
 `top_findings` map (2 per severity for `triage_findings`, 3 per severity for
 `scan_pan_data`), plus a `pagination.next_cursor` for drill-down.
 
-**To restore the pre-v0.3.0 shape on the next call**, pass `limit: -1` to
-either tool (response is a flat findings array, auto-capped at 500). Any
-filter or scope parameter (`min_severity`, `rule_filter`, `include_tests`,
-`include_untracked`, `include_taint`, `exclude_patterns`) also continues to
-return the flat shape with cursor pagination.
+Any filter or scope parameter (`min_severity`, `rule_filter`, `include_tests`,
+`include_untracked`, `include_taint`, `exclude_patterns`) switches the
+response to the flat shape with cursor pagination.
 
 Both tools declare `_meta["anthropic/maxResultSizeChars"]: 20000` so MCP
 clients that recognise the annotation (Claude Code >= v2.1.91) can size
 inline rendering in advance. As of v0.3.1 the triage top-N is 1 per severity
 and the by_rule histogram is capped at 10 entries (omitted rules counted in
 `more_rules`).
+
+## v0.4.0 migration note (breaking)
+
+As of **v0.4.0**, all three hybrid tools (`generate_compliance_report`,
+`triage_findings`, `scan_pan_data`) reject `limit: -1` with a structured
+error containing the token `LIMIT_MINUS_ONE_REMOVED`. The legacy auto-capped
+flat response (max 500 findings in one shot) is no longer callable. Migrate
+CI/batch callers to cursor pagination: call with default parameters (or
+`min_severity` / `rule_filter` to narrow), then follow
+`pagination.next_cursor` until it is empty. The cursor loop handles any
+finding volume without a size cap.
 
 ## generate_compliance_report
 
@@ -70,7 +74,7 @@ triage labels.
 | `include_taint` | bool | no | flow-based severity adjustment via `go/packages`. **Default `true`** (production precision, as of ). Set `false` for fast dev iteration (adds 5-30s otherwise). Requires `go` binary on `PATH`; falls back to AST-only on failure |
 | `min_severity` | string | no | Scope the response to findings at or above this severity. One of `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` / `INFO` (case-insensitive). Default: no filter |
 | `rule_filter` | string | no | Comma-separated list of rule IDs (`PAN-KEYWORD,PAN-TYPE`) OR a single regex between slashes (`/PAN-.*/`). Default: no filter |
-| `limit` | int | no | Maximum number of findings to return after filtering. Default `0` (summary-first). Pass `-1` to request the legacy flat findings array (auto-capped at 500) |
+| `limit` | int | no | Default `0` (summary-first). Positive integer for an exact cap. `-1` returns an error as of v0.4.0; use cursor pagination for CI/batch callers |
 | `cursor` | string | no | Opaque pagination cursor. Empty = fresh scan. Non-empty = resume from session cache (10-minute TTL) |
 
 All four filter/scope parameters (..) apply **before**
@@ -92,15 +96,14 @@ The response is one of three variants, tagged by `response_shape`:
   `CURSOR_MALFORMED` (decode failure / cross-tool replay). Client retries
   without a cursor.
 
-**Legacy flat response:** pass `limit: -1` to restore the pre-v0.2.0 flat
-shape. If `len(findings) > 500`, the response is capped and surfaces
-`pagination.auto_capped: true` with `total_before_cap` + `kept` counts —
-this is an advanced escape hatch, avoid for interactive UX.
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. CI/batch
+callers should follow `pagination.next_cursor` until it is empty — the
+cursor loop handles any finding volume and stays within the Meta ceiling.
 
 As of v0.3.3 the default page size is tuned per tool (triage=12,
 pan=30, report=24) so a filtered flat response fits inline in AI
-clients without file-dump fallback. Pass `limit: -1` to fetch up to
-500 findings in a single auto-capped response (CI/batch use only).
+clients without file-dump fallback.
 
 **PCI DSS Requirements:** All 14 covered requirements (3.2.1, 3.3.1, 3.4.1, 3.5.1, 4.2.1, 6.2.4, 6.3.3, 6.4.3, 8.3.1, 8.3.6, 8.4.2, 8.6.2, 10.2.1, 11.6.1)
 
@@ -153,13 +156,14 @@ Detect PAN/CVV exposure in Go source files and .env configuration.
   entry expired (10-minute TTL) or server restarted. Re-run without a
   cursor. Cross-tool cursor replay also returns `CURSOR_MALFORMED`.
 
-**Legacy flat response:** pass `limit: -1` to restore the pre-v0.3.0 flat
-findings array (auto-capped at 500) — this is an advanced escape hatch, avoid for interactive UX.
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. CI/batch
+callers should follow `pagination.next_cursor` until it is empty — the
+cursor loop handles any finding volume and stays within the Meta ceiling.
 
 As of v0.3.3 the default page size is tuned per tool (triage=12,
 pan=30, report=24) so a filtered flat response fits inline in AI
-clients without file-dump fallback. Pass `limit: -1` to fetch up to
-500 findings in a single auto-capped response (CI/batch use only).
+clients without file-dump fallback.
 
 **PCI DSS Requirements:** 3.3.1, 3.4.1, 3.5.1
 
@@ -462,13 +466,14 @@ triage payload on real projects.
   entry expired (10-minute TTL) or server restarted. Re-run without a
   cursor. Cross-tool cursor replay also returns `CURSOR_MALFORMED`.
 
-**Legacy flat response:** pass `limit: -1` to restore the pre-v0.3.0 flat
-enriched-findings array (auto-capped at 500) — this is an advanced escape hatch, avoid for interactive UX.
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. CI/batch
+callers should follow `pagination.next_cursor` until it is empty — the
+cursor loop handles any finding volume and stays within the Meta ceiling.
 
 As of v0.3.3 the default page size is tuned per tool (triage=12,
 pan=30, report=24) so a filtered flat response fits inline in AI
-clients without file-dump fallback. Pass `limit: -1` to fetch up to
-500 findings in a single auto-capped response (CI/batch use only).
+clients without file-dump fallback.
 
 **PCI DSS Requirements:** spans all requirements covered by
 `generate_compliance_report`
