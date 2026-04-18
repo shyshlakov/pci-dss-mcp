@@ -5,6 +5,83 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## v0.4.0 - 2026-04-18
+
+### Breaking Changes
+
+- **`limit: -1` removed from all three hybrid tools (G-06 — landed in plan
+  19.11-08, release cut in this plan).** `triage_findings`, `scan_pan_data`,
+  and `generate_compliance_report` no longer accept `limit: -1`. Callers that
+  previously passed `-1` to fetch up to 500 findings in one shot now receive
+  a structured error with the token `LIMIT_MINUS_ONE_REMOVED` and a hint to
+  migrate to cursor pagination. Rationale: on noisy real-world Go payment
+  services the `-1` path produced ~170 KB responses (19x the declared 20 KB
+  Meta ceiling), triggering Claude Code / Desktop chunked-read file-dump
+  fallback. Text warnings in tool descriptions did not hold against LLM
+  user-intent rationalization across multiple UAT sessions — handler-level
+  rejection is the only reliable fix.
+
+- **9 single-scanner tools default to summary-first hybrid shape (G-07).**
+  `check_auth_strength`, `check_encryption`, `check_tls_config`,
+  `check_secrets_in_configs`, `check_error_handling`, `audit_log_coverage`,
+  `check_data_retention`, `check_payment_page_scripts`, and
+  `check_dependencies` — previously returned flat `scanner.ScannerToolOutput`
+  by default on every call. They now return `response_shape: "summary"` on
+  unfiltered calls: severity counts, per-rule histogram (top 10 +
+  `more_rules`), up to N findings per severity in `top_findings` (N=3 for
+  the 8 lightweight scanners, N=1 for `check_dependencies` because OSV
+  payloads are ~1 KB each), and `pagination.next_cursor` for drill-down.
+  Any filter / scope / limit input switches the response to flat with
+  cursor pagination (30 findings/page for 8 scanners, 15/page for
+  `check_dependencies`). `update_vulnerability_db` and `explain_requirement`
+  are unchanged (small status / spec responses, no findings array).
+
+- **All 12 tools returning findings now declare
+  `_meta["anthropic/maxResultSizeChars"]: 20000`.** AI clients that honour
+  the annotation (Claude Code >= v2.1.91) size inline rendering in advance.
+
+### Migration guide
+
+The cursor-loop pattern replaces every `limit: -1` call site. Pseudocode:
+
+```pseudocode
+# Before (v0.3.3 or earlier):
+#   result = call_tool("triage_findings", {"path": ".", "limit": -1})
+#   process(result.findings)
+
+# After (v0.4.0):
+result = call_tool("triage_findings", {"path": "."})
+# result.response_shape == "summary" — inspect for triage
+process_summary(result.summary, result.top_findings)
+
+cursor = result.pagination.next_cursor
+while cursor != "":
+    page = call_tool("triage_findings", {"path": ".", "cursor": cursor})
+    # page.response_shape == "flat"
+    process_flat(page.findings)
+    cursor = page.next_cursor
+    # cursor == "" signals no more pages
+```
+
+Same cursor-loop pattern applies to every tool migrated in this release.
+Cursors are tool-scoped (tool A cursor rejected on tool B with
+`CURSOR_MALFORMED`) and expire after 10 minutes (`CURSOR_EXPIRED`).
+
+For CI/batch callers that need a single-shot audit artifact, call with a
+narrow filter (e.g. `min_severity: "CRITICAL"`) to bound the result set
+explicitly, then cursor-loop if the filtered set still paginates.
+
+### Unchanged
+
+- Layer B (summary) response shape content for `triage_findings`,
+  `scan_pan_data`, `generate_compliance_report` — byte-identical to v0.3.3.
+- Detection logic for all 12 scanners — fixture-level severity counts match
+  the v0.3.3 baseline (critical=49 high=89 medium=27 low=0 info=59 on the
+  golden fixture).
+- Suppression system (`pci-ignore` comments + `.pci-mcp-ignore` file) —
+  unchanged. `update_vulnerability_db` and `explain_requirement` tool
+  contracts — unchanged.
+
 ## v0.3.3 - 2026-04-17
 
 ### Fixed
