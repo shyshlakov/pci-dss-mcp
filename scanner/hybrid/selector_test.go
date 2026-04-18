@@ -243,52 +243,6 @@ func TestSelectAndExecute_Cursor_Expired(t *testing.T) {
 	}
 }
 
-func TestSelectAndExecute_LimitNegOne_UnderCap(t *testing.T) {
-	ctx := context.Background()
-	findings := mkFindings(100)
-	res, err := SelectAndExecute[fakeFinding, fakeSummary, fakeFlat](
-		ctx,
-		Input{Limit: -1, AbsPath: "/tmp/x", ToolName: "triage_findings", ScanTimestamp: "2026-04-17T00:00:00Z"},
-		newFakeScan(findings, nil),
-		noopFilter,
-		buildSummaryFake,
-		buildFlatFake,
-		newMemCache(),
-	)
-	if err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
-	if res.Flat == nil || res.Flat.AutoCapped {
-		t.Fatalf("expected Flat auto_capped=false; got %+v", res)
-	}
-	if res.Flat.Total != 100 || len(res.Flat.Page) != 100 {
-		t.Errorf("Flat=%+v, want total=100 page=100", res.Flat)
-	}
-}
-
-func TestSelectAndExecute_LimitNegOne_OverCap(t *testing.T) {
-	ctx := context.Background()
-	findings := mkFindings(700)
-	res, err := SelectAndExecute[fakeFinding, fakeSummary, fakeFlat](
-		ctx,
-		Input{Limit: -1, AbsPath: "/tmp/x", ToolName: "scan_pan_data", ScanTimestamp: "2026-04-17T00:00:00Z"},
-		newFakeScan(findings, nil),
-		noopFilter,
-		buildSummaryFake,
-		buildFlatFake,
-		newMemCache(),
-	)
-	if err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
-	if res.Flat == nil || !res.Flat.AutoCapped {
-		t.Fatalf("expected Flat auto_capped=true; got %+v", res)
-	}
-	if res.Flat.Total != 700 || len(res.Flat.Page) != AutoCapThreshold {
-		t.Errorf("Flat=%+v, want total=700 page=%d", res.Flat, AutoCapThreshold)
-	}
-}
-
 func TestSelectAndExecute_FilterSet_MinSeverity(t *testing.T) {
 	ctx := context.Background()
 	findings := mkFindings(30)

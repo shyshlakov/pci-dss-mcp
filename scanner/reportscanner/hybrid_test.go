@@ -288,43 +288,6 @@ func TestHybrid_Limit100_ReturnsExactFlat(t *testing.T) {
 	}
 }
 
-func TestHybrid_LimitNegOne_UnderCap_NoAutoCap(t *testing.T) {
-	report := synthesizeReportWithNFindings(100)
-	flat := buildAutoCapFlat(report)
-	if flat == nil {
-		t.Fatalf("buildAutoCapFlat returned nil")
-	}
-	if len(flat.Findings) != 100 {
-		t.Fatalf("Findings len = %d, want 100", len(flat.Findings))
-	}
-	if flat.Pagination.AutoCapped {
-		t.Fatalf("AutoCapped must be false when under cap")
-	}
-	if flat.Pagination.Kept != 0 && flat.Pagination.Kept != len(flat.Findings) {
-		t.Fatalf("Kept = %d, want 0 or 100", flat.Pagination.Kept)
-	}
-}
-
-func TestHybrid_LimitNegOne_OverCap_Capped(t *testing.T) {
-	report := synthesizeReportWithNFindings(800)
-	flat := buildAutoCapFlat(report)
-	if flat == nil {
-		t.Fatalf("buildAutoCapFlat returned nil")
-	}
-	if len(flat.Findings) != 500 {
-		t.Fatalf("Findings len = %d, want 500", len(flat.Findings))
-	}
-	if !flat.Pagination.AutoCapped {
-		t.Fatalf("AutoCapped must be true when over cap")
-	}
-	if flat.Pagination.TotalBeforeCap != 800 {
-		t.Fatalf("TotalBeforeCap = %d, want 800", flat.Pagination.TotalBeforeCap)
-	}
-	if flat.Pagination.Kept != 500 {
-		t.Fatalf("Kept = %d, want 500", flat.Pagination.Kept)
-	}
-}
-
 func TestLayerB_FixtureBudget25KB(t *testing.T) {
 	ResetSessionCacheForTest(nil)
 	gen, path := scanFixtureInput(t)

@@ -71,6 +71,9 @@ func RegisterTools(server *mcp.Server) {
 	}
 
 	mcp.AddTool(server, tool, func(ctx context.Context, req *mcp.CallToolRequest, input ScanPANInput) (*mcp.CallToolResult, any, error) {
+		if input.Limit == -1 {
+			return panErrorResult("LIMIT_MINUS_ONE_REMOVED: limit=-1 is no longer accepted. For interactive use, call with default params (summary-first with next_cursor) or apply min_severity/rule_filter for a paged flat response; follow the cursor for subsequent pages."), nil, nil
+		}
 		scopeFilterSet := len(input.ExcludePatterns) > 0 || input.IncludeTests || input.IncludeUntracked || input.IncludeTaint
 		qualityFilterSet := strings.TrimSpace(input.MinSeverity) != "" || strings.TrimSpace(input.RuleFilter) != ""
 		if input.Cursor != "" && (scopeFilterSet || qualityFilterSet) {

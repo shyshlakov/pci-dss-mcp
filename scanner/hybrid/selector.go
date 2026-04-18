@@ -68,17 +68,6 @@ func SelectAndExecute[TFinding, TSummary, TFlat any](
 		return nil, fmt.Errorf("hybrid scan: %w", err)
 	}
 
-	if in.Limit == -1 {
-		total := len(findings)
-		autoCapped := total > AutoCapThreshold
-		kept := findings
-		if autoCapped {
-			kept = findings[:AutoCapThreshold]
-		}
-		flat := buildFlat(kept, 0, len(kept), total, meta, "", "", autoCapped)
-		return &Result[TSummary, TFlat]{Flat: flat}, nil
-	}
-
 	if in.Limit > 0 || in.MinSeverity != "" || in.RuleFilter != "" {
 		filtered, ferr := filter(findings, in.MinSeverity, in.RuleFilter)
 		if ferr != nil {

@@ -271,7 +271,6 @@ func TestTriageToolDescription_SummaryFirstBias(t *testing.T) {
 	needles := []string{
 		"summary",
 		"cursor",
-		"limit: -1 is an advanced",
 		"top 1 per severity",
 	}
 	for _, n := range needles {

@@ -86,6 +86,13 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 			}, nil, nil
 		}
 
+		if input.Limit == -1 {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: "LIMIT_MINUS_ONE_REMOVED: limit=-1 is no longer accepted. For interactive use, call with default params (summary-first with next_cursor) or apply min_severity/rule_filter for a paged flat response; follow the cursor for subsequent pages."}},
+				IsError: true,
+			}, nil, nil
+		}
+
 		summary, flat, errResp, err := SelectAndExecute(ctx, gen, input, "generate_compliance_report")
 		if err != nil {
 			return &mcp.CallToolResult{

@@ -81,6 +81,9 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 		if input.DepScanMode != "" && input.DepScanMode != "auto" && input.DepScanMode != "online" && input.DepScanMode != "offline" {
 			return triageErrorResult(fmt.Sprintf("Invalid dep_scan_mode %q. Valid modes: auto, online, offline", input.DepScanMode)), nil, nil
 		}
+		if input.Limit == -1 {
+			return triageErrorResult("LIMIT_MINUS_ONE_REMOVED: limit=-1 is no longer accepted. For interactive use, call with default params (summary-first with next_cursor) or apply min_severity/rule_filter for a paged flat response; follow the cursor for subsequent pages."), nil, nil
+		}
 		if input.Cursor != "" {
 			if input.MinSeverity != "" || input.RuleFilter != "" || input.Limit > 0 || input.IncludeTests || input.DepScanMode != "" || input.IncludeTaint != nil {
 				return triageErrorResult("triage_findings cursor_malformed: cursor + filter/scope params is not supported; re-run without cursor to apply new filters"), nil, nil

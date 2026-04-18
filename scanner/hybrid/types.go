@@ -58,8 +58,7 @@ type Cacher[TFinding any] interface {
 }
 
 const (
-	AutoCapThreshold = 500
-	FlatPageSize     = 60
+	FlatPageSize = 60
 )
 
 const (

@@ -11,16 +11,14 @@ import (
 )
 
 const (
-	autoCapThreshold = 500
-	flatPageSize     = 24
-	topPerSeverity   = 10
+	flatPageSize   = 24
+	topPerSeverity = 10
 )
 
 const (
 	hintSummaryFollowUp = "Call again with cursor to page through full findings, or use min_severity/rule_filter to narrow"
 	hintFlatNextPage    = "Call again with next_cursor to page, or use min_severity/rule_filter to narrow"
 	hintFlatEndOfList   = "End of results"
-	hintAutoCap         = "Response auto-capped at 500 findings. Pass limit=<N> for explicit size or use cursor pagination."
 	hintCursorMalformed = "Cursor token is corrupted. Re-run without cursor to start a fresh scan."
 	hintCursorExpired   = "Session cache expired or server restarted. Re-run without cursor to start a fresh scan."
 )
@@ -77,10 +75,6 @@ func SelectAndExecute(ctx context.Context, gen *ReportGenerator, input ReportInp
 	report, err := gen.GenerateWithOptions(ctx, path, input.DepScanMode, input.IncludeTests, includeTaint)
 	if err != nil {
 		return nil, nil, nil, err
-	}
-
-	if input.Limit == -1 {
-		return nil, buildAutoCapFlat(report), nil, nil
 	}
 
 	if input.Limit > 0 || input.MinSeverity != "" || input.RuleFilter != "" {
@@ -258,38 +252,6 @@ func buildFlatPage(entry *cacheEntry, off, pageSize int, sid, toolName string) *
 			NextCursor:    next,
 			Hint:          hint,
 			AutoCapped:    false,
-		},
-	}
-}
-
-func buildAutoCapFlat(report *ComplianceReport) *FlatResponse {
-	total := len(report.Findings)
-	if total <= autoCapThreshold {
-		return &FlatResponse{
-			ResponseShape: "flat",
-			Metadata:      report.Metadata,
-			Summary:       report.Summary,
-			Findings:      report.Findings,
-			Pagination: PaginationInfo{
-				TotalFindings: total,
-				Returned:      total,
-				AutoCapped:    false,
-			},
-		}
-	}
-	kept := report.Findings[:autoCapThreshold]
-	return &FlatResponse{
-		ResponseShape: "flat",
-		Metadata:      report.Metadata,
-		Summary:       report.Summary,
-		Findings:      kept,
-		Pagination: PaginationInfo{
-			TotalFindings:  total,
-			Returned:       len(kept),
-			AutoCapped:     true,
-			TotalBeforeCap: total,
-			Kept:           len(kept),
-			Hint:           hintAutoCap,
 		},
 	}
 }
