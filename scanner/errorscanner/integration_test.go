@@ -83,7 +83,8 @@ func TestIntegration_ErrorLeakFindings(t *testing.T) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_error_handling",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":          tmpDir,
+			"include_tests": true,
 		},
 	})
 	if err != nil {
@@ -160,7 +161,8 @@ func checkHealth() error { return nil }
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_error_handling",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":          tmpDir,
+			"include_tests": true,
 		},
 	})
 	if err != nil {
