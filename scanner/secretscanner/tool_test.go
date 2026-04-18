@@ -97,7 +97,8 @@ func TestToolValidPath(t *testing.T) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_secrets_in_configs",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":          tmpDir,
+			"include_tests": true,
 		},
 	})
 	if err != nil {
