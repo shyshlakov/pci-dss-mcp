@@ -366,3 +366,25 @@ func writeFile(t *testing.T, dir, name, content string) {
 		t.Fatal(err)
 	}
 }
+
+func TestReport_LimitMinusOneRejected(t *testing.T) {
+	reportscanner.ResetSessionCacheForTest(nil)
+	session := setupTestServer(t)
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "generate_compliance_report",
+		Arguments: map[string]any{
+			"path":  ".",
+			"limit": -1,
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if !result.IsError {
+		t.Fatalf("expected IsError=true for limit=-1, got %+v", result)
+	}
+	body := extractText(t, result)
+	if !strings.Contains(body, "LIMIT_MINUS_ONE_REMOVED") {
+		t.Errorf("error message missing LIMIT_MINUS_ONE_REMOVED code; got %q", body)
+	}
+}

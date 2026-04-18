@@ -359,3 +359,33 @@ func TestTriageLayerB_MaxResultSizeChars(t *testing.T) {
 		t.Fatalf("triage_findings not in ListTools")
 	}
 }
+
+func TestTriage_LimitMinusOneRejected(t *testing.T) {
+	db, err := pcidb.New()
+	if err != nil {
+		t.Fatalf("pcidb.New: %v", err)
+	}
+	session := newTriageSessionForLayerB(t, db)
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "triage_findings",
+		Arguments: map[string]any{
+			"path":  ".",
+			"limit": -1,
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if !result.IsError {
+		t.Fatalf("expected IsError=true for limit=-1, got %+v", result)
+	}
+	var body string
+	for _, c := range result.Content {
+		if tc, ok := c.(*mcp.TextContent); ok {
+			body += tc.Text
+		}
+	}
+	if !strings.Contains(body, "LIMIT_MINUS_ONE_REMOVED") {
+		t.Errorf("error message missing LIMIT_MINUS_ONE_REMOVED code; got %q", body)
+	}
+}
