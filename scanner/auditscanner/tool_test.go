@@ -96,7 +96,8 @@ func TestToolValidPath(t *testing.T) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "audit_log_coverage",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":          tmpDir,
+			"include_tests": true,
 		},
 	})
 	if err != nil {
