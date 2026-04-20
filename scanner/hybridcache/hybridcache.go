@@ -35,6 +35,7 @@ const (
 type Entry struct {
 	Findings  []scanner.Finding
 	Meta      ScanMeta
+	Histogram *Histogram
 	CreatedAt time.Time
 	ExpiresAt time.Time
 }
@@ -152,6 +153,18 @@ func Put(sid string, entry *Entry) {
 	entry.ExpiresAt = now.Add(SessionTTL)
 	cache.Store(sid, entry)
 	startEvictor()
+}
+
+func PutWithHistogram(sid string, findings []scanner.Finding, meta ScanMeta, hist *Histogram) {
+	Put(sid, &Entry{Findings: findings, Meta: meta, Histogram: hist})
+}
+
+func GetWithHistogram(sid string) ([]scanner.Finding, ScanMeta, *Histogram, bool) {
+	e, ok := Get(sid)
+	if !ok {
+		return nil, ScanMeta{}, nil, false
+	}
+	return e.Findings, e.Meta, e.Histogram, true
 }
 
 func Get(sid string) (*Entry, bool) {
