@@ -422,3 +422,72 @@ func TestPAN_LimitMinusOneRejected(t *testing.T) {
 		t.Errorf("error message missing LIMIT_MINUS_ONE_REMOVED code; got %q", body)
 	}
 }
+
+func TestPANLayerA_IncludesHistogram(t *testing.T) {
+	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
+	scanRoot := copyFixtureTreeForPAN(t, fixtureRoot)
+	session := newPANSessionForLayerB(t)
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "scan_pan_data",
+		Arguments: map[string]any{
+			"path":          scanRoot,
+			"include_tests": true,
+			"min_severity":  "HIGH",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("scan_pan_data Layer A IsError: %+v", result)
+	}
+	m := panStructuredMap(t, result)
+	if got := m["response_shape"]; got != "flat" {
+		t.Fatalf("response_shape=%v, want flat", got)
+	}
+	summary, ok := m["summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("summary missing: %T", m["summary"])
+	}
+	bySev, ok := summary["by_severity"].(map[string]any)
+	if !ok {
+		t.Fatalf("by_severity missing: %T", summary["by_severity"])
+	}
+	info, _ := bySev["info"].(float64)
+	if info < 0 {
+		t.Errorf("by_severity.info=%v want >=0", info)
+	}
+	byRule, ok := summary["by_rule"].([]any)
+	if !ok {
+		t.Fatalf("by_rule wrong type: %T", summary["by_rule"])
+	}
+	if len(byRule) > 10 {
+		t.Errorf("by_rule len=%d must be <=10", len(byRule))
+	}
+}
+
+func TestPANToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	session := newPANSessionForLayerB(t)
+	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	var desc string
+	var found bool
+	for _, tool := range tools.Tools {
+		if tool.Name != "scan_pan_data" {
+			continue
+		}
+		found = true
+		desc = tool.Description
+	}
+	if !found {
+		t.Fatalf("scan_pan_data not in ListTools")
+	}
+	needles := []string{"summary.by_severity", "summary.by_rule", "full-scan"}
+	for _, n := range needles {
+		if !strings.Contains(desc, n) {
+			t.Errorf("scan_pan_data description missing substring %q", n)
+		}
+	}
+}
