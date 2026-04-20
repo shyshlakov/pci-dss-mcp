@@ -122,9 +122,11 @@ func TestTriageToolIntegration_WithViolations(t *testing.T) {
 	session := setupTriageServer(t)
 	tmpDir := copyFixtures(t)
 
+	// Default path now returns Layer B summary shape. Exercise the flat path
+	// via min_severity filter so the Findings array is still populated.
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name:      "triage_findings",
-		Arguments: map[string]any{"path": tmpDir},
+		Arguments: map[string]any{"path": tmpDir, "min_severity": "INFO"},
 	})
 	if err != nil {
 		t.Fatalf("CallTool error: %v", err)
@@ -135,15 +137,18 @@ func TestTriageToolIntegration_WithViolations(t *testing.T) {
 
 	// 1-line text summary only; no hybrid text+JSON dump.
 	text := extractTriageText(t, result)
-	if !strings.Contains(text, "findings triaged") {
-		t.Errorf("text summary should contain 'findings triaged', got: %q", text)
+	if !strings.Contains(text, "triage_findings:") {
+		t.Errorf("text summary should contain 'triage_findings:' prefix, got: %q", text)
 	}
 	if strings.Contains(text, "JSON:") {
 		t.Errorf("text content must not contain hybrid 'JSON:' suffix, got: %q", text)
 	}
 
-	// structured payload carries the enriched findings.
+	// structured payload carries the enriched findings (flat variant).
 	tr := decodeTriageStructured(t, result)
+	if tr.ResponseShape != "flat" {
+		t.Fatalf("expected response_shape=flat, got %q", tr.ResponseShape)
+	}
 	if tr.Metadata.FindingsTotal == 0 {
 		t.Fatal("StructuredContent: expected at least one triaged finding")
 	}
@@ -151,7 +156,6 @@ func TestTriageToolIntegration_WithViolations(t *testing.T) {
 		t.Fatal("StructuredContent: Findings slice is empty")
 	}
 
-	// Verify enriched finding evidence is present (triage hint + severity).
 	hasHint := false
 	hasSeverity := false
 	for _, ef := range tr.Findings {
@@ -170,7 +174,6 @@ func TestTriageToolIntegration_WithViolations(t *testing.T) {
 		t.Error("StructuredContent: expected at least one CRITICAL/HIGH/MEDIUM finding")
 	}
 
-	// every finding must carry a ResourceLink instead of inline source.
 	for i, ef := range tr.Findings {
 		if len(ef.Context.Sources) == 0 {
 			t.Errorf("finding[%d]: expected Sources []ResourceLink, got 0 entries", i)
@@ -204,9 +207,23 @@ func TestTriageToolIntegration_CleanProject(t *testing.T) {
 		t.Fatalf("expected success, got error: %s", extractTriageText(t, result))
 	}
 
-	text := extractTriageText(t, result)
-	if !strings.Contains(text, "No active findings to triage") {
-		t.Errorf("clean project should return 'No active findings to triage', got: %s", text)
+	raw, merr := json.Marshal(result.StructuredContent)
+	if merr != nil {
+		t.Fatalf("marshal StructuredContent: %v", merr)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatalf("unmarshal StructuredContent: %v", err)
+	}
+	if got := payload["response_shape"]; got != "summary" {
+		t.Fatalf("clean project default response_shape=%v, want summary", got)
+	}
+	summary, _ := payload["summary"].(map[string]any)
+	bySev, _ := summary["by_severity"].(map[string]any)
+	for _, sev := range []string{"critical", "high", "medium", "low", "info"} {
+		if v, _ := bySev[sev].(float64); v != 0 {
+			t.Errorf("clean project by_severity[%q]=%v, want 0", sev, v)
+		}
 	}
 }
 

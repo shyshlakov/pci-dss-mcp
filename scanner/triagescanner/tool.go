@@ -12,11 +12,11 @@ import (
 
 	"github.com/shyshlakov/pci-dss-mcp/pcidb"
 	"github.com/shyshlakov/pci-dss-mcp/scanner"
+	"github.com/shyshlakov/pci-dss-mcp/scanner/hybrid"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/hybridcache"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/reportscanner"
 )
 
-const triagePageSize = 60
 const toolNameTriage = "triage_findings"
 
 type TriageInput struct {
@@ -26,25 +26,67 @@ type TriageInput struct {
 	IncludeTaint *bool  `json:"include_taint,omitempty" jsonschema:"Enable flow-based severity adjustment via go/packages type analysis. When true, panscanner downgrades PAN-KEYWORD and suppresses PAN-TYPE findings for transit-only CHD fields. Adds 5-30 seconds to scan time. Default true (production-grade precision, matches generate_compliance_report). Set false for fast dev iteration. Requires 'go' binary on PATH; falls back to AST-only scanning on failure."`
 	MinSeverity  string `json:"min_severity,omitempty" jsonschema:"Filter findings by minimum severity. One of CRITICAL / HIGH / MEDIUM / LOW / INFO (case-insensitive). Default: no severity filter. Applied BEFORE enrichment to save context-collection cost."`
 	RuleFilter   string `json:"rule_filter,omitempty" jsonschema:"Filter findings by rule ID. Comma-separated list for exact match (e.g. PAN-KEYWORD,PAN-TYPE) OR a single regex in leading/trailing slashes (e.g. /PAN-.*/). Default: no rule filter."`
-	Limit        int    `json:"limit,omitempty" jsonschema:"Maximum number of findings to enrich after filtering. Default 0 (unlimited). Use to cap triage cost on noisy projects."`
+	Limit        int    `json:"limit,omitempty" jsonschema:"Maximum number of findings to enrich per call. Default 0 (summary-first response with next_cursor). To fetch more findings than fit in one response, follow next_cursor; do NOT raise this value to fetch all at once (server caps at the per-tool page size and rejects with LIMIT_EXCEEDS_PAGE_SIZE)."`
 	Cursor       string `json:"cursor,omitempty" jsonschema:"Opaque cursor token from a prior triage_findings response. When set, resumes pagination from the stored session cache (10-minute TTL). Leave empty for a fresh scan."`
+}
+
+type triageCacher struct{}
+
+func (triageCacher) Put(sid string, findings []scanner.Finding, meta hybridcache.ScanMeta) {
+	cp := make([]scanner.Finding, len(findings))
+	copy(cp, findings)
+	hybridcache.Put(sid, &hybridcache.Entry{Findings: cp, Meta: meta})
+}
+
+func (triageCacher) Get(sid string) ([]scanner.Finding, hybridcache.ScanMeta, bool) {
+	entry, ok := hybridcache.Get(sid)
+	if !ok {
+		return nil, hybridcache.ScanMeta{}, false
+	}
+	return entry.Findings, entry.Meta, true
+}
+
+func (triageCacher) PutWithHistogram(sid string, findings []scanner.Finding, meta hybridcache.ScanMeta, hist *hybridcache.Histogram) {
+	cp := make([]scanner.Finding, len(findings))
+	copy(cp, findings)
+	hybridcache.PutWithHistogram(sid, cp, meta, hist)
+}
+
+func (triageCacher) GetWithHistogram(sid string) ([]scanner.Finding, hybridcache.ScanMeta, *hybridcache.Histogram, bool) {
+	return hybridcache.GetWithHistogram(sid)
+}
+
+func (triageCacher) Histogram(findings []scanner.Finding) *hybridcache.Histogram {
+	h := hybridcache.BuildHistogram(findings)
+	return &h
 }
 
 func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 	engine := NewTriageEngine()
+	schema, schemaErr := buildTriageOutputSchemaUnion()
+	if schemaErr != nil {
+		slog.Warn("buildTriageOutputSchemaUnion failed", "err", schemaErr)
+	}
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "triage_findings",
-		Description: "Collect contextual code evidence for PCI DSS compliance findings " +
-			"to enable AI-assisted triage. Runs all scanners, then enriches each finding " +
-			"with surrounding code, imports, middleware chains, router setup, and response " +
-			"type evidence. Returns structured context so AI can classify findings as " +
-			"confirmed, false positive, or needs manual review. Taint analysis is ON by " +
-			"default (matches generate_compliance_report precision); set include_taint=false " +
-			"for fast dev iteration. Supports cursor pagination (10-minute TTL) via the " +
-			"cursor input; server caches the unfiltered finding slice and pages 60 at a " +
-			"time through it on resume.",
-	}, func(ctx context.Context, req *mcp.CallToolRequest, input TriageInput) (*mcp.CallToolResult, *TriageResult, error) {
+	tool := &mcp.Tool{
+		Name: toolNameTriage,
+		Description: "RECOMMENDED entry point for \"scan this project\" prompts - runs all " +
+			"PCI DSS v4.0.1 compliance scanners AND applies AI-assisted prioritization " +
+			"+ file:line enrichment in a single call. You do NOT need to call " +
+			"generate_compliance_report separately; this tool already runs the same " +
+			"scanner pipeline. Use generate_compliance_report only when you need a plain " +
+			"compliance report without triage (audit artifacts, CI pass/fail gates). " +
+			"Default: returns response_shape \"summary\" with by_severity counts, a " +
+			"capped by_rule histogram (top 10 + more_rules), and top 1 per severity " +
+			"enriched finding - plus a pagination.next_cursor for drill-down. " +
+			"Prefer this for mixed queries; min_severity / rule_filter drop to " +
+			"response_shape \"flat\" but still carry summary.by_severity + summary.by_rule " +
+			"for full-scan context. Follow the cursor for the full paginated list.",
+		Meta:         mcp.Meta{"anthropic/maxResultSizeChars": 20000},
+		OutputSchema: schema,
+	}
+
+	mcp.AddTool(server, tool, func(ctx context.Context, req *mcp.CallToolRequest, input TriageInput) (*mcp.CallToolResult, any, error) {
 		path := strings.TrimSpace(input.Path)
 		if path == "" {
 			path = "."
@@ -52,135 +94,119 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 		if input.DepScanMode != "" && input.DepScanMode != "auto" && input.DepScanMode != "online" && input.DepScanMode != "offline" {
 			return triageErrorResult(fmt.Sprintf("Invalid dep_scan_mode %q. Valid modes: auto, online, offline", input.DepScanMode)), nil, nil
 		}
+		if input.Limit == -1 {
+			return triageErrorResult("LIMIT_MINUS_ONE_REMOVED: limit=-1 is no longer accepted. For interactive use, call with default params (summary-first with next_cursor) or apply min_severity/rule_filter for a paged flat response; follow the cursor for subsequent pages."), nil, nil
+		}
+		if input.Cursor != "" {
+			if input.MinSeverity != "" || input.RuleFilter != "" || input.Limit > 0 || input.IncludeTests || input.DepScanMode != "" || input.IncludeTaint != nil {
+				return triageErrorResult("triage_findings cursor_malformed: cursor + filter/scope params is not supported; re-run without cursor to apply new filters"), nil, nil
+			}
+		}
 		includeTaint := true
 		if input.IncludeTaint != nil {
 			includeTaint = *input.IncludeTaint
 		}
-		if input.Cursor != "" {
-			return handleTriageCursor(ctx, engine, path, input)
+		absPath, aerr := filepath.Abs(filepath.Clean(path))
+		if aerr != nil {
+			absPath = path
 		}
-		return handleTriageFresh(ctx, engine, db, path, includeTaint, input)
+		scanTS := time.Now().UTC().Format(time.RFC3339)
+
+		scan := func(ctx context.Context, in hybrid.Input) ([]scanner.Finding, hybridcache.ScanMeta, error) {
+			gen := reportscanner.NewReportGenerator(db)
+			report, err := gen.GenerateWithOptions(ctx, path, input.DepScanMode, input.IncludeTests, includeTaint)
+			if err != nil {
+				return nil, hybridcache.ScanMeta{}, err
+			}
+			out := make([]scanner.Finding, 0, len(report.Findings))
+			for _, rf := range report.Findings {
+				out = append(out, rf.Finding)
+			}
+			meta := hybridcache.ScanMeta{
+				TotalFiles: report.Metadata.TotalFiles,
+				TotalLines: report.Metadata.TotalLines,
+				DurationMS: report.Metadata.DurationMS,
+			}
+			return out, meta, nil
+		}
+
+		filterFn := func(findings []scanner.Finding, minSev, ruleFilter string) ([]scanner.Finding, error) {
+			return reportscanner.FilterFindings(findings, minSev, ruleFilter, 0)
+		}
+
+		buildSummary := func(findings []scanner.Finding, meta hybridcache.ScanMeta, sid, nextCursor string) *TriageSummaryResponse {
+			total := len(findings)
+			result, terr := engine.Triage(ctx, path, findings)
+			if terr != nil {
+				slog.Warn("triage enrichment failed inside buildSummary", "err", terr)
+				return buildTriageSummaryInternal(nil, TriageLayerBMetadata{FindingsTotal: total}, meta, total, sid, nextCursor)
+			}
+			layerBMeta := TriageLayerBMetadata{
+				FindingsTotal:   total,
+				FindingsTriaged: result.Metadata.FindingsTriaged,
+				FilesAnalyzed:   result.Metadata.FilesAnalyzed,
+				DurationMS:      result.Metadata.DurationMS,
+			}
+			return buildTriageSummaryInternal(result.Findings, layerBMeta, meta, total, sid, nextCursor)
+		}
+
+		buildFlat := func(findings []scanner.Finding, allFindings []scanner.Finding, histogram *hybridcache.Histogram, off, pageSize, total int, meta hybridcache.ScanMeta, sid, nextCursor string, autoCapped bool) *TriageResult {
+			result, terr := engine.Triage(ctx, path, findings)
+			if terr != nil {
+				slog.Warn("triage enrichment failed inside buildFlat", "err", terr)
+				return &TriageResult{ResponseShape: "flat", Findings: []EnrichedFinding{}, Summary: histogram}
+			}
+			result.ResponseShape = "flat"
+			result.Metadata.FindingsTotal = total
+			if nextCursor != "" {
+				result.NextCursor = nextCursor
+			}
+			result.Summary = histogram
+			return result
+		}
+
+		in := hybrid.Input{
+			AbsPath:       absPath,
+			Cursor:        input.Cursor,
+			MinSeverity:   input.MinSeverity,
+			RuleFilter:    input.RuleFilter,
+			Limit:         input.Limit,
+			IncludeTests:  input.IncludeTests,
+			IncludeTaint:  includeTaint,
+			ScanTimestamp: scanTS,
+			ToolName:      toolNameTriage,
+			FlatPageSize:  12,
+		}
+		res, err := hybrid.SelectAndExecute[scanner.Finding, TriageSummaryResponse, TriageResult](
+			ctx, in, scan, filterFn, buildSummary, buildFlat, triageCacher{},
+		)
+		if err != nil {
+			return triageErrorResult(fmt.Sprintf("triage_findings error: %s", err.Error())), nil, nil
+		}
+		if res.Err != nil {
+			cerr := &TriageCursorError{
+				ResponseShape: "error",
+				Error:         strings.ToLower(res.Err.Code),
+				Code:          res.Err.Code,
+				Hint:          res.Err.Hint,
+			}
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: res.Err.Code}},
+				IsError: true,
+			}, cerr, nil
+		}
+		if res.Summary != nil {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("triage_findings: %d findings analyzed (summary with top %d per severity)", res.Summary.Pagination.TotalFindings, TopNPerSeverityTriage)}},
+			}, res.Summary, nil
+		}
+		if res.Flat == nil {
+			return triageErrorResult("triage_findings: enrichment failed (context canceled or internal error)"), nil, nil
+		}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("triage_findings: %d findings returned (flat page)", len(res.Flat.Findings))}},
+		}, res.Flat, nil
 	})
-}
-
-func handleTriageCursor(ctx context.Context, engine *TriageEngine, path string, input TriageInput) (*mcp.CallToolResult, *TriageResult, error) {
-	if input.MinSeverity != "" || input.RuleFilter != "" || input.Limit > 0 || input.IncludeTests || input.DepScanMode != "" || input.IncludeTaint != nil {
-		return triageErrorResult("triage_findings cursor_malformed: cursor + filter/scope params is not supported; re-run without cursor to apply new filters"), nil, nil
-	}
-	payload, err := hybridcache.DecodeCursor(input.Cursor)
-	if err != nil {
-		return triageErrorResult("triage_findings cursor_malformed: " + err.Error()), nil, nil
-	}
-	if payload.Tool != "" && payload.Tool != toolNameTriage {
-		return triageErrorResult("triage_findings cursor_malformed: tool mismatch"), nil, nil
-	}
-	entry, ok := hybridcache.Get(payload.SID)
-	if !ok {
-		return triageErrorResult("triage_findings cursor_expired"), nil, nil
-	}
-	cached := entry.Findings
-	off := payload.Off
-	if off < 0 {
-		off = 0
-	}
-	if off >= len(cached) {
-		empty := &TriageResult{Findings: []EnrichedFinding{}, Metadata: TriageMetadata{FindingsTotal: len(cached)}}
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: "triage_findings: end of cursor stream"}},
-		}, empty, nil
-	}
-	end := off + triagePageSize
-	if end > len(cached) {
-		end = len(cached)
-	}
-	page := cached[off:end]
-	result, terr := engine.Triage(ctx, path, page)
-	if terr != nil {
-		return triageErrorResult(fmt.Sprintf("triage error: %s", terr.Error())), nil, nil
-	}
-	if end < len(cached) {
-		next, encErr := hybridcache.EncodeCursor(hybridcache.CursorPayload{SID: payload.SID, Off: end, Tool: toolNameTriage})
-		if encErr != nil {
-			slog.Warn("triage_findings encodeCursor failed", "err", encErr, "sid", payload.SID, "off", end)
-		} else {
-			result.NextCursor = next
-		}
-	}
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("triage_findings: resumed page (%d findings, off=%d/%d)", len(page), off, len(cached))}},
-	}, result, nil
-}
-
-func handleTriageFresh(ctx context.Context, engine *TriageEngine, db *pcidb.DB, path string, includeTaint bool, input TriageInput) (*mcp.CallToolResult, *TriageResult, error) {
-	gen := reportscanner.NewReportGenerator(db)
-	report, err := gen.GenerateWithOptions(ctx, path, input.DepScanMode, input.IncludeTests, includeTaint)
-	if err != nil {
-		return triageErrorResult(fmt.Sprintf("triage_findings error: %s", err.Error())), nil, nil
-	}
-	findings := make([]scanner.Finding, 0, len(report.Findings))
-	for _, rf := range report.Findings {
-		findings = append(findings, rf.Finding)
-	}
-	if input.MinSeverity != "" || input.RuleFilter != "" || input.Limit > 0 {
-		filtered, ferr := reportscanner.FilterFindings(findings, input.MinSeverity, input.RuleFilter, input.Limit)
-		if ferr != nil {
-			return triageErrorResult(fmt.Sprintf("rule_filter error: %s", ferr.Error())), nil, nil
-		}
-		findings = filtered
-	}
-	if len(findings) == 0 {
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: "No active findings to triage. Project is clean."}},
-		}, &TriageResult{Findings: []EnrichedFinding{}, Metadata: TriageMetadata{}}, nil
-	}
-	absPath, err := filepath.Abs(filepath.Clean(path))
-	if err != nil {
-		absPath = path
-	}
-	scanTS := time.Now().UTC().Format(time.RFC3339)
-	fh := hybridcache.FilterHash(input.MinSeverity, input.RuleFilter, input.IncludeTests)
-	sid := hybridcache.SessionKey(absPath+"|triage", scanTS, fh, includeTaint)
-	meta := hybridcache.ScanMeta{
-		TotalFiles: report.Metadata.TotalFiles,
-		TotalLines: report.Metadata.TotalLines,
-		DurationMS: report.Metadata.DurationMS,
-	}
-	cached := make([]scanner.Finding, len(findings))
-	copy(cached, findings)
-	hybridcache.Put(sid, &hybridcache.Entry{Findings: cached, Meta: meta})
-
-	pageEnd := len(findings)
-	if pageEnd > triagePageSize {
-		pageEnd = triagePageSize
-	}
-	result, terr := engine.Triage(ctx, path, findings[:pageEnd])
-	if terr != nil {
-		return triageErrorResult(fmt.Sprintf("triage error: %s", terr.Error())), nil, nil
-	}
-	// Preserve the parity contract at the MCP layer: FindingsTotal reflects
-	// the pre-pagination input count so generate_compliance_report and
-	// triage_findings agree on scope.
-	result.Metadata.FindingsTotal = len(findings)
-	if pageEnd < len(findings) {
-		next, encErr := hybridcache.EncodeCursor(hybridcache.CursorPayload{SID: sid, Off: pageEnd, Tool: toolNameTriage})
-		if encErr != nil {
-			slog.Warn("triage_findings encodeCursor failed", "err", encErr, "sid", sid, "off", pageEnd)
-		} else {
-			result.NextCursor = next
-		}
-	}
-	summary := fmt.Sprintf(
-		"%d findings triaged in %dms (%d files analyzed). Structured results in tool output.",
-		result.Metadata.FindingsTriaged,
-		result.Metadata.DurationMS,
-		result.Metadata.FilesAnalyzed,
-	)
-	if result.NextCursor != "" {
-		summary += " More findings available via next_cursor."
-	}
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: summary}},
-	}, result, nil
 }
 
 func triageErrorResult(msg string) *mcp.CallToolResult {

@@ -83,7 +83,8 @@ func TestIntegration_AuthStrengthFindings(t *testing.T) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_auth_strength",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":          tmpDir,
+			"include_tests": true,
 		},
 	})
 	if err != nil {
@@ -153,7 +154,8 @@ func HandleHealth(w http.ResponseWriter, r *http.Request) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_auth_strength",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":          tmpDir,
+			"include_tests": true,
 		},
 	})
 	if err != nil {

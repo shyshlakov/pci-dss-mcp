@@ -17,11 +17,6 @@ tagged `response_shape: "summary"`. The three tools
 `generate_compliance_report`, `triage_findings`, and `scan_pan_data`
 now accept an optional `cursor` input parameter for paginated follow-ups.
 
-**To restore the pre-v0.2.0 shape on the next call**, pass `limit: -1` to
-`generate_compliance_report`. The server returns a flat findings array
-(capped at 500 entries; over-cap responses surface
-`pagination.auto_capped: true` with `total_before_cap` / `kept` hints).
-
 **To drill into the full findings list progressively**, follow the
 `pagination.next_cursor` returned in the default summary response. Each
 follow-up call returns 60 findings per page (`FlatResponse`) plus a new
@@ -31,9 +26,59 @@ by `generate_compliance_report` cannot be replayed against `triage_findings`
 expired cursors return `CURSOR_EXPIRED` and the client re-runs without a
 cursor to start a fresh scan.
 
+## v0.3.0 migration note (breaking)
+
+As of **v0.3.0**, the default response shape of `triage_findings` and
+`scan_pan_data` is now a summary-first variant (`response_shape: "summary"`)
+mirroring the v0.2.0 change to `generate_compliance_report`. Unfiltered,
+cursor-less calls return severity counts, a per-rule histogram, and a small
+`top_findings` map (2 per severity for `triage_findings`, 3 per severity for
+`scan_pan_data`), plus a `pagination.next_cursor` for drill-down.
+
+Any filter or scope parameter (`min_severity`, `rule_filter`, `include_tests`,
+`include_untracked`, `include_taint`, `exclude_patterns`) switches the
+response to the flat shape with cursor pagination.
+
+Both tools declare `_meta["anthropic/maxResultSizeChars"]: 20000` so MCP
+clients that recognise the annotation (Claude Code >= v2.1.91) can size
+inline rendering in advance. As of v0.3.1 the triage top-N is 1 per severity
+and the by_rule histogram is capped at 10 entries (omitted rules counted in
+`more_rules`).
+
+## v0.4.0 migration note (breaking)
+
+As of **v0.4.0**, all three hybrid tools (`generate_compliance_report`,
+`triage_findings`, `scan_pan_data`) reject `limit: -1` with a structured
+error containing the token `LIMIT_MINUS_ONE_REMOVED`. The legacy auto-capped
+flat response (max 500 findings in one shot) is no longer callable. Migrate
+CI/batch callers to cursor pagination: call with default parameters (or
+`min_severity` / `rule_filter` to narrow), then follow
+`pagination.next_cursor` until it is empty. The cursor loop handles any
+finding volume without a size cap.
+
+## v0.4.1 migration note
+
+As of **v0.4.1**, the Layer A `response_shape: "flat"` variant on all 12
+finding-returning tools (`generate_compliance_report`, `triage_findings`,
+`scan_pan_data`, `check_encryption`, `check_tls_config`,
+`check_secrets_in_configs`, `check_error_handling`, `check_auth_strength`,
+`audit_log_coverage`, `check_data_retention`, `check_payment_page_scripts`,
+`check_dependencies`) carries a new additive `summary.by_severity` and
+`summary.by_rule` block computed over the FULL unfiltered scan. This is
+additive only (new optional JSON fields, omitempty) and does not break
+clients parsing older responses. A filtered call now answers both "how many
+HIGH+ findings" and "what is the full-scan rule/severity breakdown" in a
+single shot, so mixed prompts no longer require a second default call to
+recover the summary view.
+
 ## generate_compliance_report
 
-Run all PCI DSS v4.0.1 compliance scanners and generate a comprehensive report.
+Run all PCI DSS v4.0.1 compliance scanners and generate a plain compliance report
+**without triage enrichment**. For interactive "scan this project" prompts, prefer
+[`triage_findings`](#triage_findings) instead — it runs the same scanners plus
+AI-assisted prioritization and file:line context in one call. Use this tool when
+you need audit artifacts, CI pass/fail gates, or a requirement-level view without
+triage labels.
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -44,7 +89,7 @@ Run all PCI DSS v4.0.1 compliance scanners and generate a comprehensive report.
 | `include_taint` | bool | no | flow-based severity adjustment via `go/packages`. **Default `true`** (production precision, as of ). Set `false` for fast dev iteration (adds 5-30s otherwise). Requires `go` binary on `PATH`; falls back to AST-only on failure |
 | `min_severity` | string | no | Scope the response to findings at or above this severity. One of `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` / `INFO` (case-insensitive). Default: no filter |
 | `rule_filter` | string | no | Comma-separated list of rule IDs (`PAN-KEYWORD,PAN-TYPE`) OR a single regex between slashes (`/PAN-.*/`). Default: no filter |
-| `limit` | int | no | Maximum number of findings to return after filtering. Default `0` (summary-first). Pass `-1` to request the legacy flat findings array (auto-capped at 500) |
+| `limit` | int | no | Default `0` (summary-first). Positive integer for an exact cap. `-1` returns an error as of v0.4.0; use cursor pagination for CI/batch callers |
 | `cursor` | string | no | Opaque pagination cursor. Empty = fresh scan. Non-empty = resume from session cache (10-minute TTL) |
 
 All four filter/scope parameters (..) apply **before**
@@ -60,15 +105,28 @@ The response is one of three variants, tagged by `response_shape`:
   findings per severity (CRITICAL / HIGH / MEDIUM), and
   `pagination.next_cursor` for follow-up.
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
-  `min_severity` / `rule_filter` / positive `limit` is set. Up to 60
-  findings per page, plus `next_cursor` when more pages remain.
+  `min_severity` / `rule_filter` / positive `limit` is set. Up to 24
+  per page with cursor, plus `next_cursor` when more pages remain.
+  As of v0.4.1 the flat shape also carries `summary.by_severity` and
+  `summary.by_rule` computed over the FULL unfiltered scan, so a filtered
+  call answers 'how many HIGH+ findings AND how many INFO in total' in
+  one shot — no second default call needed.
 - `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
   `CURSOR_MALFORMED` (decode failure / cross-tool replay). Client retries
   without a cursor.
 
-**Legacy flat response:** pass `limit: -1` to restore the pre-v0.2.0 flat
-shape. If `len(findings) > 500`, the response is capped and surfaces
-`pagination.auto_capped: true` with `total_before_cap` + `kept` counts.
+The tool declares `_meta["anthropic/maxResultSizeChars"]: 20000` so AI
+clients that honour the annotation (Claude Code >= v2.1.91) size inline
+rendering in advance.
+
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. CI/batch
+callers should follow `pagination.next_cursor` until it is empty — the
+cursor loop handles any finding volume and stays within the Meta ceiling.
+
+As of v0.3.3 the default page size is tuned per tool (triage=12,
+pan=30, report=24) so a filtered flat response fits inline in AI
+clients without file-dump fallback.
 
 **PCI DSS Requirements:** All 14 covered requirements (3.2.1, 3.3.1, 3.4.1, 3.5.1, 4.2.1, 6.2.4, 6.3.3, 6.4.3, 8.3.1, 8.3.6, 8.4.2, 8.6.2, 10.2.1, 11.6.1)
 
@@ -102,12 +160,37 @@ Detect PAN/CVV exposure in Go source files and .env configuration.
 | `path` | string | yes | Path to scan |
 | `cursor` | string | no | Opaque pagination cursor (v0.2.0+). Empty = fresh scan. Non-empty = resume from `scanner/hybridcache` (10-minute TTL; cursors are tool-scoped and not interchangeable with `generate_compliance_report` / `triage_findings`) |
 
-**Pagination and cursor (v0.2.0+):** when the finding count exceeds 60,
-the first response returns 60 findings plus `next_cursor`. Re-invoke
-with `cursor` set to the previous `next_cursor` to fetch the next page.
-Cursors are tool-scoped — a `scan_pan_data` cursor is rejected by the
-other two tools with `CURSOR_MALFORMED`. Expired cursors (10-minute TTL)
-return `CURSOR_EXPIRED`; re-run without a cursor to start fresh.
+**Pagination and cursor (v0.3.0+):**
+
+`scan_pan_data` now implements the three-layer hybrid response shape:
+
+- `response_shape: "summary"` — default, returned when no filter / scope
+  parameter is set and no cursor is supplied. Carries `summary.by_severity`
+  counts, `summary.by_rule` histogram (sorted by count desc), and
+  `top_findings` with up to 3 findings per severity (CRITICAL / HIGH /
+  MEDIUM / LOW / INFO) plus `pagination.next_cursor` for drill-down.
+  by_rule is capped at 10 entries sorted by count desc; omitted rules
+  surface as `more_rules: N`.
+- `response_shape: "flat"` — returned on cursor follow-up OR when any of
+  `min_severity`, `rule_filter`, `include_tests`, `include_untracked`,
+  `include_taint`, `exclude_patterns` is set. 30 findings per page plus
+  `next_cursor` when more pages remain. As of v0.4.1 the flat shape also
+  carries `summary.by_severity` and `summary.by_rule` computed over the
+  FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
+- `response_shape: "error"` with `code: "CURSOR_EXPIRED"` — session cache
+  entry expired (10-minute TTL) or server restarted. Re-run without a
+  cursor. Cross-tool cursor replay also returns `CURSOR_MALFORMED`.
+
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. CI/batch
+callers should follow `pagination.next_cursor` until it is empty — the
+cursor loop handles any finding volume and stays within the Meta ceiling.
+
+As of v0.3.3 the default page size is tuned per tool (triage=12,
+pan=30, report=24) so a filtered flat response fits inline in AI
+clients without file-dump fallback.
 
 **PCI DSS Requirements:** 3.3.1, 3.4.1, 3.5.1
 
@@ -131,6 +214,45 @@ Detect weak cryptographic algorithms, hardcoded keys, and plain HTTP usage.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `path` | string | yes | Path to scan |
+| `exclude_patterns` | []string | no | Optional glob patterns to exclude. Default: `vendor/`, `generated/`, `*.pb.go`, `testdata/`, `mocks/` |
+| `include_tests` | bool | no | Include `_test.go` files. Default `false` |
+| `include_untracked` | bool | no | Include gitignored files. Default `false` |
+| `min_severity` | string | no | Filter by minimum severity (CRITICAL/HIGH/MEDIUM/LOW/INFO). Setting this forces the flat response shape |
+| `rule_filter` | string | no | Filter by rule ID (comma list or `/regex/`). Setting this forces the flat response shape |
+| `limit` | int | no | Default `0` (summary-first). Positive integer for an exact cap. `-1` returns an error as of v0.4.0; use cursor pagination |
+| `cursor` | string | no | Opaque cursor from a prior response. Empty = fresh scan. Non-empty = resume (10-min TTL, tool-scoped) |
+
+**Pagination and cursor (v0.4.0+):**
+
+`check_encryption` uses the three-layer hybrid response shape. Response is one of
+three variants, tagged by `response_shape`:
+
+- `response_shape: "summary"` — default (no filter/scope/cursor). Carries
+  `summary.by_severity` counts, `summary.by_rule` histogram (top 10 sorted
+  count desc, rule_id asc; `more_rules: N` when over cap), `top_findings`
+  map with up to 3 findings per severity (CRITICAL / HIGH / MEDIUM / LOW /
+  INFO; empty buckets ship as `[]`), and `pagination.next_cursor` for
+  drill-down.
+- `response_shape: "flat"` — returned on cursor follow-up OR when any of
+  `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
+  `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
+- `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
+  `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
+  combo). Client retries without cursor.
+
+The tool declares `_meta["anthropic/maxResultSizeChars"]: 20000` so AI
+clients that honour the annotation (Claude Code >= v2.1.91) size inline
+rendering in advance.
+
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. Migrate
+CI/batch callers to cursor pagination: default-call, then follow
+`pagination.next_cursor` until empty.
 
 **PCI DSS Requirements:** 6.2.4, 4.2.1
 
@@ -158,6 +280,45 @@ Detect TLS misconfigurations: InsecureSkipVerify, weak protocol versions, weak c
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `path` | string | yes | Path to scan |
+| `exclude_patterns` | []string | no | Optional glob patterns to exclude. Default: `vendor/`, `generated/`, `*.pb.go`, `testdata/`, `mocks/` |
+| `include_tests` | bool | no | Include `_test.go` files. Default `false` |
+| `include_untracked` | bool | no | Include gitignored files. Default `false` |
+| `min_severity` | string | no | Filter by minimum severity (CRITICAL/HIGH/MEDIUM/LOW/INFO). Setting this forces the flat response shape |
+| `rule_filter` | string | no | Filter by rule ID (comma list or `/regex/`). Setting this forces the flat response shape |
+| `limit` | int | no | Default `0` (summary-first). Positive integer for an exact cap. `-1` returns an error as of v0.4.0; use cursor pagination |
+| `cursor` | string | no | Opaque cursor from a prior response. Empty = fresh scan. Non-empty = resume (10-min TTL, tool-scoped) |
+
+**Pagination and cursor (v0.4.0+):**
+
+`check_tls_config` uses the three-layer hybrid response shape. Response is one of
+three variants, tagged by `response_shape`:
+
+- `response_shape: "summary"` — default (no filter/scope/cursor). Carries
+  `summary.by_severity` counts, `summary.by_rule` histogram (top 10 sorted
+  count desc, rule_id asc; `more_rules: N` when over cap), `top_findings`
+  map with up to 3 findings per severity (CRITICAL / HIGH / MEDIUM / LOW /
+  INFO; empty buckets ship as `[]`), and `pagination.next_cursor` for
+  drill-down.
+- `response_shape: "flat"` — returned on cursor follow-up OR when any of
+  `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
+  `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
+- `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
+  `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
+  combo). Client retries without cursor.
+
+The tool declares `_meta["anthropic/maxResultSizeChars"]: 20000` so AI
+clients that honour the annotation (Claude Code >= v2.1.91) size inline
+rendering in advance.
+
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. Migrate
+CI/batch callers to cursor pagination: default-call, then follow
+`pagination.next_cursor` until empty.
 
 **PCI DSS Requirements:** 4.2.1
 
@@ -181,6 +342,45 @@ Detect secrets in configuration files (.env, .yaml, .json, .toml).
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `path` | string | yes | Path to scan |
+| `exclude_patterns` | []string | no | Optional glob patterns to exclude. Default: `vendor/`, `generated/`, `*.pb.go`, `testdata/`, `mocks/` |
+| `include_tests` | bool | no | Include `_test.go` files. Default `false` |
+| `include_untracked` | bool | no | Include gitignored files. Default `false` |
+| `min_severity` | string | no | Filter by minimum severity (CRITICAL/HIGH/MEDIUM/LOW/INFO). Setting this forces the flat response shape |
+| `rule_filter` | string | no | Filter by rule ID (comma list or `/regex/`). Setting this forces the flat response shape |
+| `limit` | int | no | Default `0` (summary-first). Positive integer for an exact cap. `-1` returns an error as of v0.4.0; use cursor pagination |
+| `cursor` | string | no | Opaque cursor from a prior response. Empty = fresh scan. Non-empty = resume (10-min TTL, tool-scoped) |
+
+**Pagination and cursor (v0.4.0+):**
+
+`check_secrets_in_configs` uses the three-layer hybrid response shape. Response is one of
+three variants, tagged by `response_shape`:
+
+- `response_shape: "summary"` — default (no filter/scope/cursor). Carries
+  `summary.by_severity` counts, `summary.by_rule` histogram (top 10 sorted
+  count desc, rule_id asc; `more_rules: N` when over cap), `top_findings`
+  map with up to 3 findings per severity (CRITICAL / HIGH / MEDIUM / LOW /
+  INFO; empty buckets ship as `[]`), and `pagination.next_cursor` for
+  drill-down.
+- `response_shape: "flat"` — returned on cursor follow-up OR when any of
+  `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
+  `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
+- `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
+  `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
+  combo). Client retries without cursor.
+
+The tool declares `_meta["anthropic/maxResultSizeChars"]: 20000` so AI
+clients that honour the annotation (Claude Code >= v2.1.91) size inline
+rendering in advance.
+
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. Migrate
+CI/batch callers to cursor pagination: default-call, then follow
+`pagination.next_cursor` until empty.
 
 **PCI DSS Requirements:** 8.6.2
 
@@ -204,6 +404,45 @@ Detect unsafe error detail exposure in HTTP handlers, especially payment-related
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `path` | string | yes | Path to scan |
+| `exclude_patterns` | []string | no | Optional glob patterns to exclude. Default: `vendor/`, `generated/`, `*.pb.go`, `testdata/`, `mocks/` |
+| `include_tests` | bool | no | Include `_test.go` files. Default `false` |
+| `include_untracked` | bool | no | Include gitignored files. Default `false` |
+| `min_severity` | string | no | Filter by minimum severity (CRITICAL/HIGH/MEDIUM/LOW/INFO). Setting this forces the flat response shape |
+| `rule_filter` | string | no | Filter by rule ID (comma list or `/regex/`). Setting this forces the flat response shape |
+| `limit` | int | no | Default `0` (summary-first). Positive integer for an exact cap. `-1` returns an error as of v0.4.0; use cursor pagination |
+| `cursor` | string | no | Opaque cursor from a prior response. Empty = fresh scan. Non-empty = resume (10-min TTL, tool-scoped) |
+
+**Pagination and cursor (v0.4.0+):**
+
+`check_error_handling` uses the three-layer hybrid response shape. Response is one of
+three variants, tagged by `response_shape`:
+
+- `response_shape: "summary"` — default (no filter/scope/cursor). Carries
+  `summary.by_severity` counts, `summary.by_rule` histogram (top 10 sorted
+  count desc, rule_id asc; `more_rules: N` when over cap), `top_findings`
+  map with up to 3 findings per severity (CRITICAL / HIGH / MEDIUM / LOW /
+  INFO; empty buckets ship as `[]`), and `pagination.next_cursor` for
+  drill-down.
+- `response_shape: "flat"` — returned on cursor follow-up OR when any of
+  `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
+  `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
+- `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
+  `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
+  combo). Client retries without cursor.
+
+The tool declares `_meta["anthropic/maxResultSizeChars"]: 20000` so AI
+clients that honour the annotation (Claude Code >= v2.1.91) size inline
+rendering in advance.
+
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. Migrate
+CI/batch callers to cursor pagination: default-call, then follow
+`pagination.next_cursor` until empty.
 
 **PCI DSS Requirements:** 6.2.4
 
@@ -227,6 +466,45 @@ Detect weak password policies, hardcoded credentials, and missing MFA on payment
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `path` | string | yes | Path to scan |
+| `exclude_patterns` | []string | no | Optional glob patterns to exclude. Default: `vendor/`, `generated/`, `*.pb.go`, `testdata/`, `mocks/` |
+| `include_tests` | bool | no | Include `_test.go` files. Default `false` |
+| `include_untracked` | bool | no | Include gitignored files. Default `false` |
+| `min_severity` | string | no | Filter by minimum severity (CRITICAL/HIGH/MEDIUM/LOW/INFO). Setting this forces the flat response shape |
+| `rule_filter` | string | no | Filter by rule ID (comma list or `/regex/`). Setting this forces the flat response shape |
+| `limit` | int | no | Default `0` (summary-first). Positive integer for an exact cap. `-1` returns an error as of v0.4.0; use cursor pagination |
+| `cursor` | string | no | Opaque cursor from a prior response. Empty = fresh scan. Non-empty = resume (10-min TTL, tool-scoped) |
+
+**Pagination and cursor (v0.4.0+):**
+
+`check_auth_strength` uses the three-layer hybrid response shape. Response is one of
+three variants, tagged by `response_shape`:
+
+- `response_shape: "summary"` — default (no filter/scope/cursor). Carries
+  `summary.by_severity` counts, `summary.by_rule` histogram (top 10 sorted
+  count desc, rule_id asc; `more_rules: N` when over cap), `top_findings`
+  map with up to 3 findings per severity (CRITICAL / HIGH / MEDIUM / LOW /
+  INFO; empty buckets ship as `[]`), and `pagination.next_cursor` for
+  drill-down.
+- `response_shape: "flat"` — returned on cursor follow-up OR when any of
+  `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
+  `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
+- `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
+  `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
+  combo). Client retries without cursor.
+
+The tool declares `_meta["anthropic/maxResultSizeChars"]: 20000` so AI
+clients that honour the annotation (Claude Code >= v2.1.91) size inline
+rendering in advance.
+
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. Migrate
+CI/batch callers to cursor pagination: default-call, then follow
+`pagination.next_cursor` until empty.
 
 **PCI DSS Requirements:** 8.3.1, 8.3.6, 8.4.2
 
@@ -250,6 +528,45 @@ Verify audit logging on payment-related HTTP handlers.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `path` | string | yes | Path to scan |
+| `exclude_patterns` | []string | no | Optional glob patterns to exclude. Default: `vendor/`, `generated/`, `*.pb.go`, `testdata/`, `mocks/` |
+| `include_tests` | bool | no | Include `_test.go` files. Default `false` |
+| `include_untracked` | bool | no | Include gitignored files. Default `false` |
+| `min_severity` | string | no | Filter by minimum severity (CRITICAL/HIGH/MEDIUM/LOW/INFO). Setting this forces the flat response shape |
+| `rule_filter` | string | no | Filter by rule ID (comma list or `/regex/`). Setting this forces the flat response shape |
+| `limit` | int | no | Default `0` (summary-first). Positive integer for an exact cap. `-1` returns an error as of v0.4.0; use cursor pagination |
+| `cursor` | string | no | Opaque cursor from a prior response. Empty = fresh scan. Non-empty = resume (10-min TTL, tool-scoped) |
+
+**Pagination and cursor (v0.4.0+):**
+
+`audit_log_coverage` uses the three-layer hybrid response shape. Response is one of
+three variants, tagged by `response_shape`:
+
+- `response_shape: "summary"` — default (no filter/scope/cursor). Carries
+  `summary.by_severity` counts, `summary.by_rule` histogram (top 10 sorted
+  count desc, rule_id asc; `more_rules: N` when over cap), `top_findings`
+  map with up to 3 findings per severity (CRITICAL / HIGH / MEDIUM / LOW /
+  INFO; empty buckets ship as `[]`), and `pagination.next_cursor` for
+  drill-down.
+- `response_shape: "flat"` — returned on cursor follow-up OR when any of
+  `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
+  `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
+- `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
+  `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
+  combo). Client retries without cursor.
+
+The tool declares `_meta["anthropic/maxResultSizeChars"]: 20000` so AI
+clients that honour the annotation (Claude Code >= v2.1.91) size inline
+rendering in advance.
+
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. Migrate
+CI/batch callers to cursor pagination: default-call, then follow
+`pagination.next_cursor` until empty.
 
 **PCI DSS Requirements:** 10.2.1
 
@@ -273,6 +590,45 @@ Detect CVV/PAN storage without TTL, Redis operations missing expiration, and mem
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `path` | string | yes | Path to scan |
+| `exclude_patterns` | []string | no | Optional glob patterns to exclude. Default: `vendor/`, `generated/`, `*.pb.go`, `testdata/`, `mocks/` |
+| `include_tests` | bool | no | Include `_test.go` files. Default `false` |
+| `include_untracked` | bool | no | Include gitignored files. Default `false` |
+| `min_severity` | string | no | Filter by minimum severity (CRITICAL/HIGH/MEDIUM/LOW/INFO). Setting this forces the flat response shape |
+| `rule_filter` | string | no | Filter by rule ID (comma list or `/regex/`). Setting this forces the flat response shape |
+| `limit` | int | no | Default `0` (summary-first). Positive integer for an exact cap. `-1` returns an error as of v0.4.0; use cursor pagination |
+| `cursor` | string | no | Opaque cursor from a prior response. Empty = fresh scan. Non-empty = resume (10-min TTL, tool-scoped) |
+
+**Pagination and cursor (v0.4.0+):**
+
+`check_data_retention` uses the three-layer hybrid response shape. Response is one of
+three variants, tagged by `response_shape`:
+
+- `response_shape: "summary"` — default (no filter/scope/cursor). Carries
+  `summary.by_severity` counts, `summary.by_rule` histogram (top 10 sorted
+  count desc, rule_id asc; `more_rules: N` when over cap), `top_findings`
+  map with up to 3 findings per severity (CRITICAL / HIGH / MEDIUM / LOW /
+  INFO; empty buckets ship as `[]`), and `pagination.next_cursor` for
+  drill-down.
+- `response_shape: "flat"` — returned on cursor follow-up OR when any of
+  `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
+  `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
+- `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
+  `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
+  combo). Client retries without cursor.
+
+The tool declares `_meta["anthropic/maxResultSizeChars"]: 20000` so AI
+clients that honour the annotation (Claude Code >= v2.1.91) size inline
+rendering in advance.
+
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. Migrate
+CI/batch callers to cursor pagination: default-call, then follow
+`pagination.next_cursor` until empty.
 
 **PCI DSS Requirements:** 3.2.1, 3.3.1
 
@@ -296,6 +652,45 @@ Check CSP headers, SRI attributes, and nonce usage on Go HTTP handlers and HTML 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `path` | string | yes | Path to scan |
+| `exclude_patterns` | []string | no | Optional glob patterns to exclude. Default: `vendor/`, `generated/`, `*.pb.go`, `testdata/`, `mocks/` |
+| `include_tests` | bool | no | Include `_test.go` files. Default `false` |
+| `include_untracked` | bool | no | Include gitignored files. Default `false` |
+| `min_severity` | string | no | Filter by minimum severity (CRITICAL/HIGH/MEDIUM/LOW/INFO). Setting this forces the flat response shape |
+| `rule_filter` | string | no | Filter by rule ID (comma list or `/regex/`). Setting this forces the flat response shape |
+| `limit` | int | no | Default `0` (summary-first). Positive integer for an exact cap. `-1` returns an error as of v0.4.0; use cursor pagination |
+| `cursor` | string | no | Opaque cursor from a prior response. Empty = fresh scan. Non-empty = resume (10-min TTL, tool-scoped) |
+
+**Pagination and cursor (v0.4.0+):**
+
+`check_payment_page_scripts` uses the three-layer hybrid response shape. Response is one of
+three variants, tagged by `response_shape`:
+
+- `response_shape: "summary"` — default (no filter/scope/cursor). Carries
+  `summary.by_severity` counts, `summary.by_rule` histogram (top 10 sorted
+  count desc, rule_id asc; `more_rules: N` when over cap), `top_findings`
+  map with up to 3 findings per severity (CRITICAL / HIGH / MEDIUM / LOW /
+  INFO; empty buckets ship as `[]`), and `pagination.next_cursor` for
+  drill-down.
+- `response_shape: "flat"` — returned on cursor follow-up OR when any of
+  `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
+  `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
+- `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
+  `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
+  combo). Client retries without cursor.
+
+The tool declares `_meta["anthropic/maxResultSizeChars"]: 20000` so AI
+clients that honour the annotation (Claude Code >= v2.1.91) size inline
+rendering in advance.
+
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. Migrate
+CI/batch callers to cursor pagination: default-call, then follow
+`pagination.next_cursor` until empty.
 
 **PCI DSS Requirements:** 6.4.3, 11.6.1
 
@@ -318,8 +713,39 @@ Scan go.mod dependencies for known vulnerabilities via OSV.dev database.
 **Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `path` | string | yes | Path to project directory containing go.mod |
+| `path` | string | yes | Path to project directory containing `go.mod` |
 | `mode` | string | no | Scan mode: `auto` (default), `online`, `offline` |
+| `min_severity` | string | no | Filter by minimum severity. Setting this forces the flat response shape |
+| `rule_filter` | string | no | Filter by rule ID (comma list or `/regex/`). Setting this forces the flat response shape |
+| `limit` | int | no | Default `0` (summary-first). Positive integer for an exact cap. `-1` returns an error as of v0.4.0 |
+| `cursor` | string | no | Opaque cursor from a prior response. Empty = fresh scan. Non-empty = resume (10-min TTL) |
+
+**Pagination and cursor (v0.4.0+):**
+
+`check_dependencies` uses the three-layer hybrid response shape. Response
+is one of three variants, tagged by `response_shape`:
+
+- `response_shape: "summary"` — default (no filter/cursor). Carries
+  `summary.by_severity` counts, `summary.by_rule` histogram (top 10 sorted
+  count desc, rule_id asc; `more_rules: N` when over cap), `top_findings`
+  map with up to 1 finding per severity (OSV vulnerability payload ~ 1 KB
+  each; TopN=1 keeps Layer B under the 10 KB half of the Meta ceiling),
+  and `pagination.next_cursor` for drill-down.
+- `response_shape: "flat"` — returned on cursor follow-up OR when
+  `min_severity`, `rule_filter`, or positive `limit` is set. 15 findings
+  per page with `next_cursor` when more pages remain (OSV payload size
+  awareness — half the standard 30-per-page). As of v0.4.1 the flat shape
+  also carries `summary.by_severity` and `summary.by_rule` computed over
+  the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
+- `response_shape: "error"` — `CURSOR_EXPIRED`, `CURSOR_MALFORMED`, or
+  `LIMIT_MINUS_ONE_REMOVED`.
+
+The tool declares `_meta["anthropic/maxResultSizeChars"]: 20000`.
+
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted. Use
+cursor pagination for CI/batch callers.
 
 **PCI DSS Requirements:** 6.3.3
 
@@ -364,11 +790,13 @@ network access.
 
 ## triage_findings
 
-Run a full compliance scan and enrich each active finding with AI-triage
-context: file/line `ResourceLink` hints for on-demand source reading,
-imports, package declarations, detected middleware chains, framework
-hints, and a per-finding triage hint. Designed to be chained after
-`generate_compliance_report` or called standalone.
+**Recommended entry point** for "scan this project" prompts. Runs all PCI DSS
+v4.0.1 compliance scanners AND enriches each active finding with AI-triage
+context in a single call: file/line `ResourceLink` hints for on-demand source
+reading, imports, package declarations, detected middleware chains, framework
+hints, and a per-finding triage hint. Call this **standalone** — you do NOT need
+to call `generate_compliance_report` first; this tool already includes everything
+it does plus triage enrichment.
 
 Verified-OK markers (rule IDs ending in `-OK`, currently `AUDIT-LOG-OK`
 and `CSP-OK`) are **skipped before enrichment** per — they appear
@@ -388,17 +816,38 @@ triage payload on real projects.
 | `limit` | int | no | Same as `generate_compliance_report` |
 | `cursor` | string | no | Opaque pagination cursor (v0.2.0+). Empty = fresh scan. Non-empty = resume from session cache (10-minute TTL) |
 
-**Pagination and cursor (v0.2.0+):** the first response caches the full
-filtered finding slice in the `scanner/hybridcache` session store (shared
-with `scan_pan_data`, but cursors are tool-scoped and not interchangeable),
-enriches the first 60 findings with `ResourceLink` context, and sets
-`next_cursor` when more pages remain. Follow-up calls with `cursor` set
-read from the cache, enrich the next 60 findings, and update
-`next_cursor`. `findings_total` always reports the pre-pagination count
-so `generate_compliance_report` and `triage_findings` agree on scope
-(parity contract preserved). Cursors are tool-scoped; cross-tool replay
-returns `CURSOR_MALFORMED`. Expired cursors (10-minute TTL) return
-`CURSOR_EXPIRED`.
+**Pagination and cursor (v0.3.0+):**
+
+`triage_findings` now implements the three-layer hybrid response shape:
+
+- `response_shape: "summary"` — default, returned when no filter and no
+  cursor are supplied. Carries `summary.by_severity` counts,
+  `summary.by_rule` histogram (post verified-OK skip), and `top_findings`
+  with up to 1 enriched finding per severity (CRITICAL / HIGH / MEDIUM /
+  LOW / INFO) plus `pagination.next_cursor` for drill-down.
+  by_rule is capped at 10 entries sorted by count desc; omitted rules
+  surface as `more_rules: N`.
+- `response_shape: "flat"` — returned on cursor follow-up OR when any of
+  `min_severity`, `rule_filter`, `limit > 0` is set. Up to 12 enriched
+  findings per page plus `next_cursor` when more pages remain.
+  `metadata.findings_total` always reports the pre-pagination count so
+  `generate_compliance_report` and `triage_findings` agree on scope.
+  As of v0.4.1 the flat shape also carries `summary.by_severity` and
+  `summary.by_rule` computed over the FULL unfiltered scan, so a filtered
+  call answers 'how many HIGH+ findings AND how many INFO in total' in
+  one shot — no second default call needed.
+- `response_shape: "error"` with `code: "CURSOR_EXPIRED"` — session cache
+  entry expired (10-minute TTL) or server restarted. Re-run without a
+  cursor. Cross-tool cursor replay also returns `CURSOR_MALFORMED`.
+
+**Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
+server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. CI/batch
+callers should follow `pagination.next_cursor` until it is empty — the
+cursor loop handles any finding volume and stays within the Meta ceiling.
+
+As of v0.3.3 the default page size is tuned per tool (triage=12,
+pan=30, report=24) so a filtered flat response fits inline in AI
+clients without file-dump fallback.
 
 **PCI DSS Requirements:** spans all requirements covered by
 `generate_compliance_report`

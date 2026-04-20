@@ -106,7 +106,8 @@ func TestIntegration_GoCSPFindings(t *testing.T) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_payment_page_scripts",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":          tmpDir,
+			"include_tests": true,
 		},
 	})
 	if err != nil {
@@ -150,7 +151,8 @@ func TestIntegration_HTMLFindings(t *testing.T) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_payment_page_scripts",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":          tmpDir,
+			"include_tests": true,
 		},
 	})
 	if err != nil {
@@ -196,7 +198,8 @@ func TestIntegration_CombinedScan(t *testing.T) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_payment_page_scripts",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":          tmpDir,
+			"include_tests": true,
 		},
 	})
 	if err != nil {
@@ -243,7 +246,8 @@ func HandleHealth(w http.ResponseWriter, r *http.Request) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_payment_page_scripts",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":          tmpDir,
+			"include_tests": true,
 		},
 	})
 	if err != nil {

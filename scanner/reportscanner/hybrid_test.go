@@ -3,7 +3,6 @@ package reportscanner
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -14,73 +13,6 @@ import (
 )
 
 const layerBFixtureBudgetBytes = 25 * 1024
-
-func synthesizeReportWithNFindings(n int) *ComplianceReport {
-	findings := make([]ReportFinding, 0, n)
-	for i := 0; i < n; i++ {
-		var sev scanner.Severity
-		switch i % 5 {
-		case 0:
-			sev = scanner.SeverityCritical
-		case 1:
-			sev = scanner.SeverityHigh
-		case 2:
-			sev = scanner.SeverityMedium
-		case 3:
-			sev = scanner.SeverityLow
-		default:
-			sev = scanner.SeverityInfo
-		}
-		findings = append(findings, ReportFinding{
-			Finding: scanner.Finding{
-				RuleID:        fmt.Sprintf("FAKE-%d", i),
-				Severity:      sev,
-				FilePath:      fmt.Sprintf("fake/path/%d.go", i),
-				Line:          i + 1,
-				Description:   "synthetic",
-				Suggestion:    "synthetic",
-				RequirementID: "3.3.1",
-			},
-			RequirementTitle: "Synthetic",
-			ScannerName:      "synthetic",
-		})
-	}
-	var critical, high, medium, low, info int
-	for _, f := range findings {
-		switch f.Severity {
-		case scanner.SeverityCritical:
-			critical++
-		case scanner.SeverityHigh:
-			high++
-		case scanner.SeverityMedium:
-			medium++
-		case scanner.SeverityLow:
-			low++
-		case scanner.SeverityInfo:
-			info++
-		}
-	}
-	return &ComplianceReport{
-		Metadata: ReportMetadata{
-			GeneratedAt:  time.Now().UTC().Format(time.RFC3339),
-			TargetPath:   "/synthetic",
-			TotalFiles:   n,
-			TotalLines:   n * 10,
-			DurationMS:   1,
-			ScannerCount: 1,
-		},
-		Summary: ReportSummary{
-			TotalRequirements: 1,
-			Critical:          critical,
-			High:              high,
-			Medium:            medium,
-			Low:               low,
-			Info:              info,
-		},
-		RequirementStatus: map[string]RequirementStatus{},
-		Findings:          findings,
-	}
-}
 
 func scanFixtureInput(t *testing.T) (*ReportGenerator, string) {
 	t.Helper()
@@ -285,43 +217,6 @@ func TestHybrid_Limit100_ReturnsExactFlat(t *testing.T) {
 	}
 	if flat.Pagination.AutoCapped {
 		t.Fatalf("AutoCapped must be false when Limit is explicit positive")
-	}
-}
-
-func TestHybrid_LimitNegOne_UnderCap_NoAutoCap(t *testing.T) {
-	report := synthesizeReportWithNFindings(100)
-	flat := buildAutoCapFlat(report)
-	if flat == nil {
-		t.Fatalf("buildAutoCapFlat returned nil")
-	}
-	if len(flat.Findings) != 100 {
-		t.Fatalf("Findings len = %d, want 100", len(flat.Findings))
-	}
-	if flat.Pagination.AutoCapped {
-		t.Fatalf("AutoCapped must be false when under cap")
-	}
-	if flat.Pagination.Kept != 0 && flat.Pagination.Kept != len(flat.Findings) {
-		t.Fatalf("Kept = %d, want 0 or 100", flat.Pagination.Kept)
-	}
-}
-
-func TestHybrid_LimitNegOne_OverCap_Capped(t *testing.T) {
-	report := synthesizeReportWithNFindings(800)
-	flat := buildAutoCapFlat(report)
-	if flat == nil {
-		t.Fatalf("buildAutoCapFlat returned nil")
-	}
-	if len(flat.Findings) != 500 {
-		t.Fatalf("Findings len = %d, want 500", len(flat.Findings))
-	}
-	if !flat.Pagination.AutoCapped {
-		t.Fatalf("AutoCapped must be true when over cap")
-	}
-	if flat.Pagination.TotalBeforeCap != 800 {
-		t.Fatalf("TotalBeforeCap = %d, want 800", flat.Pagination.TotalBeforeCap)
-	}
-	if flat.Pagination.Kept != 500 {
-		t.Fatalf("Kept = %d, want 500", flat.Pagination.Kept)
 	}
 }
 

@@ -150,32 +150,37 @@ Edit `~/.cursor/mcp.json`:
 
 ## Use Cases
 
-### 1. Quick scan before a commit
+### 1. Triage overview
 
 ```
-Run a PCI DSS compliance scan on the current project and show me
-HIGH and CRITICAL findings first, then summarize what INFO findings
-were detected.
+Run AI triage on this project and give me a prioritized overview:
+severity distribution, top rules firing, and top items to review first.
 ```
 
-### 2. Full compliance scan + AI-verified triage (recommended)
+### 2. Triage + focused drill-in
 
 ```
-Run a full PCI DSS compliance scan on this project, then run AI triage
-on the MEDIUM+ findings and classify each as CONFIRMED, FALSE POSITIVE,
-or NEEDS MANUAL REVIEW. For each CONFIRMED finding, explain the attack
-path and suggest a concrete fix.
+Triage this project for PCI DSS issues. Show me the CRITICAL findings
+in detail with file:line and triage hints, then give counts for the
+rest by severity.
 ```
 
-Claude will chain `generate_compliance_report` -> `triage_findings` -> its own `Read`/`Grep` tools and produce a classification for each finding.
-
-### 3. CI-style gate (fail fast)
+### 3. Rule-specific triage
 
 ```
-Scan this project with pci-dss-mcp and return ONLY findings with severity
-HIGH or above. If there are zero such findings, say "PASS". Otherwise
-list the file:line of each finding.
+Run AI triage on all CRYPTO-HARDCODED-KEY findings in this project
+and mark each as likely real vs false positive with reasoning.
 ```
+
+### 4. Plain compliance report (no AI triage)
+
+```
+Generate a PCI DSS compliance report for this project — raw findings
+without AI triage. Show requirement-level pass/fail status and
+severity counts.
+```
+
+`triage_findings` is the recommended entry point for interactive scans — it runs all scanners, applies AI classification, and attaches file:line context in a single call. Use `generate_compliance_report` only when you need raw findings without triage (audit artifacts, CI pass/fail gates).
 
 See [docs/usage.md](docs/usage.md) for more use cases: dependency checks, requirement lookup, false-positive tuning, subdirectory scans, audit-ready reports.
 

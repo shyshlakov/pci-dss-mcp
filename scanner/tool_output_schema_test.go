@@ -3,6 +3,7 @@ package scanner_test
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -175,6 +176,89 @@ func TestOutputSchema_GenerateReport_HasOneOfUnion(t *testing.T) {
 	for _, want := range []string{"summary", "flat", "error"} {
 		if !gotDiscriminators[want] {
 			t.Fatalf("oneOf missing response_shape.const = %q, got discriminators %v (raw schema: %s)", want, gotDiscriminators, string(raw))
+		}
+	}
+}
+
+func TestAllLayerA_OutputSchemaContainsHistogram(t *testing.T) {
+	db, err := pcidb.New()
+	if err != nil {
+		t.Fatalf("pcidb.New: %v", err)
+	}
+	server := mcp.NewServer(&mcp.Implementation{Name: "layera-schema", Version: "test"}, nil)
+	pcidb.RegisterTools(server, db)
+	auditscanner.RegisterTools(server)
+	authscanner.RegisterTools(server)
+	cryptoscanner.RegisterTools(server)
+	depscanner.RegisterTools(server)
+	errorscanner.RegisterTools(server)
+	panscanner.RegisterTools(server)
+	retentionscanner.RegisterTools(server)
+	scriptscanner.RegisterTools(server)
+	secretscanner.RegisterTools(server)
+	tlsscanner.RegisterTools(server)
+	reportscanner.RegisterTools(server, db)
+	triagescanner.RegisterTools(server, db)
+
+	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	go func() { _ = server.Run(context.Background(), serverTransport) }()
+	client := mcp.NewClient(&mcp.Implementation{Name: "layera-schema-client", Version: "test"}, nil)
+	session, err := client.Connect(context.Background(), clientTransport, nil)
+	if err != nil {
+		t.Fatalf("client.Connect: %v", err)
+	}
+	defer session.Close()
+
+	resp, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+
+	expected := map[string]bool{
+		"check_auth_strength":        true,
+		"check_encryption":           true,
+		"check_tls_config":           true,
+		"check_secrets_in_configs":   true,
+		"check_error_handling":       true,
+		"audit_log_coverage":         true,
+		"check_data_retention":       true,
+		"check_payment_page_scripts": true,
+		"check_dependencies":         true,
+		"scan_pan_data":              true,
+		"triage_findings":            true,
+		"generate_compliance_report": true,
+	}
+
+	for _, tool := range resp.Tools {
+		if !expected[tool.Name] {
+			continue
+		}
+		if tool.OutputSchema == nil {
+			t.Errorf("%s: OutputSchema nil", tool.Name)
+			continue
+		}
+		raw, err := json.Marshal(tool.OutputSchema)
+		if err != nil {
+			t.Errorf("%s: marshal OutputSchema: %v", tool.Name, err)
+			continue
+		}
+		s := string(raw)
+		if tool.Name == "generate_compliance_report" {
+			if !strings.Contains(s, "by_rule") {
+				t.Errorf("%s: OutputSchema missing \"by_rule\" substring", tool.Name)
+			}
+			for _, sevField := range []string{"critical_findings", "high_findings", "medium_findings"} {
+				if !strings.Contains(s, sevField) {
+					t.Errorf("%s: OutputSchema missing %q (ReportSummary embedded severity field)", tool.Name, sevField)
+				}
+			}
+			continue
+		}
+		if !strings.Contains(s, "by_severity") {
+			t.Errorf("%s: OutputSchema missing \"by_severity\" substring", tool.Name)
+		}
+		if !strings.Contains(s, "by_rule") {
+			t.Errorf("%s: OutputSchema missing \"by_rule\" substring", tool.Name)
 		}
 	}
 }

@@ -2,7 +2,7 @@
 
 Prompt templates to paste into any MCP-capable client. All examples assume the agent will invoke pci-dss-mcp tools automatically.
 
-For the three most common workflows, see the [README Use Cases section](../README.md#use-cases).
+For the four most common workflows (triage overview, focused drill-in, rule-specific triage, plain report), see the [README Use Cases section](../README.md#use-cases).
 
 ## Dependency vulnerability check
 

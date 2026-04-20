@@ -780,3 +780,29 @@ var amount = 42.0
 		}
 	}
 }
+
+func TestRuleMatches_Regex(t *testing.T) {
+	tt := []struct {
+		name   string
+		ruleID string
+		filter string
+		want   bool
+	}{
+		{"empty filter matches all", "PAN-KEYWORD", "", true},
+		{"exact comma list match", "PAN-KEYWORD", "PAN-KEYWORD,PAN-TYPE", true},
+		{"exact comma list no match", "PAN-LITERAL", "PAN-KEYWORD,PAN-TYPE", false},
+		{"regex slash syntax matches", "PAN-KEYWORD", "/PAN-.*/", true},
+		{"regex slash syntax no match", "CRYPTO-WEAK", "/PAN-.*/", false},
+		{"regex dot-star", "PAN-TYPE", "/PAN-.*/", true},
+		{"invalid regex returns false", "PAN-KEYWORD", "/[invalid/", false},
+		{"literal substring does NOT match regex path", "PAN-KEYWORD", "/PAN-.*/", true},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			got := ruleMatches(tc.ruleID, tc.filter)
+			if got != tc.want {
+				t.Errorf("ruleMatches(%q, %q) = %v, want %v", tc.ruleID, tc.filter, got, tc.want)
+			}
+		})
+	}
+}

@@ -18,7 +18,7 @@ type ReportInput struct {
 	IncludeTaint *bool  `json:"include_taint,omitempty" jsonschema:"Enable flow-based severity adjustment via go/packages type analysis. When true, panscanner downgrades PAN-KEYWORD and suppresses PAN-TYPE findings for transit-only CHD fields (request/response DTOs, API client models) per and the PCI SSC FAQ on non-persistent memory. Adds 5-30 seconds to scan time. Default true (production-grade precision). Set false for fast dev iteration. Requires 'go' binary on PATH; falls back to AST-only scanning on failure."`
 	MinSeverity  string `json:"min_severity,omitempty" jsonschema:"Filter findings by minimum severity. One of CRITICAL / HIGH / MEDIUM / LOW / INFO (case-insensitive). Default: no severity filter. Useful for AI clients that only need HIGH-or-above results."`
 	RuleFilter   string `json:"rule_filter,omitempty" jsonschema:"Filter findings by rule ID. Comma-separated list for exact match (e.g. PAN-KEYWORD,PAN-TYPE) OR a single regex in leading/trailing slashes (e.g. /PAN-.*/). Default: no rule filter."`
-	Limit        int    `json:"limit,omitempty" jsonschema:"Maximum number of findings to return after filtering. Default 0 (unlimited, summary-first Layer B). Use a positive integer for an exact cap; use -1 for the legacy auto-capped flat list (escape hatch, max 500)."`
+	Limit        int    `json:"limit,omitempty" jsonschema:"Maximum number of findings to return per call. Default 0 (summary-first response with next_cursor). To fetch more findings than fit in one response, follow next_cursor; do NOT raise this value to fetch all at once (server caps at the per-tool page size and rejects with LIMIT_EXCEEDS_PAGE_SIZE)."`
 	Cursor       string `json:"cursor,omitempty" jsonschema:"Opaque cursor token from a prior response. When set, resumes pagination from the stored session cache (10-minute TTL). Leave empty for a fresh scan."`
 }
 
@@ -50,13 +50,21 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 
 	tool := &mcp.Tool{
 		Name: "generate_compliance_report",
-		Description: "Run all PCI DSS v4.0.1 compliance scanners against a Go project and generate " +
+		Description: "Plain compliance report. For scan + AI triage + file:line enrichment " +
+			"in a single call, prefer triage_findings - it is the recommended entry point " +
+			"for interactive \"scan this project\" prompts. Use this tool when you need " +
+			"audit-artifact output (requirement-level pass/fail without triage) or CI " +
+			"pass/fail gates. " +
+			"Run all PCI DSS v4.0.1 compliance scanners against a Go project and generate " +
 			"a three-layer hybrid compliance report. Default unfiltered call returns a compact " +
 			"summary (metadata, totals, requirement_statuses, top 20 findings per severity, and a " +
 			"cursor for follow-up). Supply min_severity / rule_filter / limit to get a paged flat " +
-			"list (60 per page with cursor), limit=-1 for the legacy auto-capped flat list (max 500), " +
-			"or cursor=<token> to resume a prior session (10-minute TTL). Taint analysis is ON by " +
-			"default; set include_taint=false for fast dev iteration.",
+			"list (60 per page with cursor), or cursor=<token> to resume a prior session " +
+			"(10-minute TTL). Prefer the default shape for mixed queries; min_severity / " +
+			"rule_filter drop to response_shape \"flat\" but still carry summary.by_severity + " +
+			"summary.by_rule for full-scan context. Taint analysis is ON by default; set " +
+			"include_taint=false for fast dev iteration.",
+		Meta: mcp.Meta{"anthropic/maxResultSizeChars": 20000},
 	}
 	if schema, err := buildOutputSchemaUnion(); err == nil {
 		tool.OutputSchema = schema
@@ -75,6 +83,20 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf(
 					"Invalid dep_scan_mode %q. Valid modes: auto, online, offline", input.DepScanMode)}},
+				IsError: true,
+			}, nil, nil
+		}
+
+		if input.Limit == -1 {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: "LIMIT_MINUS_ONE_REMOVED: limit=-1 is no longer accepted. For interactive use, call with default params (summary-first with next_cursor) or apply min_severity/rule_filter for a paged flat response; follow the cursor for subsequent pages."}},
+				IsError: true,
+			}, nil, nil
+		}
+
+		if input.Limit > flatPageSize {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("LIMIT_EXCEEDS_PAGE_SIZE: limit=%d exceeds max=%d for generate_compliance_report. Use cursor pagination: call without limit (or with limit<=%d), then follow next_cursor for additional pages.", input.Limit, flatPageSize, flatPageSize)}},
 				IsError: true,
 			}, nil, nil
 		}

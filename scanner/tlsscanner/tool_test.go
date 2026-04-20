@@ -114,7 +114,8 @@ var c = &tls.Config{InsecureSkipVerify: true}
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_tls_config",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":          tmpDir,
+			"include_tests": true,
 		},
 	})
 	if err != nil {

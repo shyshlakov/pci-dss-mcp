@@ -8,19 +8,18 @@ import (
 	"time"
 
 	"github.com/shyshlakov/pci-dss-mcp/scanner"
+	"github.com/shyshlakov/pci-dss-mcp/scanner/hybridcache"
 )
 
 const (
-	autoCapThreshold = 500
-	flatPageSize     = 60
-	topPerSeverity   = 10
+	flatPageSize   = 24
+	topPerSeverity = 10
 )
 
 const (
 	hintSummaryFollowUp = "Call again with cursor to page through full findings, or use min_severity/rule_filter to narrow"
 	hintFlatNextPage    = "Call again with next_cursor to page, or use min_severity/rule_filter to narrow"
 	hintFlatEndOfList   = "End of results"
-	hintAutoCap         = "Response auto-capped at 500 findings. Pass limit=<N> for explicit size or use cursor pagination."
 	hintCursorMalformed = "Cursor token is corrupted. Re-run without cursor to start a fresh scan."
 	hintCursorExpired   = "Session cache expired or server restarted. Re-run without cursor to start a fresh scan."
 )
@@ -79,10 +78,6 @@ func SelectAndExecute(ctx context.Context, gen *ReportGenerator, input ReportInp
 		return nil, nil, nil, err
 	}
 
-	if input.Limit == -1 {
-		return nil, buildAutoCapFlat(report), nil, nil
-	}
-
 	if input.Limit > 0 || input.MinSeverity != "" || input.RuleFilter != "" {
 		raw := make([]scanner.Finding, 0, len(report.Findings))
 		for _, rf := range report.Findings {
@@ -105,16 +100,19 @@ func SelectAndExecute(ctx context.Context, gen *ReportGenerator, input ReportInp
 		}
 
 		filteredSummary := recomputeSeveritySummary(report.Summary, projected)
+		fullHist := hybridcache.BuildHistogram(raw)
 		fh := filterHash(input.MinSeverity, input.RuleFilter, input.IncludeTests)
 		sid := sessionKey(absPath, scanTS, fh, includeTaint)
 		cached := make([]ReportFinding, len(projected))
 		copy(cached, projected)
 		entry := &cacheEntry{
-			findings:   cached,
-			scanMeta:   report.Metadata,
-			summary:    filteredSummary,
-			reqStatus:  report.RequirementStatus,
-			filterHash: fh,
+			findings:     cached,
+			scanMeta:     report.Metadata,
+			summary:      filteredSummary,
+			flatByRule:   fullHist.ByRule,
+			flatMoreRule: fullHist.MoreRules,
+			reqStatus:    report.RequirementStatus,
+			filterHash:   fh,
 		}
 		putSession(sid, entry)
 
@@ -216,12 +214,17 @@ func max0(n int) int {
 }
 
 func buildFlatPage(entry *cacheEntry, off, pageSize int, sid, toolName string) *FlatResponse {
+	flatSummary := FlatSummary{
+		ReportSummary: entry.summary,
+		ByRule:        entry.flatByRule,
+		MoreRules:     entry.flatMoreRule,
+	}
 	total := len(entry.findings)
 	if off >= total {
 		return &FlatResponse{
 			ResponseShape: "flat",
 			Metadata:      entry.scanMeta,
-			Summary:       entry.summary,
+			Summary:       flatSummary,
 			Findings:      []ReportFinding{},
 			Pagination: PaginationInfo{
 				TotalFindings: total,
@@ -250,7 +253,7 @@ func buildFlatPage(entry *cacheEntry, off, pageSize int, sid, toolName string) *
 	return &FlatResponse{
 		ResponseShape: "flat",
 		Metadata:      entry.scanMeta,
-		Summary:       entry.summary,
+		Summary:       flatSummary,
 		Findings:      page,
 		Pagination: PaginationInfo{
 			TotalFindings: total,
@@ -258,38 +261,6 @@ func buildFlatPage(entry *cacheEntry, off, pageSize int, sid, toolName string) *
 			NextCursor:    next,
 			Hint:          hint,
 			AutoCapped:    false,
-		},
-	}
-}
-
-func buildAutoCapFlat(report *ComplianceReport) *FlatResponse {
-	total := len(report.Findings)
-	if total <= autoCapThreshold {
-		return &FlatResponse{
-			ResponseShape: "flat",
-			Metadata:      report.Metadata,
-			Summary:       report.Summary,
-			Findings:      report.Findings,
-			Pagination: PaginationInfo{
-				TotalFindings: total,
-				Returned:      total,
-				AutoCapped:    false,
-			},
-		}
-	}
-	kept := report.Findings[:autoCapThreshold]
-	return &FlatResponse{
-		ResponseShape: "flat",
-		Metadata:      report.Metadata,
-		Summary:       report.Summary,
-		Findings:      kept,
-		Pagination: PaginationInfo{
-			TotalFindings:  total,
-			Returned:       len(kept),
-			AutoCapped:     true,
-			TotalBeforeCap: total,
-			Kept:           len(kept),
-			Hint:           hintAutoCap,
 		},
 	}
 }

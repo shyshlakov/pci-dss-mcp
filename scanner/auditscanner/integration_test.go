@@ -83,7 +83,8 @@ func TestIntegration_AuditLogFindings(t *testing.T) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "audit_log_coverage",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":          tmpDir,
+			"include_tests": true,
 		},
 	})
 	if err != nil {
@@ -135,7 +136,8 @@ func HandleHealth(w http.ResponseWriter, r *http.Request) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "audit_log_coverage",
 		Arguments: map[string]any{
-			"path": tmpDir,
+			"path":          tmpDir,
+			"include_tests": true,
 		},
 	})
 	if err != nil {

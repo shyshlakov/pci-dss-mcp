@@ -185,3 +185,46 @@ func TestDecodeCursor_Malformed(t *testing.T) {
 		t.Fatalf("expected error for malformed cursor, got nil")
 	}
 }
+
+func TestPutWithHistogram_GetReturnsSameSnapshot(t *testing.T) {
+	clk := newFakeClock(time.Date(2026, 4, 20, 0, 0, 0, 0, time.UTC))
+	Reset(clk)
+	defer Reset(nil)
+
+	findings := []scanner.Finding{
+		{RuleID: "PAN-KEYWORD", Severity: scanner.SeverityHigh},
+		{RuleID: "PAN-KEYWORD", Severity: scanner.SeverityHigh},
+		{RuleID: "AUTH-MISSING-MFA", Severity: scanner.SeverityCritical},
+	}
+	hist := BuildHistogram(findings)
+	meta := ScanMeta{TotalFiles: 7, TotalLines: 123, DurationMS: 42}
+	PutWithHistogram("sid-h", findings, meta, &hist)
+
+	gotFindings, gotMeta, gotHist, ok := GetWithHistogram("sid-h")
+	if !ok {
+		t.Fatalf("GetWithHistogram miss")
+	}
+	if len(gotFindings) != len(findings) {
+		t.Fatalf("len(findings)=%d want %d", len(gotFindings), len(findings))
+	}
+	if gotMeta != meta {
+		t.Errorf("meta mismatch: got=%+v want=%+v", gotMeta, meta)
+	}
+	if gotHist == nil {
+		t.Fatalf("histogram snapshot lost on round-trip")
+	}
+	if gotHist.BySeverity.Critical != 1 || gotHist.BySeverity.High != 2 {
+		t.Errorf("histogram severity mismatch: %+v", gotHist.BySeverity)
+	}
+	if len(gotHist.ByRule) != 2 {
+		t.Fatalf("ByRule len=%d want 2", len(gotHist.ByRule))
+	}
+
+	e, legacyOK := Get("sid-h")
+	if !legacyOK {
+		t.Fatalf("legacy Get must still hit after PutWithHistogram")
+	}
+	if e.Histogram == nil {
+		t.Errorf("Entry.Histogram must survive via legacy Get")
+	}
+}

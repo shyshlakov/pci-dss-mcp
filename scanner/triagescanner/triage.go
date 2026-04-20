@@ -94,7 +94,8 @@ func (e *TriageEngine) Triage(ctx context.Context, projectPath string, findings 
 	}
 
 	result := &TriageResult{
-		Findings: enriched,
+		ResponseShape: "flat",
+		Findings:      enriched,
 		Metadata: TriageMetadata{
 			FindingsTotal:   len(findings),
 			FindingsTriaged: triaged,

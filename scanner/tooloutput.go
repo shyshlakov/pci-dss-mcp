@@ -18,12 +18,14 @@ import (
 // tool gets an identical output shape, making it trivial for MCP
 // clients to generalize over "any scanner tool result".
 type ScannerToolOutput struct {
-	Scanner       string        `json:"scanner" jsonschema:"Scanner identifier (e.g. pan_data, encryption)"`
-	Findings      []Finding     `json:"findings" jsonschema:"Findings detected by this scanner. May be empty."`
-	SeverityStats SeverityStats `json:"severity_stats" jsonschema:"Count of findings by severity tier"`
-	Metadata      ScanMetadata  `json:"metadata" jsonschema:"Scan execution metadata (files scanned, duration)"`
-	TotalFindings int           `json:"total_findings,omitempty" jsonschema:"Total findings for this scan (includes results beyond this page). Present when the scanner tool paginates."`
-	NextCursor    string        `json:"next_cursor,omitempty" jsonschema:"Opaque cursor token for resuming this scanner's pagination (10-minute TTL). Empty when no more pages remain or pagination is not active."`
+	ResponseShape string          `json:"response_shape" jsonschema:"Response-shape discriminator (flat for ScannerToolOutput)"`
+	Scanner       string          `json:"scanner" jsonschema:"Scanner identifier (e.g. pan_data, encryption)"`
+	Findings      []Finding       `json:"findings" jsonschema:"Findings detected by this scanner. May be empty."`
+	SeverityStats SeverityStats   `json:"severity_stats" jsonschema:"Count of findings by severity tier"`
+	Summary       *ScannerSummary `json:"summary,omitempty" jsonschema:"Full-scan summary (by_severity and top-10 by_rule histogram) computed over the unfiltered finding set. Present on Layer A flat responses emitted by hybrid-migrated tools; lets a filtered call answer both 'how many HIGH+ findings' and 'how many of each rule/severity in total' in one shot."`
+	Metadata      ScanMetadata    `json:"metadata" jsonschema:"Scan execution metadata (files scanned, duration)"`
+	TotalFindings int             `json:"total_findings,omitempty" jsonschema:"Total findings for this scan (includes results beyond this page). Present when the scanner tool paginates."`
+	NextCursor    string          `json:"next_cursor,omitempty" jsonschema:"Opaque cursor token for resuming this scanner's pagination (10-minute TTL). Empty when no more pages remain or pagination is not active."`
 }
 
 // SeverityStats holds per-severity finding counts for an MCP tool output.
@@ -35,14 +37,30 @@ type SeverityStats struct {
 	Info     int `json:"info"`
 }
 
-// BuildScannerToolOutput converts a ScanResult into the typed MCP tool
-// output shape used by every single-scanner tool.go handler. Returns a
-// non-nil struct even for zero findings so the output schema is stable.
+// RuleCount pairs a rule_id with its occurrence count. Used as an entry in
+// the top-N by_rule histogram emitted by ScannerSummary.
+type RuleCount struct {
+	RuleID string `json:"rule_id"`
+	Count  int    `json:"count"`
+}
+
+// ScannerSummary is the canonical full-scan summary block carried on hybrid
+// tools' Layer A flat responses. by_severity reflects the FULL unfiltered
+// scan (not the filtered finding page); by_rule is the top-10 histogram
+// sorted count-desc / rule_id-asc with more_rules recording the overflow.
+type ScannerSummary struct {
+	BySeverity SeverityStats `json:"by_severity"`
+	ByRule     []RuleCount   `json:"by_rule"`
+	MoreRules  int           `json:"more_rules,omitempty"`
+}
+
+// Returns non-nil even for zero findings so the OutputSchema is stable.
 func BuildScannerToolOutput(scannerName string, result *ScanResult) *ScannerToolOutput {
 	if result == nil {
 		return &ScannerToolOutput{
-			Scanner:  scannerName,
-			Findings: []Finding{},
+			ResponseShape: "flat",
+			Scanner:       scannerName,
+			Findings:      []Finding{},
 		}
 	}
 	findings := result.Findings
@@ -51,8 +69,9 @@ func BuildScannerToolOutput(scannerName string, result *ScanResult) *ScannerTool
 	}
 	counts := CountBySeverity(findings)
 	return &ScannerToolOutput{
-		Scanner:  scannerName,
-		Findings: findings,
+		ResponseShape: "flat",
+		Scanner:       scannerName,
+		Findings:      findings,
 		SeverityStats: SeverityStats{
 			Critical: counts[SeverityCritical],
 			High:     counts[SeverityHigh],
@@ -64,13 +83,6 @@ func BuildScannerToolOutput(scannerName string, result *ScanResult) *ScannerTool
 	}
 }
 
-// ParseScannerToolOutput re-marshals the StructuredContent of a MCP
-// CallToolResult into a typed *ScannerToolOutput. The MCP client receives
-// StructuredContent as map[string]any after JSON-RPC transport; this helper
-// round-trips it through json.Marshal/Unmarshal to recover the typed form.
-// Returns an error instead of the parsed output only when StructuredContent
-// cannot be marshaled or the result shape does not match ScannerToolOutput.
-// Intended for integration tests that previously parsed text blobs.
 func ParseScannerToolOutput(result *mcp.CallToolResult) (*ScannerToolOutput, error) {
 	if result == nil {
 		return nil, fmt.Errorf("nil CallToolResult")
