@@ -150,38 +150,37 @@ Edit `~/.cursor/mcp.json`:
 
 ## Use Cases
 
-### 1. Quick scan before a commit
+### 1. Triage overview
 
 ```
-Run a PCI DSS compliance scan on the current project and show me
-HIGH and CRITICAL findings first, then summarize what INFO findings
-were detected.
+Run AI triage on this project and give me a prioritized overview:
+severity distribution, top rules firing, and top items to review first.
 ```
 
-### 2. Full compliance scan + AI-verified triage (recommended)
+### 2. Triage + focused drill-in
 
 ```
-Run AI triage on this project and classify each MEDIUM+ finding as
-CONFIRMED, FALSE POSITIVE, or NEEDS MANUAL REVIEW. For each CONFIRMED
-finding, explain the attack path and suggest a concrete fix.
+Triage this project for PCI DSS issues. Show me the CRITICAL findings
+in detail with file:line and triage hints, then give counts for the
+rest by severity.
 ```
 
-`triage_findings` runs all scanners + AI enrichment + file:line context in one call — the recommended entry point for "scan this project" prompts. You do NOT need to call `generate_compliance_report` separately.
-
-**When to use `generate_compliance_report` instead:** audit artifacts, CI pass/fail gates, or a plain requirement-level pass/fail view without triage. Example prompt:
+### 3. Rule-specific triage
 
 ```
-Generate a PCI DSS compliance report for this project — requirement-level
-pass/fail only, no triage.
+Run AI triage on all CRYPTO-HARDCODED-KEY findings in this project
+and mark each as likely real vs false positive with reasoning.
 ```
 
-### 3. CI-style gate (fail fast)
+### 4. Plain compliance report (no AI triage)
 
 ```
-Scan this project with pci-dss-mcp and return ONLY findings with severity
-HIGH or above. If there are zero such findings, say "PASS". Otherwise
-list the file:line of each finding.
+Generate a PCI DSS compliance report for this project — raw findings
+without AI triage. Show requirement-level pass/fail status and
+severity counts.
 ```
+
+`triage_findings` is the recommended entry point for interactive scans — it runs all scanners, applies AI classification, and attaches file:line context in a single call. Use `generate_compliance_report` only when you need raw findings without triage (audit artifacts, CI pass/fail gates).
 
 See [docs/usage.md](docs/usage.md) for more use cases: dependency checks, requirement lookup, false-positive tuning, subdirectory scans, audit-ready reports.
 
