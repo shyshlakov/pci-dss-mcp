@@ -392,6 +392,63 @@ func TestSelectAndExecute_PerToolPageSize(t *testing.T) {
 	}
 }
 
+func TestSelectAndExecute_LimitExceedsPageSize(t *testing.T) {
+	ctx := context.Background()
+	tt := []struct {
+		name        string
+		flatPage    int
+		limit       int
+		wantReject  bool
+		wantMaxHint int
+	}{
+		{name: "triage_limit_within_page", flatPage: 12, limit: 12, wantReject: false},
+		{name: "triage_limit_just_over", flatPage: 12, limit: 13, wantReject: true, wantMaxHint: 12},
+		{name: "triage_high_positive_attack", flatPage: 12, limit: 200, wantReject: true, wantMaxHint: 12},
+		{name: "default_page_within", flatPage: 0, limit: 60, wantReject: false},
+		{name: "default_page_over", flatPage: 0, limit: 61, wantReject: true, wantMaxHint: 60},
+		{name: "depscanner_limit_just_over", flatPage: 15, limit: 16, wantReject: true, wantMaxHint: 15},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := SelectAndExecute[fakeFinding, fakeSummary, fakeFlat](
+				ctx,
+				Input{
+					FlatPageSize:  tc.flatPage,
+					Limit:         tc.limit,
+					AbsPath:       "/tmp/x",
+					ToolName:      "triage_findings",
+					ScanTimestamp: "2026-04-18T00:00:00Z",
+				},
+				newFakeScan(mkFindings(5), nil),
+				noopFilter,
+				buildSummaryFake,
+				buildFlatFake,
+				newMemCache(),
+			)
+			if err != nil {
+				t.Fatalf("unexpected err: %v", err)
+			}
+			if tc.wantReject {
+				if res.Err == nil {
+					t.Fatalf("expected reject Err, got nil (Flat=%+v Summary=%+v)", res.Flat, res.Summary)
+				}
+				if res.Err.Code != "LIMIT_EXCEEDS_PAGE_SIZE" {
+					t.Errorf("Code=%q, want LIMIT_EXCEEDS_PAGE_SIZE", res.Err.Code)
+				}
+				if !strings.Contains(res.Err.Hint, "max="+strconv.Itoa(tc.wantMaxHint)) {
+					t.Errorf("Hint=%q, want substring max=%d", res.Err.Hint, tc.wantMaxHint)
+				}
+				if !strings.Contains(res.Err.Hint, "cursor pagination") {
+					t.Errorf("Hint=%q, want substring 'cursor pagination'", res.Err.Hint)
+				}
+			} else if res.Err != nil {
+				t.Errorf("expected no reject, got Err=%+v", res.Err)
+			}
+		})
+	}
+}
+
 func TestSelectAndExecute_BuildSummaryNil(t *testing.T) {
 	ctx := context.Background()
 	buildNilSummary := func(_ []fakeFinding, _ hybridcache.ScanMeta, _, _ string) *fakeSummary {

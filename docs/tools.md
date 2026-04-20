@@ -96,6 +96,10 @@ The response is one of three variants, tagged by `response_shape`:
   `CURSOR_MALFORMED` (decode failure / cross-tool replay). Client retries
   without a cursor.
 
+The tool declares `_meta["anthropic/maxResultSizeChars"]: 20000` so AI
+clients that honour the annotation (Claude Code >= v2.1.91) size inline
+rendering in advance.
+
 **Migration note (v0.4.0):** `limit: -1` is no longer accepted and the
 server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. CI/batch
 callers should follow `pagination.next_cursor` until it is empty — the

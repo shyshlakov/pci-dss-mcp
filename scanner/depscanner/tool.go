@@ -23,7 +23,7 @@ type CheckDepsInput struct {
 	Path        string `json:"path" jsonschema:"required,Path to the project directory containing go.mod to scan for vulnerable dependencies"`
 	Mode        string `json:"mode,omitempty" jsonschema:"Scan mode: auto (default - try online then offline), online (OSV API only), offline (local cache only)"`
 	Cursor      string `json:"cursor,omitempty" jsonschema:"Opaque cursor token from a prior check_dependencies response. When set resumes pagination from the stored session cache (10-minute TTL). Leave empty for a fresh scan."`
-	Limit       int    `json:"limit,omitempty" jsonschema:"Maximum number of findings to return after filtering. Default 0 (summary-first). Positive integer for an exact cap. -1 is NO LONGER ACCEPTED (returns error) as of v0.4.0; use cursor pagination instead."`
+	Limit       int    `json:"limit,omitempty" jsonschema:"Maximum number of findings to return per call. Default 0 (summary-first response with next_cursor). To fetch more findings than fit in one response, follow next_cursor; do NOT raise this value to fetch all at once (server caps at the per-tool page size and rejects with LIMIT_EXCEEDS_PAGE_SIZE)."`
 	MinSeverity string `json:"min_severity,omitempty" jsonschema:"Filter by minimum severity (CRITICAL/HIGH/MEDIUM/LOW/INFO). Setting this forces the flat response shape."`
 	RuleFilter  string `json:"rule_filter,omitempty" jsonschema:"Filter by rule ID, comma list or /regex/. Setting this forces the flat response shape."`
 }

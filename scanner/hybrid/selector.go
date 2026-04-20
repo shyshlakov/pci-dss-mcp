@@ -24,6 +24,15 @@ func SelectAndExecute[TFinding, TSummary, TFlat any](
 	buildFlat BuildFlat[TFinding, TFlat],
 	cache Cacher[TFinding],
 ) (*Result[TSummary, TFlat], error) {
+	if in.Limit > 0 {
+		cap := effectivePageSize(in)
+		if in.Limit > cap {
+			return &Result[TSummary, TFlat]{Err: &CursorError{
+				Code: "LIMIT_EXCEEDS_PAGE_SIZE",
+				Hint: fmt.Sprintf("limit=%d exceeds max=%d for %s. Use cursor pagination: call without limit (or with limit<=%d), then follow next_cursor for additional pages.", in.Limit, cap, in.ToolName, cap),
+			}}, nil
+		}
+	}
 	if in.Cursor != "" {
 		payload, err := hybridcache.DecodeCursor(in.Cursor)
 		if err != nil {
