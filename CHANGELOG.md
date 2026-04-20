@@ -5,6 +5,63 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## v0.4.1 - 2026-04-20
+
+### Added
+
+- **Layer A flat response carries `summary.by_severity` + `summary.by_rule`
+  across all 12 finding-returning tools (closes G-10).** A 2026-04-20 field
+  observation: a mixed prompt ("show HIGH+ findings and summarize what INFO
+  exists") cost 4 MCP calls / 2m27s because `min_severity=HIGH` switches
+  the response to `response_shape: "flat"` and the previous summary view
+  was gone, forcing a second default call just to recover severity totals.
+  The flat shape now carries an additive `summary` block holding
+  `by_severity` (full-scan severity counts) and `by_rule` (top-10 histogram
+  sorted count desc, rule_id asc; omitted rules counted in `more_rules`).
+  Both reflect the FULL unfiltered scan, not the filtered page, so a
+  single filtered call answers both "how many HIGH+" and "how many INFO in
+  total" — no second call needed. Histograms are snapshotted once at scan
+  time and replay byte-identically on cursor resume.
+- **Canonical `scanner.ScannerSummary` + `scanner.RuleCount` types** shared
+  across all 12 tools (no per-tool duplicates). `hybridcache.Histogram` is
+  a type alias for `scanner.ScannerSummary`, wire-compatible everywhere the
+  block appears.
+
+### Changed
+
+- **Tool descriptions** for all 12 finding-returning tools updated to
+  document the filtered-call summary semantics: "min_severity /
+  rule_filter drop to response_shape \"flat\" but still carry
+  summary.by_severity + summary.by_rule for full-scan context".
+- **Internal: `scanner/hybrid.SelectAndExecute` generic `BuildFlat`
+  signature extended** with `allFindings []TFinding` and
+  `*hybridcache.Histogram` parameters. The `Cacher` interface gains
+  `PutWithHistogram` / `GetWithHistogram` / `Histogram` methods. Internal
+  callers only — no tool contract changes outside the additive summary
+  block.
+- **Internal: `scanner/reportscanner` `FlatResponse.Summary`** is now
+  `FlatSummary` embedding `ReportSummary` + `ByRule` + `MoreRules`.
+  Wire-compat preserved via Go struct embedding: existing severity fields
+  (`critical_findings`, `high_findings`, …) remain at the same JSON paths.
+
+### Unchanged
+
+- Layer B (summary) response shape is byte-identical to v0.4.0 on every
+  tool — the addendum is strictly a Layer A (flat) concern.
+- Detection logic for all 12 scanners — fixture severity counts match the
+  v0.4.0 baseline (critical=49 high=89 medium=27 low=0 info=59 on the
+  golden fixture).
+- Suppression system (`pci-ignore` comments + `.pci-mcp-ignore` file).
+- `update_vulnerability_db` and `explain_requirement` tool contracts.
+- `limit: -1` remains rejected across all three v0.4.0-hybrid tools.
+
+### Semver
+
+- PATCH v0.4.0 → v0.4.1. Every change is additive (new `omitempty` JSON
+  fields, new optional interface methods). JSON parsers that do not know
+  about the new fields ignore them. No field renames, no removals, no
+  semantic shift.
+
 ## v0.4.0 - 2026-04-18
 
 ### Breaking Changes
