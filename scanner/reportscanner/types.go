@@ -114,9 +114,20 @@ type SummaryResponse struct {
 type FlatResponse struct {
 	ResponseShape string          `json:"response_shape"`
 	Metadata      ReportMetadata  `json:"metadata"`
-	Summary       ReportSummary   `json:"summary"`
+	Summary       FlatSummary     `json:"summary"`
 	Findings      []ReportFinding `json:"findings"`
 	Pagination    PaginationInfo  `json:"pagination"`
+}
+
+// FlatSummary embeds ReportSummary (existing severity counts, wire-compat
+// preserved via embedding) and adds a top-10 by_rule histogram computed over
+// the FULL unfiltered scan. Emitted only on Layer A flat responses — lets a
+// filtered call answer both "how many HIGH+ findings" and "how many of each
+// rule/severity in total" in one shot.
+type FlatSummary struct {
+	ReportSummary
+	ByRule    []scanner.RuleCount `json:"by_rule"`
+	MoreRules int                 `json:"more_rules,omitempty"`
 }
 
 type PaginationInfo struct {
@@ -138,11 +149,13 @@ type CursorExpiredError struct {
 }
 
 type cacheEntry struct {
-	findings   []ReportFinding
-	scanMeta   ReportMetadata
-	summary    ReportSummary
-	reqStatus  map[string]RequirementStatus
-	filterHash string
-	createdAt  time.Time
-	expiresAt  time.Time
+	findings     []ReportFinding
+	scanMeta     ReportMetadata
+	summary      ReportSummary
+	flatByRule   []scanner.RuleCount
+	flatMoreRule int
+	reqStatus    map[string]RequirementStatus
+	filterHash   string
+	createdAt    time.Time
+	expiresAt    time.Time
 }

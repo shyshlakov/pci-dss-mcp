@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/shyshlakov/pci-dss-mcp/scanner"
+	"github.com/shyshlakov/pci-dss-mcp/scanner/hybridcache"
 )
 
 const (
@@ -99,16 +100,19 @@ func SelectAndExecute(ctx context.Context, gen *ReportGenerator, input ReportInp
 		}
 
 		filteredSummary := recomputeSeveritySummary(report.Summary, projected)
+		fullHist := hybridcache.BuildHistogram(raw)
 		fh := filterHash(input.MinSeverity, input.RuleFilter, input.IncludeTests)
 		sid := sessionKey(absPath, scanTS, fh, includeTaint)
 		cached := make([]ReportFinding, len(projected))
 		copy(cached, projected)
 		entry := &cacheEntry{
-			findings:   cached,
-			scanMeta:   report.Metadata,
-			summary:    filteredSummary,
-			reqStatus:  report.RequirementStatus,
-			filterHash: fh,
+			findings:     cached,
+			scanMeta:     report.Metadata,
+			summary:      filteredSummary,
+			flatByRule:   fullHist.ByRule,
+			flatMoreRule: fullHist.MoreRules,
+			reqStatus:    report.RequirementStatus,
+			filterHash:   fh,
 		}
 		putSession(sid, entry)
 
@@ -210,12 +214,17 @@ func max0(n int) int {
 }
 
 func buildFlatPage(entry *cacheEntry, off, pageSize int, sid, toolName string) *FlatResponse {
+	flatSummary := FlatSummary{
+		ReportSummary: entry.summary,
+		ByRule:        entry.flatByRule,
+		MoreRules:     entry.flatMoreRule,
+	}
 	total := len(entry.findings)
 	if off >= total {
 		return &FlatResponse{
 			ResponseShape: "flat",
 			Metadata:      entry.scanMeta,
-			Summary:       entry.summary,
+			Summary:       flatSummary,
 			Findings:      []ReportFinding{},
 			Pagination: PaginationInfo{
 				TotalFindings: total,
@@ -244,7 +253,7 @@ func buildFlatPage(entry *cacheEntry, off, pageSize int, sid, toolName string) *
 	return &FlatResponse{
 		ResponseShape: "flat",
 		Metadata:      entry.scanMeta,
-		Summary:       entry.summary,
+		Summary:       flatSummary,
 		Findings:      page,
 		Pagination: PaginationInfo{
 			TotalFindings: total,

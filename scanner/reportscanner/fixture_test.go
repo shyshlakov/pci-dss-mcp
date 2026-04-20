@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+
 	"github.com/shyshlakov/pci-dss-mcp/pcidb"
 	"github.com/shyshlakov/pci-dss-mcp/scanner"
 )
@@ -210,4 +212,81 @@ func absInt(x int) int {
 		return -x
 	}
 	return x
+}
+
+func TestReportLayerA_IncludesHistogram(t *testing.T) {
+	ctx := context.Background()
+	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
+	scanRoot := copyFixtureTree(t, fixtureRoot)
+
+	db, err := pcidb.New()
+	if err != nil {
+		t.Fatalf("pcidb.New: %v", err)
+	}
+	gen := NewReportGenerator(db)
+
+	includeTaint := true
+	input := ReportInput{
+		Path:         scanRoot,
+		MinSeverity:  "MEDIUM",
+		IncludeTaint: &includeTaint,
+	}
+	_, flat, _, err := SelectAndExecute(ctx, gen, input, "generate_compliance_report")
+	if err != nil {
+		t.Fatalf("SelectAndExecute: %v", err)
+	}
+	if flat == nil {
+		t.Fatalf("expected FlatResponse, got nil")
+	}
+	if flat.ResponseShape != "flat" {
+		t.Errorf("response_shape=%q want flat", flat.ResponseShape)
+	}
+	if len(flat.Summary.ByRule) == 0 {
+		t.Errorf("Summary.ByRule empty; expected full-scan histogram entries")
+	}
+	if len(flat.Summary.ByRule) > 10 {
+		t.Errorf("Summary.ByRule len=%d must be <=10", len(flat.Summary.ByRule))
+	}
+	if flat.Summary.Critical+flat.Summary.High+flat.Summary.Medium < 1 {
+		t.Errorf("embedded ReportSummary severity counts empty: %+v", flat.Summary.ReportSummary)
+	}
+}
+
+func TestReportToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	db, err := pcidb.New()
+	if err != nil {
+		t.Fatalf("pcidb.New: %v", err)
+	}
+	server := mcp.NewServer(&mcp.Implementation{Name: "report-desc", Version: "v0.0.1"}, nil)
+	RegisterTools(server, db)
+	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	go func() { _ = server.Run(context.Background(), serverTransport) }()
+	client := mcp.NewClient(&mcp.Implementation{Name: "report-desc-client", Version: "v0.0.1"}, nil)
+	session, err := client.Connect(context.Background(), clientTransport, nil)
+	if err != nil {
+		t.Fatalf("client.Connect: %v", err)
+	}
+	defer func() { _ = session.Close() }()
+	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	var desc string
+	var found bool
+	for _, tool := range tools.Tools {
+		if tool.Name != "generate_compliance_report" {
+			continue
+		}
+		found = true
+		desc = tool.Description
+	}
+	if !found {
+		t.Fatalf("generate_compliance_report not in ListTools")
+	}
+	needles := []string{"summary.by_severity", "summary.by_rule", "full-scan"}
+	for _, n := range needles {
+		if !strings.Contains(desc, n) {
+			t.Errorf("generate_compliance_report description missing substring %q", n)
+		}
+	}
 }

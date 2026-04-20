@@ -60,8 +60,10 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 			"summary (metadata, totals, requirement_statuses, top 20 findings per severity, and a " +
 			"cursor for follow-up). Supply min_severity / rule_filter / limit to get a paged flat " +
 			"list (60 per page with cursor), or cursor=<token> to resume a prior session " +
-			"(10-minute TTL). Taint analysis is ON by default; set include_taint=false for " +
-			"fast dev iteration.",
+			"(10-minute TTL). Prefer the default shape for mixed queries; min_severity / " +
+			"rule_filter drop to response_shape \"flat\" but still carry summary.by_severity + " +
+			"summary.by_rule for full-scan context. Taint analysis is ON by default; set " +
+			"include_taint=false for fast dev iteration.",
 		Meta: mcp.Meta{"anthropic/maxResultSizeChars": 20000},
 	}
 	if schema, err := buildOutputSchemaUnion(); err == nil {
