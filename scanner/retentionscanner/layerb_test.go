@@ -387,3 +387,67 @@ func TestRetention_LimitMinusOneRejected(t *testing.T) {
 		t.Errorf("error message missing LIMIT_MINUS_ONE_REMOVED code; got %q", body)
 	}
 }
+
+func TestRetentionLayerA_IncludesHistogram(t *testing.T) {
+	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
+	scanRoot := copyFixtureTreeForRetention(t, fixtureRoot)
+	session := newRetentionSessionForLayerB(t)
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "check_data_retention",
+		Arguments: map[string]any{
+			"path":          scanRoot,
+			"include_tests": true,
+			"min_severity":  "MEDIUM",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("check_data_retention Layer A IsError: %+v", result)
+	}
+	m := retentionStructuredMap(t, result)
+	if got := m["response_shape"]; got != "flat" {
+		t.Fatalf("response_shape=%v, want flat", got)
+	}
+	summary, ok := m["summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("summary missing: %T", m["summary"])
+	}
+	if _, ok := summary["by_severity"].(map[string]any); !ok {
+		t.Fatalf("by_severity missing")
+	}
+	byRule, ok := summary["by_rule"].([]any)
+	if !ok {
+		t.Fatalf("by_rule wrong type: %T", summary["by_rule"])
+	}
+	if len(byRule) > 10 {
+		t.Errorf("by_rule len=%d must be <=10", len(byRule))
+	}
+}
+
+func TestRetentionToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	session := newRetentionSessionForLayerB(t)
+	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	var desc string
+	var found bool
+	for _, tool := range tools.Tools {
+		if tool.Name != "check_data_retention" {
+			continue
+		}
+		found = true
+		desc = tool.Description
+	}
+	if !found {
+		t.Fatalf("check_data_retention not in ListTools")
+	}
+	needles := []string{"summary.by_severity", "summary.by_rule", "full-scan"}
+	for _, n := range needles {
+		if !strings.Contains(desc, n) {
+			t.Errorf("check_data_retention description missing substring %q", n)
+		}
+	}
+}

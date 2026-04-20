@@ -46,6 +46,21 @@ func (retentionCacher) Get(sid string) ([]scanner.Finding, hybridcache.ScanMeta,
 	return e.Findings, e.Meta, true
 }
 
+func (retentionCacher) PutWithHistogram(sid string, findings []scanner.Finding, meta hybridcache.ScanMeta, hist *hybridcache.Histogram) {
+	cp := make([]scanner.Finding, len(findings))
+	copy(cp, findings)
+	hybridcache.PutWithHistogram(sid, cp, meta, hist)
+}
+
+func (retentionCacher) GetWithHistogram(sid string) ([]scanner.Finding, hybridcache.ScanMeta, *hybridcache.Histogram, bool) {
+	return hybridcache.GetWithHistogram(sid)
+}
+
+func (retentionCacher) Histogram(findings []scanner.Finding) *hybridcache.Histogram {
+	h := hybridcache.BuildHistogram(findings)
+	return &h
+}
+
 func RegisterTools(server *mcp.Server) {
 	s := New()
 	schema, err := buildRetentionOutputSchemaUnion()
@@ -57,6 +72,7 @@ func RegisterTools(server *mcp.Server) {
 		Name: toolNameRetention,
 		Description: "Scan Go source and config files for unsafe data retention: Redis/DB storage of CVV/PAN without TTL (PCI DSS 3.2.1), config files missing TTL on sensitive keys (PCI DSS 3.3.1), and incorrect memory zeroing timing after authorization. Scans .go, .yaml, .json, .toml files. " +
 			"Default: returns response_shape \"summary\" with by_severity counts, a capped by_rule histogram (top 10 + more_rules), and top 3 per severity findings - plus a pagination.next_cursor for drill-down. " +
+			"Prefer this for mixed queries; min_severity / rule_filter drop to response_shape \"flat\" but still carry summary.by_severity + summary.by_rule for full-scan context. " +
 			"Follow the cursor for the full paginated list. " +
 			"Use include_tests / exclude_patterns / min_severity / rule_filter for a filtered flat response. " +
 			"Maps findings to PCI DSS 3.2.1, 3.3.1.",
@@ -119,7 +135,7 @@ func RegisterTools(server *mcp.Server) {
 			return buildRetentionSummaryInternal(findings, meta, sid, nextCursor)
 		}
 
-		buildFlat := func(findings []scanner.Finding, off, pageSize, total int, meta hybridcache.ScanMeta, sid, nextCursor string, autoCapped bool) *scanner.ScannerToolOutput {
+		buildFlat := func(findings []scanner.Finding, allFindings []scanner.Finding, histogram *hybridcache.Histogram, off, pageSize, total int, meta hybridcache.ScanMeta, sid, nextCursor string, autoCapped bool) *scanner.ScannerToolOutput {
 			counts := scanner.CountBySeverity(findings)
 			out := &scanner.ScannerToolOutput{
 				ResponseShape: "flat",
@@ -132,6 +148,7 @@ func RegisterTools(server *mcp.Server) {
 					Low:      counts[scanner.SeverityLow],
 					Info:     counts[scanner.SeverityInfo],
 				},
+				Summary: histogram,
 				Metadata: scanner.ScanMetadata{
 					ScannedFiles: meta.TotalFiles,
 					ScannedLines: meta.TotalLines,
