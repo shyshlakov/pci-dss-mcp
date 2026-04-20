@@ -525,3 +525,66 @@ func TestDep_UpdateVulnDBStillRegistered(t *testing.T) {
 		t.Errorf("update_vulnerability_db tool MUST remain registered after migration")
 	}
 }
+
+func TestDepLayerA_IncludesHistogram(t *testing.T) {
+	projectDir := seedDepFixture(t)
+	session := newDepSessionForLayerB(t)
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "check_dependencies",
+		Arguments: map[string]any{
+			"path":         projectDir,
+			"mode":         "offline",
+			"min_severity": "HIGH",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("check_dependencies Layer A IsError: %+v", result)
+	}
+	m := depStructuredMap(t, result)
+	if got := m["response_shape"]; got != "flat" {
+		t.Fatalf("response_shape=%v, want flat", got)
+	}
+	summary, ok := m["summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("summary missing: %T", m["summary"])
+	}
+	if _, ok := summary["by_severity"].(map[string]any); !ok {
+		t.Fatalf("by_severity missing")
+	}
+	byRule, ok := summary["by_rule"].([]any)
+	if !ok {
+		t.Fatalf("by_rule wrong type: %T", summary["by_rule"])
+	}
+	if len(byRule) > 10 {
+		t.Errorf("by_rule len=%d must be <=10", len(byRule))
+	}
+}
+
+func TestDepToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	session := newDepSessionForLayerB(t)
+	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	var desc string
+	var found bool
+	for _, tool := range tools.Tools {
+		if tool.Name != "check_dependencies" {
+			continue
+		}
+		found = true
+		desc = tool.Description
+	}
+	if !found {
+		t.Fatalf("check_dependencies not in ListTools")
+	}
+	needles := []string{"summary.by_severity", "summary.by_rule", "full-scan"}
+	for _, n := range needles {
+		if !strings.Contains(desc, n) {
+			t.Errorf("check_dependencies description missing substring %q", n)
+		}
+	}
+}
