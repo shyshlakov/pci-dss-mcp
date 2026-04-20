@@ -422,3 +422,67 @@ func TestAuth_LimitMinusOneRejected(t *testing.T) {
 		t.Errorf("error message missing LIMIT_MINUS_ONE_REMOVED code; got %q", body)
 	}
 }
+
+func TestAuthLayerA_IncludesHistogram(t *testing.T) {
+	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
+	scanRoot := copyFixtureTreeForAuth(t, fixtureRoot)
+	session := newAuthSessionForLayerB(t)
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "check_auth_strength",
+		Arguments: map[string]any{
+			"path":          scanRoot,
+			"include_tests": true,
+			"min_severity":  "HIGH",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("check_auth_strength Layer A IsError: %+v", result)
+	}
+	m := authStructuredMap(t, result)
+	if got := m["response_shape"]; got != "flat" {
+		t.Fatalf("response_shape=%v, want flat", got)
+	}
+	summary, ok := m["summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("summary missing: %T", m["summary"])
+	}
+	if _, ok := summary["by_severity"].(map[string]any); !ok {
+		t.Fatalf("by_severity missing")
+	}
+	byRule, ok := summary["by_rule"].([]any)
+	if !ok || len(byRule) == 0 {
+		t.Fatalf("by_rule empty/wrong type: %T len=%d", summary["by_rule"], len(byRule))
+	}
+	if len(byRule) > 10 {
+		t.Errorf("by_rule len=%d must be <=10", len(byRule))
+	}
+}
+
+func TestAuthToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	session := newAuthSessionForLayerB(t)
+	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	var desc string
+	var found bool
+	for _, tool := range tools.Tools {
+		if tool.Name != "check_auth_strength" {
+			continue
+		}
+		found = true
+		desc = tool.Description
+	}
+	if !found {
+		t.Fatalf("check_auth_strength not in ListTools")
+	}
+	needles := []string{"summary.by_severity", "summary.by_rule", "full-scan"}
+	for _, n := range needles {
+		if !strings.Contains(desc, n) {
+			t.Errorf("check_auth_strength description missing substring %q", n)
+		}
+	}
+}
