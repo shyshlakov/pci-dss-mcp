@@ -421,3 +421,67 @@ func TestTLS_LimitMinusOneRejected(t *testing.T) {
 		t.Errorf("error message missing LIMIT_MINUS_ONE_REMOVED code; got %q", body)
 	}
 }
+
+func TestTLSLayerA_IncludesHistogram(t *testing.T) {
+	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
+	scanRoot := copyFixtureTreeForTLS(t, fixtureRoot)
+	session := newTLSSessionForLayerB(t)
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "check_tls_config",
+		Arguments: map[string]any{
+			"path":          scanRoot,
+			"include_tests": true,
+			"min_severity":  "MEDIUM",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("check_tls_config Layer A IsError: %+v", result)
+	}
+	m := tlsStructuredMap(t, result)
+	if got := m["response_shape"]; got != "flat" {
+		t.Fatalf("response_shape=%v, want flat", got)
+	}
+	summary, ok := m["summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("summary missing: %T", m["summary"])
+	}
+	if _, ok := summary["by_severity"].(map[string]any); !ok {
+		t.Fatalf("by_severity missing")
+	}
+	byRule, ok := summary["by_rule"].([]any)
+	if !ok {
+		t.Fatalf("by_rule wrong type: %T", summary["by_rule"])
+	}
+	if len(byRule) > 10 {
+		t.Errorf("by_rule len=%d must be <=10", len(byRule))
+	}
+}
+
+func TestTLSToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	session := newTLSSessionForLayerB(t)
+	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	var desc string
+	var found bool
+	for _, tool := range tools.Tools {
+		if tool.Name != "check_tls_config" {
+			continue
+		}
+		found = true
+		desc = tool.Description
+	}
+	if !found {
+		t.Fatalf("check_tls_config not in ListTools")
+	}
+	needles := []string{"summary.by_severity", "summary.by_rule", "full-scan"}
+	for _, n := range needles {
+		if !strings.Contains(desc, n) {
+			t.Errorf("check_tls_config description missing substring %q", n)
+		}
+	}
+}
