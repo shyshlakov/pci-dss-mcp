@@ -68,7 +68,7 @@ func SelectAndExecute[TFinding, TSummary, TFlat any](
 				next = encoded
 			}
 		}
-		flat := buildFlat(page, off, pageSize, total, meta, payload.SID, next, false)
+		flat := buildFlat(page, cached, nil, off, pageSize, total, meta, payload.SID, next, false)
 		return &Result[TSummary, TFlat]{Flat: flat}, nil
 	}
 
@@ -104,7 +104,7 @@ func SelectAndExecute[TFinding, TSummary, TFlat any](
 				next = encoded
 			}
 		}
-		flat := buildFlat(page, 0, pageSize, total, meta, sid, next, false)
+		flat := buildFlat(page, findings, nil, 0, pageSize, total, meta, sid, next, false)
 		return &Result[TSummary, TFlat]{Flat: flat}, nil
 	}
 

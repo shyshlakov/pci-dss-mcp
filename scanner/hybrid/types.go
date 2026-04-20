@@ -43,6 +43,8 @@ type BuildSummary[TFinding, TSummary any] func(
 
 type BuildFlat[TFinding, TFlat any] func(
 	findings []TFinding,
+	allFindings []TFinding,
+	histogram *hybridcache.Histogram,
 	off int,
 	pageSize int,
 	total int,
@@ -55,6 +57,9 @@ type BuildFlat[TFinding, TFlat any] func(
 type Cacher[TFinding any] interface {
 	Put(sid string, findings []TFinding, meta hybridcache.ScanMeta)
 	Get(sid string) ([]TFinding, hybridcache.ScanMeta, bool)
+	PutWithHistogram(sid string, findings []TFinding, meta hybridcache.ScanMeta, hist *hybridcache.Histogram)
+	GetWithHistogram(sid string) ([]TFinding, hybridcache.ScanMeta, *hybridcache.Histogram, bool)
+	Histogram(findings []TFinding) *hybridcache.Histogram
 }
 
 const (
