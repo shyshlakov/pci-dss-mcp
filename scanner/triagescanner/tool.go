@@ -47,6 +47,21 @@ func (triageCacher) Get(sid string) ([]scanner.Finding, hybridcache.ScanMeta, bo
 	return entry.Findings, entry.Meta, true
 }
 
+func (triageCacher) PutWithHistogram(sid string, findings []scanner.Finding, meta hybridcache.ScanMeta, hist *hybridcache.Histogram) {
+	cp := make([]scanner.Finding, len(findings))
+	copy(cp, findings)
+	hybridcache.PutWithHistogram(sid, cp, meta, hist)
+}
+
+func (triageCacher) GetWithHistogram(sid string) ([]scanner.Finding, hybridcache.ScanMeta, *hybridcache.Histogram, bool) {
+	return hybridcache.GetWithHistogram(sid)
+}
+
+func (triageCacher) Histogram(findings []scanner.Finding) *hybridcache.Histogram {
+	h := hybridcache.BuildHistogram(findings)
+	return &h
+}
+
 func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 	engine := NewTriageEngine()
 	schema, schemaErr := buildTriageOutputSchemaUnion()
@@ -65,8 +80,9 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 			"Default: returns response_shape \"summary\" with by_severity counts, a " +
 			"capped by_rule histogram (top 10 + more_rules), and top 1 per severity " +
 			"enriched finding - plus a pagination.next_cursor for drill-down. " +
-			"Follow the cursor for the full enriched list. " +
-			"Apply min_severity / rule_filter for a filtered flat response.",
+			"Prefer this for mixed queries; min_severity / rule_filter drop to " +
+			"response_shape \"flat\" but still carry summary.by_severity + summary.by_rule " +
+			"for full-scan context. Follow the cursor for the full paginated list.",
 		Meta:         mcp.Meta{"anthropic/maxResultSizeChars": 20000},
 		OutputSchema: json.RawMessage(schema),
 	}
@@ -135,17 +151,18 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 			return buildTriageSummaryInternal(result.Findings, layerBMeta, meta, total, sid, nextCursor)
 		}
 
-		buildFlat := func(findings []scanner.Finding, off, pageSize, total int, meta hybridcache.ScanMeta, sid, nextCursor string, autoCapped bool) *TriageResult {
+		buildFlat := func(findings []scanner.Finding, allFindings []scanner.Finding, histogram *hybridcache.Histogram, off, pageSize, total int, meta hybridcache.ScanMeta, sid, nextCursor string, autoCapped bool) *TriageResult {
 			result, terr := engine.Triage(ctx, path, findings)
 			if terr != nil {
 				slog.Warn("triage enrichment failed inside buildFlat", "err", terr)
-				return &TriageResult{ResponseShape: "flat", Findings: []EnrichedFinding{}}
+				return &TriageResult{ResponseShape: "flat", Findings: []EnrichedFinding{}, Summary: histogram}
 			}
 			result.ResponseShape = "flat"
 			result.Metadata.FindingsTotal = total
 			if nextCursor != "" {
 				result.NextCursor = nextCursor
 			}
+			result.Summary = histogram
 			return result
 		}
 

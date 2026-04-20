@@ -388,3 +388,81 @@ func TestTriage_LimitMinusOneRejected(t *testing.T) {
 		t.Errorf("error message missing LIMIT_MINUS_ONE_REMOVED code; got %q", body)
 	}
 }
+
+func TestTriageLayerA_IncludesHistogram(t *testing.T) {
+	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
+	scanRoot := copyFixtureTreeForTriage(t, fixtureRoot)
+	db, err := pcidb.New()
+	if err != nil {
+		t.Fatalf("pcidb.New: %v", err)
+	}
+	session := newTriageSessionForLayerB(t, db)
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "triage_findings",
+		Arguments: map[string]any{
+			"path":          scanRoot,
+			"dep_scan_mode": "offline",
+			"min_severity":  "HIGH",
+			"include_taint": true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("triage_findings Layer A IsError: %+v", result)
+	}
+	m := structuredMap(t, result)
+	if got := m["response_shape"]; got != "flat" {
+		t.Fatalf("response_shape=%v, want flat (min_severity=HIGH)", got)
+	}
+	summary, ok := m["summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("summary missing or wrong type: %T", m["summary"])
+	}
+	bySev, ok := summary["by_severity"].(map[string]any)
+	if !ok {
+		t.Fatalf("by_severity missing or wrong type: %T", summary["by_severity"])
+	}
+	info, _ := bySev["info"].(float64)
+	if info <= 0 {
+		t.Errorf("by_severity.info=%v want >0 (full-scan semantics: filter=HIGH must not erase INFO counts)", info)
+	}
+	byRule, ok := summary["by_rule"].([]any)
+	if !ok || len(byRule) == 0 {
+		t.Fatalf("by_rule empty/wrong type: %T len=%d", summary["by_rule"], len(byRule))
+	}
+	if len(byRule) > 10 {
+		t.Errorf("by_rule len=%d must be <=10 (top-10 cap)", len(byRule))
+	}
+}
+
+func TestTriageToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	db, err := pcidb.New()
+	if err != nil {
+		t.Fatalf("pcidb.New: %v", err)
+	}
+	session := newTriageSessionForLayerB(t, db)
+	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	var desc string
+	var found bool
+	for _, tool := range tools.Tools {
+		if tool.Name != "triage_findings" {
+			continue
+		}
+		found = true
+		desc = tool.Description
+	}
+	if !found {
+		t.Fatalf("triage_findings not in ListTools")
+	}
+	needles := []string{"summary.by_severity", "summary.by_rule", "full-scan"}
+	for _, n := range needles {
+		if !strings.Contains(desc, n) {
+			t.Errorf("triage_findings description missing substring %q", n)
+		}
+	}
+}
