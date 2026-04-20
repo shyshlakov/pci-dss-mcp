@@ -2,7 +2,6 @@ package auditscanner
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -76,7 +75,7 @@ func RegisterTools(server *mcp.Server) {
 			"Follow the cursor for the full paginated list. " +
 			"Use include_tests / exclude_patterns / min_severity / rule_filter for a filtered flat response.",
 		Meta:         mcp.Meta{"anthropic/maxResultSizeChars": 20000},
-		OutputSchema: json.RawMessage(schema),
+		OutputSchema: schema,
 	}
 
 	mcp.AddTool(server, tool, func(ctx context.Context, req *mcp.CallToolRequest, input CheckAuditLogInput) (*mcp.CallToolResult, any, error) {

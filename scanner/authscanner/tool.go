@@ -2,7 +2,6 @@ package authscanner
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -77,7 +76,7 @@ func RegisterTools(server *mcp.Server) {
 			"Use include_tests / exclude_patterns / min_severity / rule_filter for a filtered flat response. " +
 			"Maps findings to PCI DSS 8.3.1, 8.3.6, 8.4.2.",
 		Meta:         mcp.Meta{"anthropic/maxResultSizeChars": 20000},
-		OutputSchema: json.RawMessage(schema),
+		OutputSchema: schema,
 	}
 
 	mcp.AddTool(server, tool, func(ctx context.Context, req *mcp.CallToolRequest, input CheckAuthStrengthInput) (*mcp.CallToolResult, any, error) {

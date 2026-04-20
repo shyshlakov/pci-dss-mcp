@@ -3,7 +3,6 @@ package reportscanner
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -14,73 +13,6 @@ import (
 )
 
 const layerBFixtureBudgetBytes = 25 * 1024
-
-func synthesizeReportWithNFindings(n int) *ComplianceReport {
-	findings := make([]ReportFinding, 0, n)
-	for i := 0; i < n; i++ {
-		var sev scanner.Severity
-		switch i % 5 {
-		case 0:
-			sev = scanner.SeverityCritical
-		case 1:
-			sev = scanner.SeverityHigh
-		case 2:
-			sev = scanner.SeverityMedium
-		case 3:
-			sev = scanner.SeverityLow
-		default:
-			sev = scanner.SeverityInfo
-		}
-		findings = append(findings, ReportFinding{
-			Finding: scanner.Finding{
-				RuleID:        fmt.Sprintf("FAKE-%d", i),
-				Severity:      sev,
-				FilePath:      fmt.Sprintf("fake/path/%d.go", i),
-				Line:          i + 1,
-				Description:   "synthetic",
-				Suggestion:    "synthetic",
-				RequirementID: "3.3.1",
-			},
-			RequirementTitle: "Synthetic",
-			ScannerName:      "synthetic",
-		})
-	}
-	var critical, high, medium, low, info int
-	for _, f := range findings {
-		switch f.Severity {
-		case scanner.SeverityCritical:
-			critical++
-		case scanner.SeverityHigh:
-			high++
-		case scanner.SeverityMedium:
-			medium++
-		case scanner.SeverityLow:
-			low++
-		case scanner.SeverityInfo:
-			info++
-		}
-	}
-	return &ComplianceReport{
-		Metadata: ReportMetadata{
-			GeneratedAt:  time.Now().UTC().Format(time.RFC3339),
-			TargetPath:   "/synthetic",
-			TotalFiles:   n,
-			TotalLines:   n * 10,
-			DurationMS:   1,
-			ScannerCount: 1,
-		},
-		Summary: ReportSummary{
-			TotalRequirements: 1,
-			Critical:          critical,
-			High:              high,
-			Medium:            medium,
-			Low:               low,
-			Info:              info,
-		},
-		RequirementStatus: map[string]RequirementStatus{},
-		Findings:          findings,
-	}
-}
 
 func scanFixtureInput(t *testing.T) (*ReportGenerator, string) {
 	t.Helper()

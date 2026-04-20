@@ -2,7 +2,6 @@ package triagescanner
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -84,7 +83,7 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 			"response_shape \"flat\" but still carry summary.by_severity + summary.by_rule " +
 			"for full-scan context. Follow the cursor for the full paginated list.",
 		Meta:         mcp.Meta{"anthropic/maxResultSizeChars": 20000},
-		OutputSchema: json.RawMessage(schema),
+		OutputSchema: schema,
 	}
 
 	mcp.AddTool(server, tool, func(ctx context.Context, req *mcp.CallToolRequest, input TriageInput) (*mcp.CallToolResult, any, error) {
@@ -202,7 +201,7 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 			}, res.Summary, nil
 		}
 		if res.Flat == nil {
-			return triageErrorResult("triage_findings: enrichment failed (context cancelled or internal error)"), nil, nil
+			return triageErrorResult("triage_findings: enrichment failed (context canceled or internal error)"), nil, nil
 		}
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("triage_findings: %d findings returned (flat page)", len(res.Flat.Findings))}},
