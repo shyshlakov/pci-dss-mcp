@@ -575,9 +575,12 @@ func TestSelectAndExecute_FreshFilterHistogramFullScan(t *testing.T) {
 
 func TestSelectAndExecute_CursorResumeHistogramStable(t *testing.T) {
 	ctx := context.Background()
-	findings := make([]fakeFinding, 40)
+	findings := make([]fakeFinding, 100)
 	for i := range findings {
-		findings[i] = fakeFinding{ID: "R-" + strconv.Itoa(i%7), Sev: severityRotation(i)}
+		findings[i] = fakeFinding{ID: "R-" + strconv.Itoa(i%7), Sev: "HIGH"}
+	}
+	for i := 0; i < 20; i++ {
+		findings = append(findings, fakeFinding{ID: "R-INFO", Sev: "INFO"})
 	}
 	cache := newMemCache()
 
@@ -597,7 +600,7 @@ func TestSelectAndExecute_CursorResumeHistogramStable(t *testing.T) {
 		t.Fatalf("fresh call missing Flat or Histogram: %+v", res1)
 	}
 	if res1.Flat.Cursor == "" {
-		t.Fatalf("fresh call must yield cursor (HIGH filter rotation leaves >12 HIGH findings)")
+		t.Fatalf("fresh call must yield cursor (HIGH filter yields 100, page=12 leaves more pages)")
 	}
 
 	firstHist, err := json.Marshal(res1.Flat.Histogram)
