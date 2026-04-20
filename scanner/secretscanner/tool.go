@@ -48,6 +48,21 @@ func (secretCacher) Get(sid string) ([]scanner.Finding, hybridcache.ScanMeta, bo
 	return e.Findings, e.Meta, true
 }
 
+func (secretCacher) PutWithHistogram(sid string, findings []scanner.Finding, meta hybridcache.ScanMeta, hist *hybridcache.Histogram) {
+	cp := make([]scanner.Finding, len(findings))
+	copy(cp, findings)
+	hybridcache.PutWithHistogram(sid, cp, meta, hist)
+}
+
+func (secretCacher) GetWithHistogram(sid string) ([]scanner.Finding, hybridcache.ScanMeta, *hybridcache.Histogram, bool) {
+	return hybridcache.GetWithHistogram(sid)
+}
+
+func (secretCacher) Histogram(findings []scanner.Finding) *hybridcache.Histogram {
+	h := hybridcache.BuildHistogram(findings)
+	return &h
+}
+
 func RegisterTools(server *mcp.Server) {
 	s := New()
 	schema, err := buildSecretOutputSchemaUnion()
@@ -59,6 +74,7 @@ func RegisterTools(server *mcp.Server) {
 		Name: toolNameSecret,
 		Description: "Scan configuration files (.env, .yaml, .json, .toml) for hardcoded secrets: API keys, passwords, tokens, and connection strings with embedded credentials. " +
 			"Default: returns response_shape \"summary\" with by_severity counts, a capped by_rule histogram (top 10 + more_rules), and top 3 per severity findings - plus a pagination.next_cursor for drill-down. " +
+			"Prefer this for mixed queries; min_severity / rule_filter drop to response_shape \"flat\" but still carry summary.by_severity + summary.by_rule for full-scan context. " +
 			"Follow the cursor for the full paginated list. " +
 			"Use include_tests / exclude_patterns / min_severity / rule_filter for a filtered flat response. " +
 			"Maps findings to PCI DSS 8.6.2.",
@@ -121,7 +137,7 @@ func RegisterTools(server *mcp.Server) {
 			return buildSecretSummaryInternal(findings, meta, sid, nextCursor)
 		}
 
-		buildFlat := func(findings []scanner.Finding, off, pageSize, total int, meta hybridcache.ScanMeta, sid, nextCursor string, autoCapped bool) *scanner.ScannerToolOutput {
+		buildFlat := func(findings []scanner.Finding, allFindings []scanner.Finding, histogram *hybridcache.Histogram, off, pageSize, total int, meta hybridcache.ScanMeta, sid, nextCursor string, autoCapped bool) *scanner.ScannerToolOutput {
 			counts := scanner.CountBySeverity(findings)
 			out := &scanner.ScannerToolOutput{
 				ResponseShape: "flat",
@@ -134,6 +150,7 @@ func RegisterTools(server *mcp.Server) {
 					Low:      counts[scanner.SeverityLow],
 					Info:     counts[scanner.SeverityInfo],
 				},
+				Summary: histogram,
 				Metadata: scanner.ScanMetadata{
 					ScannedFiles: meta.TotalFiles,
 					ScannedLines: meta.TotalLines,
