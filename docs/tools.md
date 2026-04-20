@@ -56,6 +56,21 @@ CI/batch callers to cursor pagination: call with default parameters (or
 `pagination.next_cursor` until it is empty. The cursor loop handles any
 finding volume without a size cap.
 
+## v0.4.1 migration note
+
+As of **v0.4.1**, the Layer A `response_shape: "flat"` variant on all 12
+finding-returning tools (`generate_compliance_report`, `triage_findings`,
+`scan_pan_data`, `check_encryption`, `check_tls_config`,
+`check_secrets_in_configs`, `check_error_handling`, `check_auth_strength`,
+`audit_log_coverage`, `check_data_retention`, `check_payment_page_scripts`,
+`check_dependencies`) carries a new additive `summary.by_severity` and
+`summary.by_rule` block computed over the FULL unfiltered scan. This is
+additive only (new optional JSON fields, omitempty) and does not break
+clients parsing older responses. A filtered call now answers both "how many
+HIGH+ findings" and "what is the full-scan rule/severity breakdown" in a
+single shot, so mixed prompts no longer require a second default call to
+recover the summary view.
+
 ## generate_compliance_report
 
 Run all PCI DSS v4.0.1 compliance scanners and generate a plain compliance report
@@ -92,6 +107,10 @@ The response is one of three variants, tagged by `response_shape`:
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
   `min_severity` / `rule_filter` / positive `limit` is set. Up to 24
   per page with cursor, plus `next_cursor` when more pages remain.
+  As of v0.4.1 the flat shape also carries `summary.by_severity` and
+  `summary.by_rule` computed over the FULL unfiltered scan, so a filtered
+  call answers 'how many HIGH+ findings AND how many INFO in total' in
+  one shot — no second default call needed.
 - `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
   `CURSOR_MALFORMED` (decode failure / cross-tool replay). Client retries
   without a cursor.
@@ -155,7 +174,11 @@ Detect PAN/CVV exposure in Go source files and .env configuration.
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
   `min_severity`, `rule_filter`, `include_tests`, `include_untracked`,
   `include_taint`, `exclude_patterns` is set. 30 findings per page plus
-  `next_cursor` when more pages remain.
+  `next_cursor` when more pages remain. As of v0.4.1 the flat shape also
+  carries `summary.by_severity` and `summary.by_rule` computed over the
+  FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
 - `response_shape: "error"` with `code: "CURSOR_EXPIRED"` — session cache
   entry expired (10-minute TTL) or server restarted. Re-run without a
   cursor. Cross-tool cursor replay also returns `CURSOR_MALFORMED`.
@@ -213,7 +236,11 @@ three variants, tagged by `response_shape`:
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
   `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
   `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
-  per page with `next_cursor` when more pages remain.
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
 - `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
   `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
   combo). Client retries without cursor.
@@ -275,7 +302,11 @@ three variants, tagged by `response_shape`:
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
   `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
   `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
-  per page with `next_cursor` when more pages remain.
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
 - `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
   `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
   combo). Client retries without cursor.
@@ -333,7 +364,11 @@ three variants, tagged by `response_shape`:
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
   `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
   `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
-  per page with `next_cursor` when more pages remain.
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
 - `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
   `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
   combo). Client retries without cursor.
@@ -391,7 +426,11 @@ three variants, tagged by `response_shape`:
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
   `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
   `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
-  per page with `next_cursor` when more pages remain.
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
 - `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
   `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
   combo). Client retries without cursor.
@@ -449,7 +488,11 @@ three variants, tagged by `response_shape`:
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
   `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
   `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
-  per page with `next_cursor` when more pages remain.
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
 - `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
   `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
   combo). Client retries without cursor.
@@ -507,7 +550,11 @@ three variants, tagged by `response_shape`:
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
   `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
   `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
-  per page with `next_cursor` when more pages remain.
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
 - `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
   `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
   combo). Client retries without cursor.
@@ -565,7 +612,11 @@ three variants, tagged by `response_shape`:
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
   `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
   `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
-  per page with `next_cursor` when more pages remain.
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
 - `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
   `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
   combo). Client retries without cursor.
@@ -623,7 +674,11 @@ three variants, tagged by `response_shape`:
 - `response_shape: "flat"` — returned on cursor follow-up OR when any of
   `min_severity`, `rule_filter`, positive `limit`, `include_tests`,
   `include_untracked`, or a custom `exclude_patterns` is set. 30 findings
-  per page with `next_cursor` when more pages remain.
+  per page with `next_cursor` when more pages remain. As of v0.4.1 the flat
+  shape also carries `summary.by_severity` and `summary.by_rule` computed
+  over the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
 - `response_shape: "error"` — `CURSOR_EXPIRED` (10-min TTL lapsed) or
   `CURSOR_MALFORMED` (decode failure / cross-tool replay / cursor + filter
   combo). Client retries without cursor.
@@ -679,7 +734,11 @@ is one of three variants, tagged by `response_shape`:
 - `response_shape: "flat"` — returned on cursor follow-up OR when
   `min_severity`, `rule_filter`, or positive `limit` is set. 15 findings
   per page with `next_cursor` when more pages remain (OSV payload size
-  awareness — half the standard 30-per-page).
+  awareness — half the standard 30-per-page). As of v0.4.1 the flat shape
+  also carries `summary.by_severity` and `summary.by_rule` computed over
+  the FULL unfiltered scan, so a filtered call answers 'how many HIGH+
+  findings AND how many INFO in total' in one shot — no second default
+  call needed.
 - `response_shape: "error"` — `CURSOR_EXPIRED`, `CURSOR_MALFORMED`, or
   `LIMIT_MINUS_ONE_REMOVED`.
 
@@ -773,6 +832,10 @@ triage payload on real projects.
   findings per page plus `next_cursor` when more pages remain.
   `metadata.findings_total` always reports the pre-pagination count so
   `generate_compliance_report` and `triage_findings` agree on scope.
+  As of v0.4.1 the flat shape also carries `summary.by_severity` and
+  `summary.by_rule` computed over the FULL unfiltered scan, so a filtered
+  call answers 'how many HIGH+ findings AND how many INFO in total' in
+  one shot — no second default call needed.
 - `response_shape: "error"` with `code: "CURSOR_EXPIRED"` — session cache
   entry expired (10-minute TTL) or server restarted. Re-run without a
   cursor. Cross-tool cursor replay also returns `CURSOR_MALFORMED`.
