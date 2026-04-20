@@ -2,12 +2,15 @@ package hybrid
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/shyshlakov/pci-dss-mcp/scanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/hybridcache"
 )
 
@@ -22,21 +25,25 @@ type fakeSummary struct {
 }
 
 type fakeFlat struct {
-	Page       []fakeFinding
-	Total      int
-	AutoCapped bool
-	Off        int
-	Cursor     string
+	Page        []fakeFinding
+	Total       int
+	AutoCapped  bool
+	Off         int
+	Cursor      string
+	AllFindings []fakeFinding
+	Histogram   *hybridcache.Histogram
 }
 
 type memCache struct {
-	mu sync.Mutex
-	m  map[string]memEntry
+	mu             sync.Mutex
+	m              map[string]memEntry
+	histogramCalls int
 }
 
 type memEntry struct {
 	findings []fakeFinding
 	meta     hybridcache.ScanMeta
+	hist     *hybridcache.Histogram
 }
 
 func newMemCache() *memCache { return &memCache{m: map[string]memEntry{}} }
@@ -57,6 +64,63 @@ func (c *memCache) Get(sid string) ([]fakeFinding, hybridcache.ScanMeta, bool) {
 		return nil, hybridcache.ScanMeta{}, false
 	}
 	return e.findings, e.meta, true
+}
+
+func (c *memCache) PutWithHistogram(sid string, findings []fakeFinding, meta hybridcache.ScanMeta, hist *hybridcache.Histogram) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	cp := make([]fakeFinding, len(findings))
+	copy(cp, findings)
+	c.m[sid] = memEntry{findings: cp, meta: meta, hist: hist}
+}
+
+func (c *memCache) GetWithHistogram(sid string) ([]fakeFinding, hybridcache.ScanMeta, *hybridcache.Histogram, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	e, ok := c.m[sid]
+	if !ok {
+		return nil, hybridcache.ScanMeta{}, nil, false
+	}
+	return e.findings, e.meta, e.hist, true
+}
+
+func (c *memCache) Histogram(findings []fakeFinding) *hybridcache.Histogram {
+	c.mu.Lock()
+	c.histogramCalls++
+	c.mu.Unlock()
+	bySev := scanner.SeverityStats{}
+	ruleCounts := map[string]int{}
+	for _, f := range findings {
+		ruleCounts[f.ID]++
+		switch f.Sev {
+		case "CRITICAL":
+			bySev.Critical++
+		case "HIGH":
+			bySev.High++
+		case "MEDIUM":
+			bySev.Medium++
+		case "LOW":
+			bySev.Low++
+		case "INFO":
+			bySev.Info++
+		}
+	}
+	byRule := make([]scanner.RuleCount, 0, len(ruleCounts))
+	for r, c := range ruleCounts {
+		byRule = append(byRule, scanner.RuleCount{RuleID: r, Count: c})
+	}
+	sortRuleCountsStable(byRule)
+	h := hybridcache.Histogram{BySeverity: bySev, ByRule: byRule}
+	return &h
+}
+
+func sortRuleCountsStable(rc []scanner.RuleCount) {
+	sort.SliceStable(rc, func(i, j int) bool {
+		if rc[i].Count != rc[j].Count {
+			return rc[i].Count > rc[j].Count
+		}
+		return rc[i].RuleID < rc[j].RuleID
+	})
 }
 
 func newFakeScan(findings []fakeFinding, err error) Scan[fakeFinding] {
@@ -89,8 +153,8 @@ func buildSummaryFake(findings []fakeFinding, meta hybridcache.ScanMeta, sid, ne
 	return &fakeSummary{Total: len(findings), Cursor: nextCursor}
 }
 
-func buildFlatFake(findings []fakeFinding, off, pageSize, total int, meta hybridcache.ScanMeta, sid, nextCursor string, autoCapped bool) *fakeFlat {
-	return &fakeFlat{Page: findings, Total: total, AutoCapped: autoCapped, Off: off, Cursor: nextCursor}
+func buildFlatFake(findings []fakeFinding, allFindings []fakeFinding, hist *hybridcache.Histogram, off, pageSize, total int, meta hybridcache.ScanMeta, sid, nextCursor string, autoCapped bool) *fakeFlat {
+	return &fakeFlat{Page: findings, Total: total, AutoCapped: autoCapped, Off: off, Cursor: nextCursor, AllFindings: allFindings, Histogram: hist}
 }
 
 func mkFindings(n int) []fakeFinding {
@@ -468,5 +532,103 @@ func TestSelectAndExecute_BuildSummaryNil(t *testing.T) {
 	}
 	if res.Summary != nil {
 		t.Errorf("expected nil summary from nil buildSummary, got non-nil")
+	}
+}
+
+func TestSelectAndExecute_FreshFilterHistogramFullScan(t *testing.T) {
+	ctx := context.Background()
+	findings := mkFindings(30)
+	cache := newMemCache()
+	res, err := SelectAndExecute[fakeFinding, fakeSummary, fakeFlat](
+		ctx,
+		Input{MinSeverity: "CRITICAL", AbsPath: "/tmp/fresh", ToolName: "triage_findings", ScanTimestamp: "2026-04-20T00:00:00Z"},
+		newFakeScan(findings, nil),
+		noopFilter,
+		buildSummaryFake,
+		buildFlatFake,
+		cache,
+	)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if res.Flat == nil {
+		t.Fatalf("expected Flat, got %+v", res)
+	}
+	if res.Flat.Histogram == nil {
+		t.Fatalf("expected non-nil histogram on fresh filter call")
+	}
+	if res.Flat.Histogram.BySeverity.Info <= 0 {
+		t.Errorf("BySeverity.Info=%d want >0 (filter=CRITICAL must not truncate histogram)", res.Flat.Histogram.BySeverity.Info)
+	}
+	if res.Flat.Histogram.BySeverity.Critical <= 0 {
+		t.Errorf("BySeverity.Critical=%d want >0", res.Flat.Histogram.BySeverity.Critical)
+	}
+	if cache.histogramCalls != 1 {
+		t.Errorf("cache.Histogram called %d times on fresh filter, want 1", cache.histogramCalls)
+	}
+	for _, f := range res.Flat.Page {
+		if f.Sev != "CRITICAL" {
+			t.Errorf("filtered page contains non-CRITICAL severity %q", f.Sev)
+		}
+	}
+}
+
+func TestSelectAndExecute_CursorResumeHistogramStable(t *testing.T) {
+	ctx := context.Background()
+	findings := make([]fakeFinding, 40)
+	for i := range findings {
+		findings[i] = fakeFinding{ID: "R-" + strconv.Itoa(i%7), Sev: severityRotation(i)}
+	}
+	cache := newMemCache()
+
+	res1, err := SelectAndExecute[fakeFinding, fakeSummary, fakeFlat](
+		ctx,
+		Input{FlatPageSize: 12, MinSeverity: "HIGH", AbsPath: "/tmp/resume", ToolName: "triage_findings", ScanTimestamp: "2026-04-20T00:00:00Z"},
+		newFakeScan(findings, nil),
+		noopFilter,
+		buildSummaryFake,
+		buildFlatFake,
+		cache,
+	)
+	if err != nil {
+		t.Fatalf("fresh call err: %v", err)
+	}
+	if res1.Flat == nil || res1.Flat.Histogram == nil {
+		t.Fatalf("fresh call missing Flat or Histogram: %+v", res1)
+	}
+	if res1.Flat.Cursor == "" {
+		t.Fatalf("fresh call must yield cursor (HIGH filter rotation leaves >12 HIGH findings)")
+	}
+
+	firstHist, err := json.Marshal(res1.Flat.Histogram)
+	if err != nil {
+		t.Fatalf("marshal first: %v", err)
+	}
+
+	res2, err := SelectAndExecute[fakeFinding, fakeSummary, fakeFlat](
+		ctx,
+		Input{FlatPageSize: 12, Cursor: res1.Flat.Cursor, ToolName: "triage_findings"},
+		newFakeScan(nil, errors.New("scan must not be called on resume")),
+		noopFilter,
+		buildSummaryFake,
+		buildFlatFake,
+		cache,
+	)
+	if err != nil {
+		t.Fatalf("resume call err: %v", err)
+	}
+	if res2.Flat == nil || res2.Flat.Histogram == nil {
+		t.Fatalf("resume call missing Flat or Histogram: %+v", res2)
+	}
+
+	secondHist, err := json.Marshal(res2.Flat.Histogram)
+	if err != nil {
+		t.Fatalf("marshal second: %v", err)
+	}
+	if string(firstHist) != string(secondHist) {
+		t.Errorf("cursor-resume histogram drifted:\nfresh  = %s\nresume = %s", firstHist, secondHist)
+	}
+	if cache.histogramCalls != 1 {
+		t.Errorf("cache.Histogram called %d times across fresh+resume, want 1 (resume replays cached snapshot)", cache.histogramCalls)
 	}
 }

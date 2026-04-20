@@ -41,7 +41,7 @@ func SelectAndExecute[TFinding, TSummary, TFlat any](
 		if payload.Tool != "" && payload.Tool != in.ToolName {
 			return &Result[TSummary, TFlat]{Err: &CursorError{Code: "CURSOR_MALFORMED", Hint: hintCursorMalformed}}, nil
 		}
-		cached, meta, ok := cache.Get(payload.SID)
+		cached, meta, hist, ok := cache.GetWithHistogram(payload.SID)
 		if !ok {
 			return &Result[TSummary, TFlat]{Err: &CursorError{Code: "CURSOR_EXPIRED", Hint: hintCursorExpired}}, nil
 		}
@@ -68,7 +68,7 @@ func SelectAndExecute[TFinding, TSummary, TFlat any](
 				next = encoded
 			}
 		}
-		flat := buildFlat(page, cached, nil, off, pageSize, total, meta, payload.SID, next, false)
+		flat := buildFlat(page, cached, hist, off, pageSize, total, meta, payload.SID, next, false)
 		return &Result[TSummary, TFlat]{Flat: flat}, nil
 	}
 
@@ -84,7 +84,8 @@ func SelectAndExecute[TFinding, TSummary, TFlat any](
 		}
 		fh := hybridcache.FilterHash(in.MinSeverity, in.RuleFilter, in.IncludeTests)
 		sid := hybridcache.SessionKey(in.AbsPath+"|"+in.ToolName, in.ScanTimestamp, fh, in.IncludeTaint)
-		cache.Put(sid, filtered, meta)
+		hist := cache.Histogram(findings)
+		cache.PutWithHistogram(sid, filtered, meta, hist)
 		pageSize := effectivePageSize(in)
 		if in.Limit > 0 {
 			pageSize = in.Limit
@@ -104,7 +105,7 @@ func SelectAndExecute[TFinding, TSummary, TFlat any](
 				next = encoded
 			}
 		}
-		flat := buildFlat(page, findings, nil, 0, pageSize, total, meta, sid, next, false)
+		flat := buildFlat(page, findings, hist, 0, pageSize, total, meta, sid, next, false)
 		return &Result[TSummary, TFlat]{Flat: flat}, nil
 	}
 
