@@ -881,7 +881,7 @@ clients without file-dump fallback.
 **PCI DSS Requirements:** spans all requirements covered by
 `generate_compliance_report`
 
-**Output shape (post-19.4, MCP spec 2025-06-18):**
+**Output shape (MCP spec 2025-06-18):**
 
 Returns a `TriageResult` via the SDK's `structuredContent` channel. Each
 `EnrichedFinding` carries the original `scanner.Finding` plus:
@@ -908,7 +908,7 @@ triage_hint: string              # one-line classification hint
 ```
 
 **Wire size on real projects** (taint ON): ~41 KB for 46 findings
-(reference payment service post-19.4 baseline). Under Anthropic's
+(reference payment service baseline). Under Anthropic's
 "Code execution with MCP" ≤50 KB guidance.
 
 ---

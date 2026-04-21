@@ -24,7 +24,7 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 - `docs/requirement-mapping.md` - canonical per-rule mapping table (rule_id to primary + related requirement IDs + coverage status).
 - `scanner/requirement_mapping_test.go` - bidirectional drift guard test that fails when source emit sites and the docs table disagree.
 - `scanner/internal/sensitivedata` package - shared PAN-vs-SAD classifier consumed by panscanner and sqlscanner.
-- Public documentation aligned with v0.5.0 requirement_id semantics across README.md, docs/severity.md, docs/pci-coverage.md, docs/tools.md, docs/comparison.md, and docs/taint.md (Phase 19.14). New `scanner/docs_consistency_test.go` guards docs/severity.md and docs/pci-coverage.md against drift vs docs/requirement-mapping.md.
+- Public documentation aligned with v0.5.0 requirement_id semantics across README.md, docs/severity.md, docs/pci-coverage.md, docs/tools.md, docs/comparison.md, and docs/taint.md. New `scanner/docs_consistency_test.go` guards docs/severity.md and docs/pci-coverage.md against drift vs docs/requirement-mapping.md.
 
 ### Migration Notes
 
@@ -424,7 +424,7 @@ explicitly, then cursor-loop if the filtered set still paginates.
   plausible client display window.
 - `generate_compliance_report` continues to use its private
   `SelectAndExecute` in `scanner/reportscanner/`. Migration to the shared
-  `scanner/hybrid/` helper is a nice-to-have deferred to a follow-up phase;
+  `scanner/hybrid/` helper is a nice-to-have deferred to a follow-up release;
   behaviour is unchanged.
 
 ### Metrics
@@ -645,7 +645,7 @@ explicitly, then cursor-loop if the filtered set still paginates.
 - New `scanner/cryptoscanner/hardcoded_filter.go` with `ApplyHardcodedFilter` five-layer cascade.
 - New `scanner/panscanner/banking_context.go` with `IsBankingContext` sibling analysis.
 - 8 new fixture files in `testdata/vulnerable-payment-service/` covering all filter layers and banking context patterns.
-- Fixed 6 missing CSP-MISSING INFO entries and 3 stale line numbers in EXPECTED-FINDINGS.md (pre-existing path-dependency gap, not a Phase 19.7 regression).
+- Fixed 6 missing CSP-MISSING INFO entries and 3 stale line numbers in EXPECTED-FINDINGS.md (pre-existing path-dependency gap, not a v0.1.3 regression).
 
 ## v0.1.2 — 2026-04-15
 
