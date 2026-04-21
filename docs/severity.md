@@ -31,10 +31,10 @@ Context affects confidence, not severity. Both high-confidence and low-confidenc
 
 | Rule ID | Severity | Requirement | Description |
 |---------|----------|-------------|-------------|
-| PAN-KEYWORD | CRITICAL | 3.4.1 | PAN variable name in sensitive context (logger, response) |
+| PAN-KEYWORD | CRITICAL | 3.5.1 or 3.3.1 (dynamic -- see docs/requirement-mapping.md) | PAN variable name in sensitive context; PAN fields route to 3.5.1, SAD fields (CVV/CVC/PIN/track) route to 3.3.1 |
 | PAN-LITERAL | CRITICAL | 3.4.1 | Hardcoded card number matching Luhn + IIN |
-| PAN-TYPE | HIGH | 3.4.1 | PAN-related type in sensitive context |
-| PAN-LOGGER | CRITICAL | 3.3.1 | PAN variable passed to logging function |
+| PAN-TYPE | HIGH | 3.5.1 | PAN-related type in sensitive context (string immutability prevents zeroing) |
+| PAN-LOGGER | CRITICAL | 3.5.1 or 3.3.1 (dynamic -- see docs/requirement-mapping.md) | PAN variable passed to logging function; PAN fields route to 3.5.1 (related 3.4.1, 10.2.1), SAD fields route to 3.3.1 |
 | PAN-ZEROING | MEDIUM | 3.5.1 | PAN variable not zeroed after use |
 
 ### Encryption Scanner (check_encryption)
