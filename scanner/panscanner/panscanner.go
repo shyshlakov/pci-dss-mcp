@@ -496,6 +496,7 @@ func requirementForPANField(kind sensitivedata.Kind) (string, []string) {
 	case sensitivedata.KindSAD:
 		return "3.3.1", []string{"3.3.1.2"}
 	default:
+		// Unknown kind biases to SAD mapping; scanner recall-bias prefers false positives over silent skips.
 		return "3.3.1", []string{"3.3.1.2"}
 	}
 }
@@ -507,7 +508,8 @@ func requirementForPANLogger(kind sensitivedata.Kind) (string, []string) {
 	case sensitivedata.KindSAD:
 		return "3.3.1", []string{"3.3.1.2"}
 	default:
-		return "3.3.1", nil
+		// Loggers leak SAD more readily than fields; mirror field default for symmetry under recall-bias policy.
+		return "3.3.1", []string{"3.3.1.2"}
 	}
 }
 
