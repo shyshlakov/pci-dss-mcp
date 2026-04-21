@@ -464,11 +464,13 @@
   },
   {
     "requirement_id": "3.6.1.2",
-    "title": "Secret Key Access Restriction",
-    "description": "Secret and private cryptographic keys used to encrypt/decrypt stored account data are restricted to the fewest custodians necessary.",
+    "title": "Secret Key Storage Form",
+    "description": "Secret and private keys used to encrypt/decrypt stored account data are stored in one of: (a) encrypted with a KEK that is at least as strong as the DEK, and stored separately from the DEK; (b) within a secure cryptographic device such as an HSM or PTS-approved POI; or (c) as at least two full-length key components or key shares, per an industry-accepted method.",
     "testing_procedure": "",
     "severity": "",
     "detectable": false,
+    "requires_qsa": true,
+    "not_detectable_reason": "Requires runtime inspection of key storage medium (HSM, encrypted vault, key shares).",
     "new_in_v4": false
   },
   {
