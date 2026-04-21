@@ -27,11 +27,13 @@ type expectedFrontmatter struct {
 }
 
 type expectedFinding struct {
-	RuleID   string
-	Severity string
-	FilePath string
-	Line     int
-	Notes    string
+	RuleID              string
+	Severity            string
+	FilePath            string
+	Line                int
+	RequirementID       string
+	RelatedRequirements []string
+	Notes               string
 }
 
 // copyFixtureTree recursively copies src into a fresh t.TempDir() and returns
@@ -159,20 +161,9 @@ func parseBodyTables(lines []string) ([]expectedFinding, []string) {
 		cells := splitTableRow(line)
 		switch section {
 		case "violations":
-			if len(cells) >= 4 {
-				lineNum := 0
-				_, _ = fmt.Sscanf(cells[3], "%d", &lineNum)
-				notes := ""
-				if len(cells) >= 5 {
-					notes = cells[4]
-				}
-				violations = append(violations, expectedFinding{
-					RuleID:   cells[0],
-					Severity: cells[1],
-					FilePath: cells[2],
-					Line:     lineNum,
-					Notes:    notes,
-				})
+			ef, ok := parseViolationRow(cells)
+			if ok {
+				violations = append(violations, ef)
 			}
 		case "clean":
 			if len(cells) >= 1 && cells[0] != "" {
@@ -181,6 +172,92 @@ func parseBodyTables(lines []string) ([]expectedFinding, []string) {
 		}
 	}
 	return violations, cleanFiles
+}
+
+func parseViolationRow(cells []string) (expectedFinding, bool) {
+	switch len(cells) {
+	case 5:
+		lineNum := 0
+		_, _ = fmt.Sscanf(cells[3], "%d", &lineNum)
+		return expectedFinding{
+			RuleID:   cells[0],
+			Severity: cells[1],
+			FilePath: cells[2],
+			Line:     lineNum,
+			Notes:    cells[4],
+		}, true
+	case 7:
+		lineNum := 0
+		_, _ = fmt.Sscanf(cells[3], "%d", &lineNum)
+		return expectedFinding{
+			RuleID:              cells[0],
+			Severity:            cells[1],
+			FilePath:            cells[2],
+			Line:                lineNum,
+			RequirementID:       cells[4],
+			RelatedRequirements: parseRelatedList(cells[5]),
+			Notes:               cells[6],
+		}, true
+	default:
+		return expectedFinding{}, false
+	}
+}
+
+func parseRelatedList(s string) []string {
+	trimmed := strings.TrimSpace(s)
+	if trimmed == "" {
+		return nil
+	}
+	parts := strings.Split(trimmed, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		v := strings.TrimSpace(p)
+		if v != "" {
+			out = append(out, v)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func findActualFinding(actual []ReportFinding, want expectedFinding) (ReportFinding, bool) {
+	for _, f := range actual {
+		if f.RuleID != want.RuleID {
+			continue
+		}
+		if !strings.HasSuffix(filepath.ToSlash(f.FilePath), want.FilePath) {
+			continue
+		}
+		if want.Line > 0 && absInt(f.Line-want.Line) > 2 {
+			continue
+		}
+		return f, true
+	}
+	return ReportFinding{}, false
+}
+
+func equalStringSetsIgnoreOrder(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	counts := map[string]int{}
+	for _, v := range a {
+		counts[v]++
+	}
+	for _, v := range b {
+		counts[v]--
+		if counts[v] < 0 {
+			return false
+		}
+	}
+	for _, c := range counts {
+		if c != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func splitTableRow(line string) []string {
