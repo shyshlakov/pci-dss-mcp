@@ -6,7 +6,7 @@ pci-dss-mcp is **narrow and deep**. It only scans Go, it only checks PCI DSS v4.
 
 **1. Every finding carries a PCI DSS requirement ID out of the box.**
 
-pci-dss-mcp emits `requirement_id: "3.4.1"` on every finding and produces a per-requirement `PASS` / `FAIL` / `NOT_CHECKED` status table suitable for a QSA audit deliverable. For comparison:
+pci-dss-mcp emits a specific `requirement_id` on every finding, mapped per rule in [docs/requirement-mapping.md](requirement-mapping.md), and produces a per-requirement `PASS` / `FAIL` / `NOT_CHECKED` status table suitable for a QSA audit deliverable. For comparison:
 
 - **[Semgrep's PCI DSS automation guide](https://semgrep.dev/blog/2025/from-gatekeepers-to-guardrails-automating-your-pci-v401-strategy/)** demonstrates rule examples for requirements 3.2-3.4, 6.2.4, 6.3.1, 6.3.2, 6.3.3, 8.6.2, and 10.2, but most of the 3.x examples rely on the user **writing a custom Semgrep rule** rather than a maintained ruleset. It does not map individual findings to requirement IDs automatically.
 - **CodeQL** has no dedicated PCI DSS query suite. The default query suite is OWASP-style and customization requires writing QL queries.
@@ -21,7 +21,7 @@ Generic taint engines -- **Semgrep**, **Snyk Code** ([contextual dataflow](https
 
 pci-dss-mcp's taint engine implements the severity rule table derived from that FAQ:
 
-| Flow | `PAN-KEYWORD` (3.3.1) | `PAN-TYPE` (3.5.1) |
+| Flow | `PAN-KEYWORD` (3.5.1 on PAN / 3.3.1 on SAD -- dynamic) | `PAN-TYPE` (3.5.1) |
 |---|---|---|
 | Flows to DB (stored) | keep HIGH + annotate | keep MEDIUM |
 | Transit only (no DB) | **downgrade to INFO** | **suppressed entirely** per FAQ |
