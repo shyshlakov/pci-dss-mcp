@@ -24,6 +24,7 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 - `docs/requirement-mapping.md` - canonical per-rule mapping table (rule_id to primary + related requirement IDs + coverage status).
 - `scanner/requirement_mapping_test.go` - bidirectional drift guard test that fails when source emit sites and the docs table disagree.
 - `scanner/internal/sensitivedata` package - shared PAN-vs-SAD classifier consumed by panscanner and sqlscanner.
+- Public documentation aligned with v0.5.0 requirement_id semantics across README.md, docs/severity.md, docs/pci-coverage.md, docs/tools.md, docs/comparison.md, and docs/taint.md (Phase 19.14). New `scanner/docs_consistency_test.go` guards docs/severity.md and docs/pci-coverage.md against drift vs docs/requirement-mapping.md.
 
 ### Migration Notes
 
