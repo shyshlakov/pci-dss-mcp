@@ -134,20 +134,20 @@ fixture files change.
 | AUTH-WEBHOOK-VERIFIED | INFO | clean/webhook_signed/good_middleware_verified.go | 22 |  |  | webhookmiddleware crawler match (VerifyWebhookSignatureMiddleware wrapper) |
 | AUTH-WEBHOOK-VERIFIED | INFO | clean/webhook_signed/good_stripe_constructevent.go | 19 |  |  | webhook.ConstructEvent T1 strong before parser |
 | AUTH-WEBHOOK-VERIFIED | INFO | clean/webhook_signed/webhook_with_local_helper.go | 15 |  |  | D-07 1-level recursion verifyStripeSignature -> hmac.Equal |
-| CRYPTO-HARDCODED-KEY | HIGH | internal/config/constants_file.go | 3 |  |  | F-25 Layer 4 path downgrade CRITICAL to HIGH tag crypto_key_constants_file |
-| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/header_const.go | 3 |  |  | F-25 Layer 2 header pattern downgrades to INFO tag hardcoded_header_name |
-| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/json_key.go | 3 |  |  | F-25 Layer 2 camelCase pattern downgrades to INFO tag hardcoded_json_key |
-| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/log_field.go | 3 |  |  | F-25 Layer 2 snake_case pattern downgrades to INFO tag hardcoded_log_field |
-| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/sentinel_error.go | 5 |  |  | F-25 Layer 1 AST errors.New guard downgrades to INFO tag hardcoded_sentinel_error |
-| CRYPTO-HARDCODED-KEY | CRITICAL | clean/gorm_encrypt_type/real_encrypted/secure_string.go | 13 |  |  | F-26 D-08 defense-in-depth: hardcoded AES key in Value() method coexists with GORM-ENCRYPT-OK |
-| CRYPTO-HARDCODED-KEY | CRITICAL | internal/auth/admin.go | 3 |  |  | hardcoded admin secret |
-| CRYPTO-HARDCODED-KEY | HIGH | internal/auth/process.go | 6 |  |  | hardcoded sample literal in handler |
-| CRYPTO-HARDCODED-KEY | CRITICAL | internal/crypto/keys.go | 3 |  |  | AESKey constant 32 hex chars |
-| CRYPTO-HARDCODED-KEY | CRITICAL | internal/crypto/real_hardcoded_aes.go | 3 |  |  | F-25 adversarial 64-char hex AES-256 key stays CRITICAL through all layers |
-| CRYPTO-HARDCODED-KEY | HIGH | internal/http/handler/payment/charge.go | 6 |  |  | hardcoded key inside payment handler |
-| CRYPTO-HARDCODED-KEY | INFO | internal/testseed/constants.go | 3 |  |  | dev-context marker downgrades to INFO |
-| CRYPTO-HARDCODED-KEY | HIGH | internal/util/cardops.go | 6 |  |  | hardcoded sample literal |
-| CRYPTO-HARDCODED-KEY | HIGH | internal/util/cardproc.go | 6 |  |  | hardcoded sample literal |
+| CRYPTO-HARDCODED-KEY | HIGH | internal/config/constants_file.go | 3 | 6.2.4 | 8.6.2 | F-25 Layer 4 path downgrade CRITICAL to HIGH tag crypto_key_constants_file |
+| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/header_const.go | 3 | 6.2.4 | 8.6.2 | F-25 Layer 2 header pattern downgrades to INFO tag hardcoded_header_name |
+| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/json_key.go | 3 | 6.2.4 | 8.6.2 | F-25 Layer 2 camelCase pattern downgrades to INFO tag hardcoded_json_key |
+| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/log_field.go | 3 | 6.2.4 | 8.6.2 | F-25 Layer 2 snake_case pattern downgrades to INFO tag hardcoded_log_field |
+| CRYPTO-HARDCODED-KEY | INFO | clean/crypto_filter_cases/sentinel_error.go | 5 | 6.2.4 | 8.6.2 | F-25 Layer 1 AST errors.New guard downgrades to INFO tag hardcoded_sentinel_error |
+| CRYPTO-HARDCODED-KEY | CRITICAL | clean/gorm_encrypt_type/real_encrypted/secure_string.go | 13 | 6.2.4 | 8.6.2 | F-26 D-08 defense-in-depth: hardcoded AES key in Value() method coexists with GORM-ENCRYPT-OK |
+| CRYPTO-HARDCODED-KEY | CRITICAL | internal/auth/admin.go | 3 | 6.2.4 | 8.6.2 | hardcoded admin secret |
+| CRYPTO-HARDCODED-KEY | HIGH | internal/auth/process.go | 6 | 6.2.4 | 8.6.2 | hardcoded sample literal in handler |
+| CRYPTO-HARDCODED-KEY | CRITICAL | internal/crypto/keys.go | 3 | 6.2.4 | 8.6.2 | AESKey constant 32 hex chars |
+| CRYPTO-HARDCODED-KEY | CRITICAL | internal/crypto/real_hardcoded_aes.go | 3 | 6.2.4 | 8.6.2 | F-25 adversarial 64-char hex AES-256 key stays CRITICAL through all layers |
+| CRYPTO-HARDCODED-KEY | HIGH | internal/http/handler/payment/charge.go | 6 | 6.2.4 | 8.6.2 | hardcoded key inside payment handler |
+| CRYPTO-HARDCODED-KEY | INFO | internal/testseed/constants.go | 3 | 6.2.4 | 8.6.2 | dev-context marker downgrades to INFO |
+| CRYPTO-HARDCODED-KEY | HIGH | internal/util/cardops.go | 6 | 6.2.4 | 8.6.2 | hardcoded sample literal |
+| CRYPTO-HARDCODED-KEY | HIGH | internal/util/cardproc.go | 6 | 6.2.4 | 8.6.2 | hardcoded sample literal |
 | CRYPTO-PLAIN-HTTP | CRITICAL | internal/http/client.go | 8 |  |  | http://api.payment.example/charge |
 | CRYPTO-WEAK-HASH | CRITICAL | internal/crypto/hash.go | 6 |  |  | md5.Sum on password input |
 | CSP-MISSING | INFO | internal/auth/process.go | 5 |  |  | non-HTML payment handler informational note |

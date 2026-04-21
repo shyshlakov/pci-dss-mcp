@@ -305,7 +305,7 @@ func checkTier1KeywordMatch(varName, strVal string, pos token.Position, path, pr
 		Column:              pos.Column,
 		Description:         "Hardcoded secret in variable '" + varName + "' -- key-related keyword detected",
 		Suggestion:          "Move secrets to environment variables or a secrets manager. Never commit secrets to source code.",
-		RelatedRequirements: []string{"3.6.1.2"},
+		RelatedRequirements: []string{"8.6.2"},
 	}
 	applyDevContext(finding, strVal, path, projectRoot)
 	return finding
@@ -329,7 +329,7 @@ func checkTier2HighEntropy(varName, strVal string, pos token.Position, path, pro
 		Column:              pos.Column,
 		Description:         "Possible hardcoded key in variable '" + varName + "' -- high entropy string detected, manual review recommended",
 		Suggestion:          "Verify this is not a secret. Move sensitive values to environment variables or a secrets manager.",
-		RelatedRequirements: []string{"3.6.1.2"},
+		RelatedRequirements: []string{"8.6.2"},
 	}
 	applyDevContext(finding, strVal, path, projectRoot)
 	return finding
@@ -353,7 +353,7 @@ func checkTier3EncodedPattern(varName, strVal string, pos token.Position, path, 
 		Column:              pos.Column,
 		Description:         "Possible hardcoded key in variable '" + varName + "' -- encoded string pattern detected (base64/hex)",
 		Suggestion:          "Verify this is not a secret. Move sensitive values to environment variables or a secrets manager.",
-		RelatedRequirements: []string{"3.6.1.2"},
+		RelatedRequirements: []string{"8.6.2"},
 	}
 	applyDevContext(finding, strVal, path, projectRoot)
 	return finding
