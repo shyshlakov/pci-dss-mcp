@@ -14,10 +14,10 @@ pci-dss-mcp checks **14 of ~250** PCI DSS v4.0.1 requirements across 10 scanners
 | 6.2.4 | Secure Software Development | check_encryption, check_error_handling | Hardcoded keys, weak hashes, error details leaked to responses |
 | 6.3.3 | Security Patches Applied | check_dependencies | Known CVEs in go.mod dependencies via OSV.dev |
 | 6.4.3 | Payment Page Script Management | check_payment_page_scripts | Missing CSP headers, unsafe-inline/eval, missing SRI/nonce |
-| 8.3.1 | Unique IDs for All Users | check_auth_strength | Hardcoded passwords in source code |
+| 8.3.1 | Unique IDs for All Users | check_auth_strength | Weak password policy, MFA absence, byte-vs-char length checks (related to AUTH-HARDCODED-PWD) |
 | 8.3.6 | Password Complexity Requirements | check_auth_strength | Password length checks below 12 characters |
 | 8.4.2 | MFA for Administrative Access | check_auth_strength | Payment routes without MFA middleware |
-| 8.6.2 | Passwords/Passphrases Not Hard-Coded | check_secrets_in_configs | Secrets in .env, .yaml, .json, .toml files |
+| 8.6.2 | Passwords/Passphrases Not Hard-Coded | check_auth_strength, check_secrets_in_configs | Hardcoded passwords in source code; secrets in .env/.yaml/.json/.toml; known provider prefixes; connection-string credentials |
 | 10.2.1 | Audit Logs Capture Details | audit_log_coverage | Payment handlers without audit logging, unstructured logging (fmt/log instead of slog) |
 | 11.6.1 | Change Detection for Payment Pages | check_payment_page_scripts | File integrity monitoring requirement flagged |
 
