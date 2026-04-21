@@ -59,7 +59,7 @@ fixture files change.
 | HIGH | 89 |
 | MEDIUM | 27 |
 | LOW | 0 |
-| INFO | 58 |
+| INFO | 59 |
 
 ## Violations
 
