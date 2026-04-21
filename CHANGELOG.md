@@ -5,6 +5,40 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## [0.5.0] - 2026-04-21
+
+### Changed (BREAKING for consumers grouping by requirement_id)
+
+- PAN-KEYWORD and PAN-LOGGER findings on PAN fields (cardNumber, pan, primary_account_number, accountNumber, ccNo, cardNo) now emit `requirement_id: "3.5.1"` instead of `"3.3.1"`. SAD fields (CVV/CVC/CID/track/PIN) continue to emit `"3.3.1"`. Splitting reflects PCI DSS taxonomy: 3.3.1 covers Sensitive Authentication Data, 3.5.1 covers PAN at-rest. Source of truth: docs/requirement-mapping.md.
+- PAN-LOGGER on PAN fields now also carries `related_requirements: ["3.4.1", "10.2.1"]` - display masking + audit-log integrity per PCI DSS v4.0.1 clarification.
+- SQL-SENSITIVE-COLUMN and GORM-SENSITIVE-TAG follow the same PAN/SAD split: PAN columns route to 3.5.1, SAD columns route to 3.3.1.
+- AUTH-HARDCODED-PWD primary requirement_id changed from `"8.3.1"` to `"8.6.2"`. 8.6.2 explicitly prohibits hardcoded passwords in source; 8.3.1 (auth factors) is now `related_requirements`.
+- CRYPTO-HARDCODED-KEY `related_requirements` changed from `["3.6.1.2"]` to `["8.6.2"]`. Primary remains `"6.2.4"`. 3.6.1.2 covers key storage form (KEK/HSM/key shares), not hardcoded-secret-in-source - see docs/requirement-mapping.md for the full rationale.
+
+### Fixed
+
+- pcidb entry for PCI DSS 3.6.1.2 corrected. The previous embedded text incorrectly described 3.6.1.3 (Secret Key Access Restriction - fewest custodians). Corrected title is "Secret Key Storage Form" with a description covering KEK / HSM / key shares per PCI DSS v4.0.1. The entry is marked `detectable: false`, `requires_qsa: true`.
+
+### Added
+
+- `docs/requirement-mapping.md` - canonical per-rule mapping table (rule_id to primary + related requirement IDs + coverage status).
+- `scanner/requirement_mapping_test.go` - bidirectional drift guard test that fails when source emit sites and the docs table disagree.
+- `scanner/internal/sensitivedata` package - shared PAN-vs-SAD classifier consumed by panscanner and sqlscanner.
+
+### Migration Notes
+
+Consumers of `generate_compliance_report` and `triage_findings` who group findings by `requirement_id`:
+
+- PAN-related findings (cardNumber, pan, accountNumber) previously bucketed under PCI DSS 3.3.1 will now appear under 3.5.1.
+- SAD findings (CVV, CVC, track, PIN) remain under 3.3.1.
+- Hardcoded-password findings move from 8.3.1 to 8.6.2.
+- CRYPTO-HARDCODED-KEY `related_requirements` now lists 8.6.2 instead of 3.6.1.2; primary is unchanged.
+- 3.6.1.2 entry text returned by `explain_requirement` now reflects the canonical PCI DSS v4.0.1 wording.
+
+Downstream consumers that group or filter findings by `requirement_id` should update their mappings. See docs/requirement-mapping.md for the canonical rule_id -> requirement_id table.
+
+No severity changes. No new rules. No changes to the 14 MCP tool surface.
+
 ## v0.4.1 - 2026-04-20
 
 ### Added
