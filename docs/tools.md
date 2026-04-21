@@ -115,13 +115,13 @@ triage labels.
 | `path` | string | yes | Path to the project directory to scan |
 | `dep_scan_mode` | string | no | Dependency scanner mode: `auto` (default), `online`, `offline` |
 | `include_tests` | bool | no | Include `_test.go` files in scan results. Default `false` (industry SAST consensus) |
-| `include_taint` | bool | no | flow-based severity adjustment via `go/packages`. **Default `true`** (production precision, as of ). Set `false` for fast dev iteration (adds 5-30s otherwise). Requires `go` binary on `PATH`; falls back to AST-only on failure |
+| `include_taint` | bool | no | flow-based severity adjustment via `go/packages`. **Default `true`** (production precision). Set `false` for fast dev iteration (adds 5-30s otherwise). Requires `go` binary on `PATH`; falls back to AST-only on failure |
 | `min_severity` | string | no | Scope the response to findings at or above this severity. One of `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` / `INFO` (case-insensitive). Default: no filter |
 | `rule_filter` | string | no | Comma-separated list of rule IDs (`PAN-KEYWORD,PAN-TYPE`) OR a single regex between slashes (`/PAN-.*/`). Default: no filter |
 | `limit` | int | no | Default `0` (summary-first). Positive integer for an exact cap. `-1` returns an error as of v0.4.0; use cursor pagination for CI/batch callers |
 | `cursor` | string | no | Opaque pagination cursor. Empty = fresh scan. Non-empty = resume from session cache (10-minute TTL) |
 
-All four filter/scope parameters (..) apply **before**
+All four filter/scope parameters (`min_severity`, `rule_filter`, `limit`, `cursor`) apply **before**
 serialization, so they genuinely shrink the response size rather than
 just hiding content client-side.
 
@@ -828,7 +828,7 @@ to call `generate_compliance_report` first; this tool already includes everythin
 it does plus triage enrichment.
 
 Verified-OK markers (rule IDs ending in `-OK`, currently `AUDIT-LOG-OK`
-and `CSP-OK`) are **skipped before enrichment** per — they appear
+and `CSP-OK`) are **skipped before enrichment**: they appear
 in `generate_compliance_report` for auditor visibility but carry no
 actionable signal for AI triage and previously consumed ~72% of the
 triage payload on real projects.
@@ -839,7 +839,7 @@ triage payload on real projects.
 | `path` | string | yes | Path to the project directory to triage |
 | `dep_scan_mode` | string | no | Same semantics as `generate_compliance_report` |
 | `include_tests` | bool | no | Include `_test.go` files. Default `false` |
-| `include_taint` | bool | no | Same tri-state as `generate_compliance_report`. Default `true` (matches compliance report for parity ) |
+| `include_taint` | bool | no | Same tri-state as `generate_compliance_report`. Default `true` (matches compliance report for parity) |
 | `min_severity` | string | no | Same as `generate_compliance_report` — applied BEFORE enrichment to avoid paying the per-finding context-collection cost on filtered-out findings |
 | `rule_filter` | string | no | Same as `generate_compliance_report` |
 | `limit` | int | no | Same as `generate_compliance_report` |
