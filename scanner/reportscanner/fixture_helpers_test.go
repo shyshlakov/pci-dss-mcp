@@ -223,6 +223,8 @@ func parseRelatedList(s string) []string {
 }
 
 func findActualFinding(actual []ReportFinding, want expectedFinding) (ReportFinding, bool) {
+	var fallback ReportFinding
+	fallbackOK := false
 	for _, f := range actual {
 		if f.RuleID != want.RuleID {
 			continue
@@ -230,10 +232,23 @@ func findActualFinding(actual []ReportFinding, want expectedFinding) (ReportFind
 		if !strings.HasSuffix(filepath.ToSlash(f.FilePath), want.FilePath) {
 			continue
 		}
-		if want.Line > 0 && absInt(f.Line-want.Line) > 2 {
+		if want.Line > 0 {
+			diff := absInt(f.Line - want.Line)
+			if diff > 2 {
+				continue
+			}
+			if diff == 0 {
+				return f, true
+			}
+			if !fallbackOK {
+				fallback, fallbackOK = f, true
+			}
 			continue
 		}
 		return f, true
+	}
+	if fallbackOK {
+		return fallback, true
 	}
 	return ReportFinding{}, false
 }
