@@ -100,9 +100,9 @@ Context affects confidence, not severity. Both high-confidence and low-confidenc
 | RET-DB-SENSITIVE-STORE | HIGH | 3.2.1 | Sensitive data stored in DB without retention policy |
 | RET-GORM-SENSITIVE-STORE | HIGH | 3.2.1 | Sensitive data stored via GORM without retention |
 | RET-CONFIG-NO-TTL | MEDIUM | 3.2.1 | Config specifies storage without TTL |
-| RET-ZERO-BEFORE-AUTH | MEDIUM | 3.3.1 | Sensitive variable zeroed before authorization check |
-| RET-ZERO-DEFER-ONLY | LOW | 3.3.1 | Sensitive variable zeroed only via defer |
-| RET-ZERO-AFTER-RESPONSE | MEDIUM | 3.3.1 | Sensitive variable zeroed after HTTP response |
+| RET-ZERO-BEFORE-AUTH | MEDIUM | 3.2.1 | Sensitive variable zeroed before authorization check |
+| RET-ZERO-DEFER-ONLY | LOW | 3.2.1 | Sensitive variable zeroed only via defer |
+| RET-ZERO-AFTER-RESPONSE | MEDIUM | 3.2.1 | Sensitive variable zeroed after HTTP response |
 
 ### Payment Page Scripts Scanner (check_payment_page_scripts)
 
