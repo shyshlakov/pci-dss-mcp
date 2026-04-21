@@ -77,7 +77,7 @@ Context affects confidence, not severity. Both high-confidence and low-confidenc
 
 | Rule ID | Severity | Requirement | Description |
 |---------|----------|-------------|-------------|
-| AUTH-HARDCODED-PWD | CRITICAL | 8.3.1 | Hardcoded password in source code |
+| AUTH-HARDCODED-PWD | CRITICAL | 8.6.2 | Hardcoded password in source code (related: 8.3.1 auth factor requirement) |
 | AUTH-WEAK-POLICY | HIGH | 8.3.6 | Password length check below 12 characters |
 | AUTH-BYTE-COUNT | MEDIUM | 8.3.6 | Password length in bytes, not characters |
 | AUTH-MISSING-MFA | HIGH | 8.4.2 | Payment route without MFA middleware |
