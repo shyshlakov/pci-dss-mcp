@@ -192,8 +192,8 @@ fixture files change.
 | GORM-SENSITIVE-TAG | INFO | clean/gorm_encrypt_type/real_encrypted/card_model.go | 5 |  |  | F-26 Number field with verified SecureString custom type |
 | GORM-SENSITIVE-TAG | INFO | internal/storage/postgres/model/card.go | 5 |  |  | clean Card model with BeforeCreate Encrypt hook |
 | GORM-SENSITIVE-TAG | HIGH | internal/storage/postgres/model/fake_encrypt_model.go | 9 |  |  | F-26 D-06 FakeSecureToken Number gorm column with unverified custom type |
-| GORM-SENSITIVE-TAG | HIGH | internal/storage/postgres/model/leaked.go | 5 | 3.5.1 |  | LeakedToken Number gorm column |
-| GORM-SENSITIVE-TAG | HIGH | internal/storage/postgres/model/leaked.go | 6 | 3.3.1 |  | LeakedToken CVV gorm column |
+| GORM-SENSITIVE-TAG | HIGH | internal/storage/postgres/model/leaked.go | 6 | 3.5.1 |  | LeakedToken PAN gorm column |
+| GORM-SENSITIVE-TAG | HIGH | internal/storage/postgres/model/leaked.go | 5 | 3.3.1 |  | LeakedToken CVV gorm column |
 | GORM-SENSITIVE-TAG | HIGH | internal/storage/postgres/model/token.go | 8 | 3.5.1 |  | Token Number gorm column |
 | GORM-SENSITIVE-TAG | HIGH | internal/storage/postgres/model/token.go | 9 | 3.3.1 |  | Token CVV gorm column |
 | GORM-SENSITIVE-TAG | MEDIUM | internal/storage/postgres/model/token.go | 11 |  |  | exp_month gorm column (defense-in-depth) |
@@ -217,8 +217,8 @@ fixture files change.
 | PAN-KEYWORD | HIGH | internal/retention/entry.go | 10 |  |  | RED: incidental tagless Expiry field on Z9-Z12 scoring helper |
 | PAN-KEYWORD | INFO | internal/service/tokens/model/model.go | 5 |  |  | negative evidence — tagless field |
 | PAN-KEYWORD | HIGH | internal/service/tokens/model/model.go | 7 | 3.3.1 | 3.3.1.2 | tagless CVV escalated by struct sibling |
-| PAN-KEYWORD | HIGH | internal/storage/postgres/model/leaked.go | 5 | 3.5.1 |  | gorm Number column |
-| PAN-KEYWORD | HIGH | internal/storage/postgres/model/leaked.go | 6 | 3.3.1 | 3.3.1.2 | gorm CVV column |
+| PAN-KEYWORD | HIGH | internal/storage/postgres/model/leaked.go | 6 | 3.5.1 |  | PAN struct field |
+| PAN-KEYWORD | HIGH | internal/storage/postgres/model/leaked.go | 5 | 3.3.1 | 3.3.1.2 | CVV struct field |
 | PAN-KEYWORD | HIGH | internal/storage/postgres/model/token.go | 9 | 3.3.1 | 3.3.1.2 | gorm CVV column |
 | PAN-KEYWORD | INFO | pkg/mastercard/models/card/card.go | 4 |  |  | json-only API model transit-only |
 | PAN-KEYWORD | INFO | pkg/mastercard/models/card/card.go | 6 |  |  | json-only API model transit-only |
@@ -272,8 +272,8 @@ fixture files change.
 | SQL-SENSITIVE-COLUMN | HIGH | clean/readd_cycle/migrations/20260301000000_readd_legacy_card.sql | 1 |  |  | ALTER TABLE ADD COLUMN pan — re-add column stays HIGH |
 | SQL-SENSITIVE-COLUMN | HIGH | internal/storage/postgres/migrations/0001_init.sql | 4 | 3.5.1 |  | tokens.number column |
 | SQL-SENSITIVE-COLUMN | HIGH | internal/storage/postgres/migrations/0001_init.sql | 5 | 3.3.1 |  | tokens.cvv column |
-| SQL-SENSITIVE-COLUMN | HIGH | internal/storage/postgres/migrations/0001_init.sql | 14 | 3.5.1 |  | leaked_cards.number column |
-| SQL-SENSITIVE-COLUMN | HIGH | internal/storage/postgres/migrations/0001_init.sql | 15 | 3.3.1 |  | leaked_cards.cvv column |
+| SQL-SENSITIVE-COLUMN | HIGH | internal/storage/postgres/migrations/0001_init.sql | 15 | 3.5.1 |  | leaked_cards.pan column |
+| SQL-SENSITIVE-COLUMN | HIGH | internal/storage/postgres/migrations/0001_init.sql | 14 | 3.3.1 |  | leaked_cards.cvv column |
 | SQL-TEXT-TYPE | INFO | clean/migrations/20240101000000_add_legacy_card.sql | 3 |  |  | legacy_card.pan dropped in 20260101000000_drop_legacy_card tag column_dropped |
 | SQL-TEXT-TYPE | MEDIUM | clean/readd_cycle/migrations/20240101000000_add_legacy_card.sql | 3 |  |  | readded_card.pan re-added after drop no downgrade |
 | SQL-TEXT-TYPE | MEDIUM | internal/storage/postgres/migrations/0001_init.sql | 14 |  |  | leaked_cards.number TEXT not BYTEA |

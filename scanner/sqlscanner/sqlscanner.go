@@ -28,7 +28,20 @@ import (
 	"time"
 
 	"github.com/shyshlakov/pci-dss-mcp/scanner"
+	"github.com/shyshlakov/pci-dss-mcp/scanner/internal/sensitivedata"
 )
+
+
+func requirementForSQLColumn(name string) string {
+	switch sensitivedata.Classify(name) {
+	case sensitivedata.KindPAN:
+		return "3.5.1"
+	case sensitivedata.KindSAD:
+		return "3.3.1"
+	default:
+		return "3.3.1"
+	}
+}
 
 // Rule IDs exported for use in reportscanner tests and downstream tooling.
 const (
@@ -256,7 +269,7 @@ func (s *SQLScanner) scanSQLFileWithMeta(path string) ([]scanner.Finding, []sqlF
 		findings = append(findings, scanner.Finding{
 			RuleID:        RuleSQLSensitiveColumn,
 			Severity:      scanner.SeverityHigh,
-			RequirementID: "3.3.1",
+			RequirementID: requirementForSQLColumn(c.Name),
 			FilePath:      path,
 			Line:          c.Line,
 			Description: fmt.Sprintf(
@@ -356,7 +369,7 @@ func (s *SQLScanner) scanGoFileWithStructs(path string) ([]scanner.Finding, []Go
 			findings = append(findings, scanner.Finding{
 				RuleID:        RuleGormSensitiveTag,
 				Severity:      sev,
-				RequirementID: "3.3.1",
+				RequirementID: requirementForSQLColumn(tag.ColumnName),
 				FilePath:      path,
 				Line:          tag.Line,
 				Description: fmt.Sprintf(
