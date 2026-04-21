@@ -10,10 +10,11 @@ Duration: <DUR> | Files: 870 | Lines: 14551
 
 --- Requirement 3: Protect Stored Account Data ---
 
-[CRITICAL] 3.3.1 -- SAD Not Retained After Authorization
+[CRITICAL] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/internal/service/tokens/logging.go:11
   Sensitive cardholder data 'cardNumber' passed to logging function slog.Info
   Fix: Remove sensitive data from log output. Log a masked or tokenized reference instead.
+  Also satisfies: 3.4.1, 10.2.1
 
 [CRITICAL] 3.2.1 -- Data Retention and Disposal
   <SCAN_ROOT>/internal/auth/process.go:5
@@ -40,17 +41,15 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   Sensitive data stored via ORM Create without automatic expiry. PCI DSS 3.2.1 prohibits storing SAD after authorization.
   Fix: Use time-limited storage or ensure data is purged after authorization.
 
-[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+[HIGH] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/internal/banking/mixed_pan_iban.go:4
   Struct field 'AccountNumber' may expose cardholder data, requires manual review (LOW confidence)
   Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
-  Also satisfies: 3.3.1.2
 
-[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+[HIGH] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/internal/banking/mixed_pan_iban.go:8
   Struct field 'CardNumber' may expose cardholder data, requires manual review (LOW confidence)
   Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
-  Also satisfies: 3.3.1.2
 
 [HIGH] 3.3.1 -- SAD Not Retained After Authorization
   <SCAN_ROOT>/internal/retention/entry.go:10
@@ -70,11 +69,10 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
   Also satisfies: 3.3.1.2
 
-[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+[HIGH] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/internal/storage/postgres/model/leaked.go:6
   Struct field 'PAN' may expose cardholder data, requires manual review (LOW confidence)
   Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
-  Also satisfies: 3.3.1.2
 
 [HIGH] 3.3.1 -- SAD Not Retained After Authorization
   <SCAN_ROOT>/internal/storage/postgres/model/token.go:9
@@ -132,17 +130,17 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   defer zeroing in ProcessCardBuffer executes after response -- SAD persists in memory during response transmission.
   Fix: Add explicit clear/zero call between authorization and response write, not just defer.
 
-[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+[HIGH] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/clean/readd_cycle/migrations/20240101000000_add_legacy_card.sql:3
   Sensitive column "pan" declared in SQL schema. PCI DSS 3.3.1 forbids storing Sensitive Authentication Data (track data, CVV, PIN block) after authorization. For PAN, storage must be rendered unreadable per 3.5.1.
   Fix: If this column stores SAD (CVV/track/PIN) drop it. If it stores PAN, change the column type to bytea and encrypt at the application layer via a BeforeCreate/BeforeSave hook.
 
-[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+[HIGH] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/clean/readd_cycle/migrations/20260301000000_readd_legacy_card.sql:1
   Sensitive column "pan" declared in SQL schema. PCI DSS 3.3.1 forbids storing Sensitive Authentication Data (track data, CVV, PIN block) after authorization. For PAN, storage must be rendered unreadable per 3.5.1.
   Fix: If this column stores SAD (CVV/track/PIN) drop it. If it stores PAN, change the column type to bytea and encrypt at the application layer via a BeforeCreate/BeforeSave hook.
 
-[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+[HIGH] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/internal/storage/postgres/migrations/0001_init.sql:4
   Sensitive column "card_number" declared in SQL schema. PCI DSS 3.3.1 forbids storing Sensitive Authentication Data (track data, CVV, PIN block) after authorization. For PAN, storage must be rendered unreadable per 3.5.1.
   Fix: If this column stores SAD (CVV/track/PIN) drop it. If it stores PAN, change the column type to bytea and encrypt at the application layer via a BeforeCreate/BeforeSave hook.
@@ -157,7 +155,7 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   Sensitive column "cvv" declared in SQL schema. PCI DSS 3.3.1 forbids storing Sensitive Authentication Data (track data, CVV, PIN block) after authorization. For PAN, storage must be rendered unreadable per 3.5.1.
   Fix: If this column stores SAD (CVV/track/PIN) drop it. If it stores PAN, change the column type to bytea and encrypt at the application layer via a BeforeCreate/BeforeSave hook.
 
-[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+[HIGH] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/internal/storage/postgres/migrations/0001_init.sql:15
   Sensitive column "pan" declared in SQL schema. PCI DSS 3.3.1 forbids storing Sensitive Authentication Data (track data, CVV, PIN block) after authorization. For PAN, storage must be rendered unreadable per 3.5.1.
   Fix: If this column stores SAD (CVV/track/PIN) drop it. If it stores PAN, change the column type to bytea and encrypt at the application layer via a BeforeCreate/BeforeSave hook.
@@ -177,7 +175,7 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   Struct LeakedToken field CVV has sensitive DB column tag (gorm:"cvv"). Struct has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt.
   Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
 
-[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+[HIGH] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/internal/storage/postgres/model/leaked.go:6
   Struct LeakedToken field PAN has sensitive DB column tag (gorm:"pan"). Struct has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt.
   Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
@@ -187,7 +185,7 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   Struct LeakedToken stores sensitive cardholder columns but has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt. PCI DSS 3.5.1 requires PAN/SAD to be rendered unreadable at rest.
   Fix: Add a (m *Struct) BeforeCreate(tx *gorm.DB) error hook that calls your Encrypt helper on sensitive fields before persistence.
 
-[HIGH] 3.3.1 -- SAD Not Retained After Authorization
+[HIGH] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/internal/storage/postgres/model/token.go:8
   Struct Token field Number has sensitive DB column tag (gorm:"card_number"). Struct has no BeforeCreate/BeforeSave/BeforeUpdate/AfterFind method referencing Encrypt/Decrypt.
   Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
@@ -317,11 +315,10 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   Struct Token field ExpYear has sensitive DB column tag (gorm:"exp_year"). Expiry field exposed alongside unprotected PAN.
   Fix: Ensure the field is encrypted at the application layer via BeforeCreate/BeforeSave/BeforeUpdate hooks that call your Encrypt/Decrypt helper.
 
-[INFO] 3.3.1 -- SAD Not Retained After Authorization
+[INFO] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/clean/banking_struct/pure_banking.go:5
   Struct field 'AccountNumber' may expose cardholder data, requires manual review (LOW confidence)
   Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
-  Also satisfies: 3.3.1.2
 
 [INFO] 3.3.1 -- SAD Not Retained After Authorization
   <SCAN_ROOT>/internal/banking/mixed_pan_iban.go:6
@@ -329,17 +326,15 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
   Also satisfies: 3.3.1.2
 
-[INFO] 3.3.1 -- SAD Not Retained After Authorization
+[INFO] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/internal/billing/handler.go:13
   Struct field 'PAN' (json: 'pan') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
   Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
-  Also satisfies: 3.3.1.2
 
-[INFO] 3.3.1 -- SAD Not Retained After Authorization
+[INFO] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/internal/http/handler/tokens/models/requests/tokenize.go:4
   Struct field 'CardNumber' (json: 'card_number') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
   Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
-  Also satisfies: 3.3.1.2
 
 [INFO] 3.3.1 -- SAD Not Retained After Authorization
   <SCAN_ROOT>/internal/http/handler/tokens/models/requests/tokenize.go:5
@@ -353,17 +348,15 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
   Also satisfies: 3.3.1.2
 
-[INFO] 3.3.1 -- SAD Not Retained After Authorization
+[INFO] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/internal/integration/stripe_client.go:5
   Struct field 'CardNumber' (json: 'card_number') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
   Fix: Use tokenized or encrypted references instead of raw cardholder data.
-  Also satisfies: 3.3.1.2
 
-[INFO] 3.3.1 -- SAD Not Retained After Authorization
+[INFO] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/internal/order/submit.go:4
   Struct field 'PAN' (json: 'pan') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
   Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
-  Also satisfies: 3.3.1.2
 
 [INFO] 3.3.1 -- SAD Not Retained After Authorization
   <SCAN_ROOT>/internal/payment/core.go:14
@@ -377,11 +370,10 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
   Also satisfies: 3.3.1.2
 
-[INFO] 3.3.1 -- SAD Not Retained After Authorization
+[INFO] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/pkg/mastercard/models/card/card.go:4
   Struct field 'PrimaryAccountNumber' (json: 'primary_account_number') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
   Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
-  Also satisfies: 3.3.1.2
 
 [INFO] 3.3.1 -- SAD Not Retained After Authorization
   <SCAN_ROOT>/pkg/mastercard/models/card/card.go:6
@@ -394,7 +386,7 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   Sensitive data config group "services.card_data" missing TTL/expiry setting. PCI DSS 3.2.1, 3.3.1 require data retention limits.
   Fix: Add a TTL/expiry/retention setting alongside sensitive data configuration.
 
-[INFO] 3.3.1 -- SAD Not Retained After Authorization
+[INFO] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/clean/migrations/20240101000000_add_legacy_card.sql:3
   Sensitive column "pan" declared in SQL schema. PCI DSS 3.3.1 forbids storing Sensitive Authentication Data (track data, CVV, PIN block) after authorization. For PAN, storage must be rendered unreadable per 3.5.1.
   Fix: If this column stores SAD (CVV/track/PIN) drop it. If it stores PAN, change the column type to bytea and encrypt at the application layer via a BeforeCreate/BeforeSave hook.
@@ -478,13 +470,13 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   <SCAN_ROOT>/clean/gorm_encrypt_type/real_encrypted/secure_string.go:13
   Hardcoded secret in variable 'encryptionKey' -- key-related keyword detected
   Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [CRITICAL] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/internal/auth/admin.go:3
   Hardcoded secret in variable 'AdminPassword' -- key-related keyword detected
   Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [CRITICAL] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/internal/crypto/hash.go:6
@@ -495,13 +487,13 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   <SCAN_ROOT>/internal/crypto/keys.go:3
   Hardcoded secret in variable 'AESKey' -- key-related keyword detected
   Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [CRITICAL] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/internal/crypto/real_hardcoded_aes.go:3
   Hardcoded secret in variable 'aes256HexKey' -- key-related keyword detected
   Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [CRITICAL] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/internal/billing/encode_map.go:21
@@ -555,31 +547,31 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   <SCAN_ROOT>/internal/auth/process.go:6
   Possible hardcoded key in variable 'card' -- encoded string pattern detected (base64/hex)
   Fix: Verify this is not a secret. Move sensitive values to environment variables or a secrets manager.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [HIGH] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/internal/config/constants_file.go:3
   Hardcoded secret in variable 'defaultApiKey' -- key-related keyword detected
   Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [HIGH] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/internal/http/handler/payment/charge.go:6
   Possible hardcoded key in variable 'card' -- encoded string pattern detected (base64/hex)
   Fix: Verify this is not a secret. Move sensitive values to environment variables or a secrets manager.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [HIGH] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/internal/util/cardops.go:6
   Possible hardcoded key in variable 'cardNumber' -- encoded string pattern detected (base64/hex)
   Fix: Verify this is not a secret. Move sensitive values to environment variables or a secrets manager.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [HIGH] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/internal/util/cardproc.go:6
   Possible hardcoded key in variable 'card' -- encoded string pattern detected (base64/hex)
   Fix: Verify this is not a secret. Move sensitive values to environment variables or a secrets manager.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [HIGH] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/internal/billing/handler.go:18
@@ -665,31 +657,31 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   <SCAN_ROOT>/clean/crypto_filter_cases/header_const.go:3
   Hardcoded secret in variable 'authTokenKey' -- key-related keyword detected
   Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [INFO] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/clean/crypto_filter_cases/json_key.go:3
   Hardcoded secret in variable 'tokenFieldKey' -- key-related keyword detected
   Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [INFO] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/clean/crypto_filter_cases/log_field.go:3
   Hardcoded secret in variable 'logFieldKey' -- key-related keyword detected
   Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [INFO] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/clean/crypto_filter_cases/sentinel_error.go:5
   Hardcoded secret in variable 'ErrInvalidToken' -- key-related keyword detected
   Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [INFO] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/internal/testseed/constants.go:3
   Hardcoded secret in variable 'TestRawSecret' -- key-related keyword detected [dev-context]
   Fix: Move secrets to environment variables or a secrets manager. Never commit secrets to source code.
-  Also satisfies: 3.6.1.2
+  Also satisfies: 8.6.2
 
 [INFO] 6.2.4 -- Software Engineering Techniques
   <SCAN_ROOT>/clean/s2s_handler/stripe_hmac_webhook.go:16
@@ -838,22 +830,22 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   Hardcoded credential value in key "api_key"
   Fix: Remove hardcoded credential. Use a vault or environment variable injection.
 
-[CRITICAL] 8.3.1 -- Strong Authentication for Users
+[CRITICAL] 8.6.2 -- Hardcoded Password Prohibition
   <SCAN_ROOT>/internal/auth/admin.go:3
   Hardcoded password in variable 'AdminPassword'
   Fix: Move passwords to environment variables or a secrets manager. Never commit passwords to source code.
-  Also satisfies: 8.6.2
+  Also satisfies: 8.3.1
 
 [CRITICAL] 8.3.6 -- Password Complexity Requirements
   <SCAN_ROOT>/internal/auth/policy.go:12
   Password minimum length check uses threshold 8, PCI DSS v4.0 requires minimum 12 characters
   Fix: Update password policy to require at least 12 characters (PCI DSS 8.3.6).
 
-[CRITICAL] 8.3.1 -- Strong Authentication for Users
+[CRITICAL] 8.6.2 -- Hardcoded Password Prohibition
   <SCAN_ROOT>/internal/payment/hardcoded_admin.go:3
   Hardcoded password in variable 'adminPasswd'
   Fix: Move passwords to environment variables or a secrets manager. Never commit passwords to source code.
-  Also satisfies: 8.6.2
+  Also satisfies: 8.3.1
 
 [HIGH] 8.6.2 -- Hardcoded Password Prohibition
   <SCAN_ROOT>/configs/service.yaml:5
@@ -1017,11 +1009,11 @@ Duration: <DUR> | Files: 870 | Lines: 14551
   Fix: Wrap payment route handler with MFA middleware (e.g., mfaRequired(handler)) or verify MFA enforcement at infrastructure level.
   Also satisfies: 8.6.1, 8.6.2
 
-[INFO] 8.3.1 -- Strong Authentication for Users
+[INFO] 8.6.2 -- Hardcoded Password Prohibition
   <SCAN_ROOT>/clean/testutil/db_fixture.go:3
   Hardcoded password in variable 'dbPasswd'
   Fix: Move passwords to environment variables or a secrets manager. Never commit passwords to source code.
-  Also satisfies: 8.6.2
+  Also satisfies: 8.3.1
 
 [INFO] 8.4.2 -- MFA for CDE Access
   <SCAN_ROOT>/internal/http/handler/webhook/bad_generic_webhook.go:9
@@ -1181,8 +1173,8 @@ Duration: <DUR> | Files: 870 | Lines: 14551
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Requirements Summary
-Checked: 19 requirements | NOT_CHECKED: 231 requirements (manual QSA verification required)
-PASS: 1 | FAIL: 18 | WARNING: 0 | SUPPRESSED: 0
+Checked: 18 requirements | NOT_CHECKED: 232 requirements (manual QSA verification required)
+PASS: 2 | FAIL: 16 | WARNING: 0 | SUPPRESSED: 0
 
 NOT_CHECKED requirements (manual QSA verification required):
   1.1.1: Network Security Policies and Procedures
@@ -1226,6 +1218,7 @@ NOT_CHECKED requirements (manual QSA verification required):
   3.5.1.3: Cryptographic Key Management for PAN
   3.6.1: Key Management Processes
   3.6.1.1: Cryptographic Architecture Documentation
+  3.6.1.2: Secret Key Storage Form
   3.6.1.3: Secret Key Encrypted Storage
   3.6.1.4: Key Storage Locations Minimized
   3.7.1: Key Management Policies
@@ -1419,11 +1412,11 @@ NOT_CHECKED requirements (manual QSA verification required):
 
 Accuracy Notes (PASS requirements):
   6.3.3: Statically verified: Queries OSV.dev for known vulnerabilities in go.mod dependencies Not verified: Vulnerability remediation process and timelines
+  8.3.1: Statically verified: Detects hardcoded passwords in Go source (var, const, :=, os.Setenv) Not verified: Password complexity enforcement at runtime and password storage mechanism
 
 Cross-Referenced Requirements:
   FAIL 2.2.7 -- Covered by same finding (see 4.2.1)
   FAIL 3.3.1.2 -- Covered by same finding (see 3.3.1)
-  FAIL 3.6.1.2 -- Covered by same finding (see 6.2.4)
   FAIL 4.2.1.1 -- Covered by same finding (see 4.2.1)
   FAIL 8.6.1 -- Covered by same finding (see 8.4.2)
 
