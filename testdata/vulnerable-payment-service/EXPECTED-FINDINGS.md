@@ -93,9 +93,9 @@ fixture files change.
 | AUDIT-UNSTRUCTURED | HIGH | internal/exchange/handler.go | 10 |  |  | tier-2 HIGH after fixture-shortcut removal |
 | AUDIT-UNSTRUCTURED | HIGH | internal/payment/core.go | 19 |  |  | tier-2 HIGH after fixture-shortcut removal |
 | AUTH-BYTE-COUNT | MEDIUM | internal/auth/policy.go | 12 |  |  | len(password) byte count check |
-| AUTH-HARDCODED-PWD | INFO | clean/testutil/db_fixture.go | 3 |  |  | testutil helper hardcoded password testutil_exclusion downgrade |
-| AUTH-HARDCODED-PWD | CRITICAL | internal/auth/admin.go | 3 |  |  | const AdminPassword = "admin123" |
-| AUTH-HARDCODED-PWD | CRITICAL | internal/payment/hardcoded_admin.go | 3 |  |  | prod path hardcoded admin password stays CRITICAL adversarial |
+| AUTH-HARDCODED-PWD | INFO | clean/testutil/db_fixture.go | 3 | 8.6.2 | 8.3.1 | testutil helper hardcoded password testutil_exclusion downgrade |
+| AUTH-HARDCODED-PWD | CRITICAL | internal/auth/admin.go | 3 | 8.6.2 | 8.3.1 | const AdminPassword = "admin123" |
+| AUTH-HARDCODED-PWD | CRITICAL | internal/payment/hardcoded_admin.go | 3 | 8.6.2 | 8.3.1 | prod path hardcoded admin password stays CRITICAL adversarial |
 | AUTH-MISSING-MFA | INFO | clean/s2s_handler/generic_consensus_webhook.go | 9 |  |  | downgrade:s2s_handler T2+T3 consensus name regex + /hooks/ path + POST + no Authorization read |
 | AUTH-MISSING-MFA | INFO | clean/s2s_handler/stripe_hmac_webhook.go | 13 |  |  | downgrade:s2s_handler T1 strong hmac.Equal before json.Unmarshal |
 | AUTH-MISSING-MFA | HIGH | internal/auth/process.go | 5 |  |  | AuthorizeCharge handler no MFA |
