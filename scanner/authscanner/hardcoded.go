@@ -182,25 +182,25 @@ func buildPasswordFinding(varName, strVal, path, projectRoot string, pos token.P
 		finding = scanner.Finding{
 			RuleID:              "AUTH-HARDCODED-PWD",
 			Severity:            scanner.SeverityInfo,
-			RequirementID:       "8.3.1",
+			RequirementID:       "8.6.2",
 			FilePath:            path,
 			Line:                pos.Line,
 			Column:              pos.Column,
 			Description:         fmt.Sprintf("Placeholder password in variable '%s' -- verify this is replaced before deployment", varName),
 			Suggestion:          "Replace placeholder value with a runtime-loaded secret.",
-			RelatedRequirements: []string{"8.6.2"},
+			RelatedRequirements: []string{"8.3.1"},
 		}
 	} else {
 		finding = scanner.Finding{
 			RuleID:              "AUTH-HARDCODED-PWD",
 			Severity:            scanner.SeverityCritical,
-			RequirementID:       "8.3.1",
+			RequirementID:       "8.6.2",
 			FilePath:            path,
 			Line:                pos.Line,
 			Column:              pos.Column,
 			Description:         fmt.Sprintf("Hardcoded password in variable '%s'", varName),
 			Suggestion:          "Move passwords to environment variables or a secrets manager. Never commit passwords to source code.",
-			RelatedRequirements: []string{"8.6.2"},
+			RelatedRequirements: []string{"8.3.1"},
 		}
 	}
 	applyAuthDevContext(&finding, strVal, path, projectRoot)
@@ -268,13 +268,13 @@ func passwordFromSetenv(node *ast.CallExpr, fset *token.FileSet, path, projectRo
 	finding := scanner.Finding{
 		RuleID:              "AUTH-HARDCODED-PWD",
 		Severity:            scanner.SeverityCritical,
-		RequirementID:       "8.3.1",
+		RequirementID:       "8.6.2",
 		FilePath:            path,
 		Line:                pos.Line,
 		Column:              pos.Column,
 		Description:         fmt.Sprintf("Hardcoded secret in os.Setenv call with key '%s'", keyStr),
 		Suggestion:          "Move secrets to environment variables loaded at runtime, not hardcoded in os.Setenv calls.",
-		RelatedRequirements: []string{"8.6.2"},
+		RelatedRequirements: []string{"8.3.1"},
 	}
 	applyAuthDevContext(&finding, valStr, path, projectRoot)
 	if isTestutilPath(path) {

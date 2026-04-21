@@ -71,6 +71,35 @@ HIGH+ findings" and "what is the full-scan rule/severity breakdown" in a
 single shot, so mixed prompts no longer require a second default call to
 recover the summary view.
 
+## v0.5.0 migration note
+
+As of **v0.5.0**, four rules emit requirement IDs based on PAN-vs-SAD field
+classification instead of a static mapping. Consumers that bucket findings
+by `requirement_id` need to update their filters.
+
+Specifically:
+
+- `PAN-KEYWORD`, `PAN-LOGGER`, `SQL-SENSITIVE-COLUMN`, and `GORM-SENSITIVE-TAG`
+  findings on PAN fields (`cardNumber`, `pan`, `primary_account_number`,
+  `accountNumber`, `ccNo`, `cardNo`) now emit `requirement_id: "3.5.1"`
+  (previously `"3.3.1"`). SAD fields (`CVV`, `CVC`, `CID`, `track`, `PIN`)
+  continue to emit `"3.3.1"`.
+- `PAN-LOGGER` on PAN fields additionally carries
+  `related_requirements: ["3.4.1", "10.2.1"]`.
+- `AUTH-HARDCODED-PWD` primary `requirement_id` changed from `"8.3.1"` to
+  `"8.6.2"`. `"8.3.1"` moved to `related_requirements`.
+- `CRYPTO-HARDCODED-KEY` `related_requirements` changed from `["3.6.1.2"]`
+  to `["8.6.2"]`. Primary remains `"6.2.4"`.
+- `explain_requirement("3.6.1.2")` now returns the correct PCI DSS v4.0.1
+  wording ("Secret Key Storage Form" -- KEK / HSM / key shares). The previous
+  embedded text described 3.6.1.3 ("Secret Key Access Restriction").
+
+No severity changes. No new rules. No changes to the 14 MCP tool surface.
+For the full canonical rule-to-requirement mapping, see
+[docs/requirement-mapping.md](requirement-mapping.md). A Go drift-guard test
+in the scanner package fails the build if any rule's source emit diverges
+from the canonical table.
+
 ## generate_compliance_report
 
 Run all PCI DSS v4.0.1 compliance scanners and generate a plain compliance report
@@ -86,13 +115,13 @@ triage labels.
 | `path` | string | yes | Path to the project directory to scan |
 | `dep_scan_mode` | string | no | Dependency scanner mode: `auto` (default), `online`, `offline` |
 | `include_tests` | bool | no | Include `_test.go` files in scan results. Default `false` (industry SAST consensus) |
-| `include_taint` | bool | no | flow-based severity adjustment via `go/packages`. **Default `true`** (production precision, as of ). Set `false` for fast dev iteration (adds 5-30s otherwise). Requires `go` binary on `PATH`; falls back to AST-only on failure |
+| `include_taint` | bool | no | flow-based severity adjustment via `go/packages`. **Default `true`** (production precision). Set `false` for fast dev iteration (adds 5-30s otherwise). Requires `go` binary on `PATH`; falls back to AST-only on failure |
 | `min_severity` | string | no | Scope the response to findings at or above this severity. One of `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` / `INFO` (case-insensitive). Default: no filter |
 | `rule_filter` | string | no | Comma-separated list of rule IDs (`PAN-KEYWORD,PAN-TYPE`) OR a single regex between slashes (`/PAN-.*/`). Default: no filter |
 | `limit` | int | no | Default `0` (summary-first). Positive integer for an exact cap. `-1` returns an error as of v0.4.0; use cursor pagination for CI/batch callers |
 | `cursor` | string | no | Opaque pagination cursor. Empty = fresh scan. Non-empty = resume from session cache (10-minute TTL) |
 
-All four filter/scope parameters (..) apply **before**
+All four filter/scope parameters (`min_severity`, `rule_filter`, `limit`, `cursor`) apply **before**
 serialization, so they genuinely shrink the response size rather than
 just hiding content client-side.
 
@@ -199,7 +228,7 @@ clients without file-dump fallback.
 **Example output:**
 ```
 1 CRITICAL, 0 HIGH, 0 MEDIUM, 0 LOW, 0 INFO findings
-[CRITICAL] PAN variable 'cardNumber' passed to fmt.Fprintf (Requirement 3.4.1)
+[CRITICAL] PAN variable 'cardNumber' passed to fmt.Fprintf (Requirement 3.5.1)
   payment/handler.go:45
   Suggestion: Mask PAN to show only first 6 and last 4 digits
 ```
@@ -506,14 +535,14 @@ server returns an error with the token `LIMIT_MINUS_ONE_REMOVED`. Migrate
 CI/batch callers to cursor pagination: default-call, then follow
 `pagination.next_cursor` until empty.
 
-**PCI DSS Requirements:** 8.3.1, 8.3.6, 8.4.2
+**PCI DSS Requirements:** 8.3.1, 8.3.6, 8.4.2, 8.6.2
 
 **Rules:** AUTH-HARDCODED-PWD, AUTH-WEAK-POLICY, AUTH-BYTE-COUNT, AUTH-MISSING-MFA
 
 **Example output:**
 ```
 1 CRITICAL, 1 HIGH, 0 MEDIUM, 0 LOW, 0 INFO findings
-[CRITICAL] Hardcoded password detected (Requirement 8.3.1)
+[CRITICAL] Hardcoded password detected (Requirement 8.6.2)
   auth/login.go:15
   Suggestion: Use environment variables or a secrets manager for credentials
 ```
@@ -799,7 +828,7 @@ to call `generate_compliance_report` first; this tool already includes everythin
 it does plus triage enrichment.
 
 Verified-OK markers (rule IDs ending in `-OK`, currently `AUDIT-LOG-OK`
-and `CSP-OK`) are **skipped before enrichment** per — they appear
+and `CSP-OK`) are **skipped before enrichment**: they appear
 in `generate_compliance_report` for auditor visibility but carry no
 actionable signal for AI triage and previously consumed ~72% of the
 triage payload on real projects.
@@ -810,7 +839,7 @@ triage payload on real projects.
 | `path` | string | yes | Path to the project directory to triage |
 | `dep_scan_mode` | string | no | Same semantics as `generate_compliance_report` |
 | `include_tests` | bool | no | Include `_test.go` files. Default `false` |
-| `include_taint` | bool | no | Same tri-state as `generate_compliance_report`. Default `true` (matches compliance report for parity ) |
+| `include_taint` | bool | no | Same tri-state as `generate_compliance_report`. Default `true` (matches compliance report for parity) |
 | `min_severity` | string | no | Same as `generate_compliance_report` — applied BEFORE enrichment to avoid paying the per-finding context-collection cost on filtered-out findings |
 | `rule_filter` | string | no | Same as `generate_compliance_report` |
 | `limit` | int | no | Same as `generate_compliance_report` |
@@ -852,7 +881,7 @@ clients without file-dump fallback.
 **PCI DSS Requirements:** spans all requirements covered by
 `generate_compliance_report`
 
-**Output shape (post-19.4, MCP spec 2025-06-18):**
+**Output shape (MCP spec 2025-06-18):**
 
 Returns a `TriageResult` via the SDK's `structuredContent` channel. Each
 `EnrichedFinding` carries the original `scanner.Finding` plus:
@@ -879,7 +908,7 @@ triage_hint: string              # one-line classification hint
 ```
 
 **Wire size on real projects** (taint ON): ~41 KB for 46 findings
-(reference payment service post-19.4 baseline). Under Anthropic's
+(reference payment service baseline). Under Anthropic's
 "Code execution with MCP" ≤50 KB guidance.
 
 ---

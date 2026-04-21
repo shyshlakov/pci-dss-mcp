@@ -390,7 +390,7 @@ func logCard(cardNumber string) {
 	var found bool
 	for _, f := range result.Findings {
 		if f.RuleID == "PAN-LOGGER" && f.Severity == scanner.SeverityCritical &&
-			f.RequirementID == "3.3.1" {
+			f.RequirementID == "3.5.1" {
 			found = true
 			break
 		}

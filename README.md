@@ -30,11 +30,11 @@ Duration: 1957ms | Files: 615 | Lines: 9142
 
 [CRITICAL] 3.3.1 -- SAD Not Retained After Authorization
   internal/service/tokens/logging.go:11
-  Sensitive cardholder data 'cardNumber' passed to logging function slog.Info
-  Fix: Remove sensitive data from log output. Log a masked or tokenized reference instead.
+  Sensitive authentication data 'cvv' passed to logging function slog.Info
+  Fix: Remove SAD from log output. SAD must not be retained after authorization per PCI DSS 3.3.1.
 ```
 
-Every finding carries `requirement_id`, `severity`, `file_path`, `line`, and a triage hint so your AI editor can **verify the finding against the real code** and flag false positives automatically.
+Every finding carries `requirement_id`, `severity`, `file_path`, `line`, and a triage hint so your AI editor can **verify the finding against the real code** and flag false positives automatically. See [docs/requirement-mapping.md](docs/requirement-mapping.md) for the canonical rule_id to requirement_id table.
 
 ### What pci-dss-mcp is NOT
 

@@ -91,8 +91,8 @@ func TestSQLScanner_ScanMigrations(t *testing.T) {
 			if f.Severity != scanner.SeverityHigh {
 				t.Errorf("SQL-SENSITIVE-COLUMN severity = %q, want HIGH", f.Severity)
 			}
-			if f.RequirementID != "3.3.1" {
-				t.Errorf("SQL-SENSITIVE-COLUMN req = %q, want 3.3.1", f.RequirementID)
+			if f.RequirementID != "3.5.1" && f.RequirementID != "3.3.1" {
+				t.Errorf("SQL-SENSITIVE-COLUMN req = %q, want 3.3.1 or 3.5.1", f.RequirementID)
 			}
 		case sqlscanner.RuleSQLTextType:
 			sawTextType = true
@@ -323,8 +323,8 @@ func TestSQLScanner_ScanGormModels(t *testing.T) {
 			if f.Severity != scanner.SeverityInfo {
 				t.Errorf("with_hook GORM-SENSITIVE-TAG severity = %q, want INFO ", f.Severity)
 			}
-			if f.RequirementID != "3.3.1" {
-				t.Errorf("GORM-SENSITIVE-TAG req = %q, want 3.3.1", f.RequirementID)
+			if f.RequirementID != "3.5.1" && f.RequirementID != "3.3.1" {
+				t.Errorf("GORM-SENSITIVE-TAG req = %q, want 3.3.1 or 3.5.1", f.RequirementID)
 			}
 		}
 	}

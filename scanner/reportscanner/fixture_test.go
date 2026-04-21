@@ -94,6 +94,26 @@ func TestVulnerablePaymentServiceFixture(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("requirement_id_matches", func(tt *testing.T) {
+		for _, want := range contract.violations {
+			if want.RequirementID == "" && len(want.RelatedRequirements) == 0 {
+				continue
+			}
+			got, ok := findActualFinding(actual, want)
+			if !ok {
+				continue
+			}
+			if want.RequirementID != "" && got.RequirementID != want.RequirementID {
+				tt.Errorf("req_id mismatch: rule=%s file=%s line=%d: want %q got %q",
+					want.RuleID, want.FilePath, want.Line, want.RequirementID, got.RequirementID)
+			}
+			if len(want.RelatedRequirements) > 0 && !equalStringSetsIgnoreOrder(got.RelatedRequirements, want.RelatedRequirements) {
+				tt.Errorf("related mismatch: rule=%s file=%s line=%d: want %v got %v",
+					want.RuleID, want.FilePath, want.Line, want.RelatedRequirements, got.RelatedRequirements)
+			}
+		}
+	})
 }
 
 // TestVulnerablePaymentServiceFixture_LivePath is the defense-in-depth

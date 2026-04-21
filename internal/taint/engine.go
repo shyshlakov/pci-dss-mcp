@@ -62,10 +62,11 @@ var (
 
 // loadTimeout is the performance budget for packages.Load. Exceeding it
 // forces a graceful degrade: GetOrInit returns nil and scanners fall back to
-// AST-only analysis. Encoded as a named constant so tests can import the
-// same value, but the literal form 30*time.Second is also inlined at the
-// call site below for plan-grep compliance.
-const loadTimeout = 30 * time.Second
+// AST-only analysis. Bumped 30s -> 90s after GitHub Actions migrated
+// macos-latest to macOS 15 arm64 runners (3 vCPU / 7 GB RAM) in Aug-Sep 2025,
+// where go/packages.Load under -race stalls past 30s on the vulnerable-payment-service
+// fixture. ubuntu-latest (4 vCPU / 16 GB) still fits well under the new budget.
+const loadTimeout = 90 * time.Second
 
 // GetOrInit returns a loaded TaintEngine for projectRoot, or nil if loading
 // fails for any reason. The first call on a given root pays the packages.Load
@@ -76,7 +77,7 @@ const loadTimeout = 30 * time.Second
 // Failure modes (all return nil):
 // - projectRoot cannot be converted to an absolute path
 // - go binary is missing from PATH (packages.Load reports an error)
-// - context deadline exceeded (30 s timeout or caller-supplied shorter one)
+// - context deadline exceeded (90 s timeout or caller-supplied shorter one)
 // - root-level packages have no TypesInfo (hard typecheck failure)
 //
 // On the first degrade in a process, we emit exactly one slog.Warn record
@@ -107,8 +108,8 @@ func GetOrInit(ctx context.Context, projectRoot string) *TaintEngine {
 
 	// Slow path: first load for this project root. Hold the load under a
 	// per-call timeout so a pathological module cannot hang the scanner.
-	// 30 s budget (explicit literal form for plan-grep compliance).
-	loadCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	// 90 s budget (explicit literal form for plan-grep compliance).
+	loadCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	_ = loadTimeout // keep the named constant referenced for future callers
 	defer cancel()
 
@@ -137,7 +138,7 @@ func GetOrInit(ctx context.Context, projectRoot string) *TaintEngine {
 	engine.loadOK = loadErr == nil && len(pkgs) > 0 && !containsHardErrors(pkgs)
 
 	// Cache the engine regardless of loadOK so a broken project does not
-	// re-pay the 30 s timeout on every call.
+	// re-pay the 90 s timeout on every call.
 	engineMu.Lock()
 	engineCache[absRoot] = engine
 	engineMu.Unlock()

@@ -26,6 +26,7 @@ import (
 
 	"github.com/shyshlakov/pci-dss-mcp/internal/taint"
 	"github.com/shyshlakov/pci-dss-mcp/scanner"
+	"github.com/shyshlakov/pci-dss-mcp/scanner/internal/sensitivedata"
 )
 
 // inferPackagePathWarnOnce gates the slog.Warn in inferPackagePath so a
@@ -488,32 +489,58 @@ func (s *panScanState) emitFieldFindings(field *ast.Field, st *ast.StructType, t
 	}
 }
 
+func requirementForPANField(kind sensitivedata.Kind) (string, []string) {
+	switch kind {
+	case sensitivedata.KindPAN:
+		return "3.5.1", nil
+	case sensitivedata.KindSAD:
+		return "3.3.1", []string{"3.3.1.2"}
+	default:
+		// Unknown kind biases to SAD mapping; scanner recall-bias prefers false positives over silent skips.
+		return "3.3.1", []string{"3.3.1.2"}
+	}
+}
+
+func requirementForPANLogger(kind sensitivedata.Kind) (string, []string) {
+	switch kind {
+	case sensitivedata.KindPAN:
+		return "3.5.1", []string{"3.4.1", "10.2.1"}
+	case sensitivedata.KindSAD:
+		return "3.3.1", []string{"3.3.1.2"}
+	default:
+		// Loggers leak SAD more readily than fields; mirror field default for symmetry under recall-bias policy.
+		return "3.3.1", []string{"3.3.1.2"}
+	}
+}
+
 // buildKeywordFinding constructs a PAN-KEYWORD finding whose severity depends
 // on the enclosing struct's payment-context score (>= 2 => CRITICAL, else HIGH).
 func (s *panScanState) buildKeywordFinding(fieldName string, pos token.Position, paymentCount int) scanner.Finding {
+	kind := sensitivedata.Classify(fieldName)
+	reqID, related := requirementForPANField(kind)
 	if paymentCount >= 2 {
 		return scanner.Finding{
 			RuleID:              "PAN-KEYWORD",
 			Severity:            scanner.SeverityCritical,
-			RequirementID:       "3.3.1",
+			RequirementID:       reqID,
 			FilePath:            s.path,
 			Line:                pos.Line,
 			Column:              pos.Column,
 			Description:         fmt.Sprintf("Struct field '%s' exposes cardholder data in payment context (HIGH confidence)", fieldName),
 			Suggestion:          "Use tokenized or encrypted references instead of raw cardholder data.",
-			RelatedRequirements: []string{"3.3.1.2"},
+			RelatedRequirements: related,
 		}
 	}
 	return scanner.Finding{
 		RuleID:              "PAN-KEYWORD",
 		Severity:            scanner.SeverityHigh,
-		RequirementID:       "3.3.1",
+		RequirementID:       reqID,
 		FilePath:            s.path,
 		Line:                pos.Line,
 		Column:              pos.Column,
 		Description:         fmt.Sprintf("Struct field '%s' may expose cardholder data, requires manual review (LOW confidence)", fieldName),
 		Suggestion:          "Verify if this field contains actual cardholder data. Use tokenized references if so.",
-		RelatedRequirements: []string{"3.3.1.2"},
+		RelatedRequirements: related,
 	}
 }
 
@@ -533,16 +560,18 @@ func (s *panScanState) emitJSONTagFindings(field *ast.Field, st *ast.StructType,
 	if len(field.Names) > 0 {
 		fieldName = field.Names[0].Name
 	}
+	kind := sensitivedata.Classify(jsonTag)
+	reqID, related := requirementForPANField(kind)
 	s.appendField(scanner.Finding{
 		RuleID:              "PAN-KEYWORD",
 		Severity:            scanner.SeverityHigh,
-		RequirementID:       "3.3.1",
+		RequirementID:       reqID,
 		FilePath:            s.path,
 		Line:                pos.Line,
 		Column:              pos.Column,
 		Description:         fmt.Sprintf("Struct field json tag '%s' exposes cardholder data keyword", jsonTag),
 		Suggestion:          "Rename the JSON field or use a DTO without sensitive field names in API responses.",
-		RelatedRequirements: []string{"3.3.1.2"},
+		RelatedRequirements: related,
 	}, typeName, fieldName, st)
 }
 
@@ -646,15 +675,18 @@ func (s *panScanState) scanLoggerCalls() {
 			if !ok || !IsSensitiveKeyword(ident.Name) {
 				continue
 			}
+			kind := sensitivedata.Classify(ident.Name)
+			reqID, related := requirementForPANLogger(kind)
 			s.appendOther(scanner.Finding{
-				RuleID:        "PAN-LOGGER",
-				Severity:      scanner.SeverityCritical,
-				RequirementID: "3.3.1",
-				FilePath:      s.path,
-				Line:          cm.Position.Line,
-				Column:        cm.Position.Column,
-				Description:   fmt.Sprintf("Sensitive cardholder data '%s' passed to logging function %s", ident.Name, cm.FuncName),
-				Suggestion:    "Remove sensitive data from log output. Log a masked or tokenized reference instead.",
+				RuleID:              "PAN-LOGGER",
+				Severity:            scanner.SeverityCritical,
+				RequirementID:       reqID,
+				FilePath:            s.path,
+				Line:                cm.Position.Line,
+				Column:              cm.Position.Column,
+				Description:         fmt.Sprintf("Sensitive cardholder data '%s' passed to logging function %s", ident.Name, cm.FuncName),
+				Suggestion:          "Remove sensitive data from log output. Log a masked or tokenized reference instead.",
+				RelatedRequirements: related,
 			})
 		}
 	}

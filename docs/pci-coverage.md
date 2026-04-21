@@ -6,18 +6,18 @@ pci-dss-mcp checks **14 of ~250** PCI DSS v4.0.1 requirements across 10 scanners
 
 | Requirement | Title | Scanner | Detection |
 |-------------|-------|---------|-----------|
-| 3.2.1 | Account Data Storage Minimized | check_data_retention | Redis/DB storage without TTL, config without retention policy |
-| 3.3.1 | SAD Not Retained After Authorization | scan_pan_data, check_data_retention | PAN in logs, CVV storage patterns, memory zeroing issues |
+| 3.2.1 | Account Data Storage Minimized | check_data_retention | Redis/DB storage without TTL, config without retention policy, SAD memory zeroing (RET-ZERO-BEFORE-AUTH / DEFER-ONLY / AFTER-RESPONSE) |
+| 3.3.1 | SAD Not Retained After Authorization | scan_pan_data, check_data_retention | SAD variables (CVV/CVC/PIN/track) in logs and source; SAD column storage patterns; SAD memory zeroing issues |
 | 3.4.1 | PAN Displayed with Masking | scan_pan_data | PAN variables in HTTP responses, format strings |
-| 3.5.1 | PAN Rendered Unreadable in Storage | scan_pan_data | String-typed PAN fields (can't be zeroed), missing memory zeroing |
+| 3.5.1 | PAN Rendered Unreadable in Storage | scan_pan_data, (report-only) sqlscanner | PAN variables in logs and responses; PAN columns in SQL schemas without encryption; string-typed PAN fields (can't be zeroed); missing memory zeroing |
 | 4.2.1 | Strong Cryptography During Transmission | check_encryption, check_tls_config | Plain HTTP URLs, InsecureSkipVerify, weak TLS versions, weak ciphers |
 | 6.2.4 | Secure Software Development | check_encryption, check_error_handling | Hardcoded keys, weak hashes, error details leaked to responses |
 | 6.3.3 | Security Patches Applied | check_dependencies | Known CVEs in go.mod dependencies via OSV.dev |
 | 6.4.3 | Payment Page Script Management | check_payment_page_scripts | Missing CSP headers, unsafe-inline/eval, missing SRI/nonce |
-| 8.3.1 | Unique IDs for All Users | check_auth_strength | Hardcoded passwords in source code |
+| 8.3.1 | Unique IDs for All Users | check_auth_strength | Weak password policy, MFA absence, byte-vs-char length checks (related to AUTH-HARDCODED-PWD) |
 | 8.3.6 | Password Complexity Requirements | check_auth_strength | Password length checks below 12 characters |
 | 8.4.2 | MFA for Administrative Access | check_auth_strength | Payment routes without MFA middleware |
-| 8.6.2 | Passwords/Passphrases Not Hard-Coded | check_secrets_in_configs | Secrets in .env, .yaml, .json, .toml files |
+| 8.6.2 | Passwords/Passphrases Not Hard-Coded | check_auth_strength, check_secrets_in_configs | Hardcoded passwords in source code; secrets in .env/.yaml/.json/.toml; known provider prefixes; connection-string credentials |
 | 10.2.1 | Audit Logs Capture Details | audit_log_coverage | Payment handlers without audit logging, unstructured logging (fmt/log instead of slog) |
 | 11.6.1 | Change Detection for Payment Pages | check_payment_page_scripts | File integrity monitoring requirement flagged |
 
@@ -29,7 +29,7 @@ Each detectable requirement has defined coverage scope and known limitations. Th
 
 Sub-requirements that are not directly scanned but have a parent requirement that is scanned are shown with a "Covered by parent" annotation in the compliance report. For example, 3.3.1.1 inherits coverage from 3.3.1.
 
-When a finding satisfies multiple PCI DSS requirements, the report shows "Also satisfies: X.Y.Z" cross-references. For example, a hardcoded password finding (8.3.1) also satisfies 8.6.2.
+When a finding satisfies multiple PCI DSS requirements, the report shows "Also satisfies: X.Y.Z" cross-references. For example, a hardcoded password finding (8.6.2) also satisfies 8.3.1.
 
 ## NOT_CHECKED Categories
 
