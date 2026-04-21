@@ -122,6 +122,15 @@ Context affects confidence, not severity. Both high-confidence and low-confidenc
 | META-CSP-ONLY | MEDIUM | 6.4.3 | CSP only in meta tag, not HTTP header |
 | FIM-REQUIRED | HIGH | 11.6.1 | File integrity monitoring required for payment pages |
 
+### SQL Scanner (report-only, via generate_compliance_report)
+
+| Rule ID | Severity | Requirement | Description |
+|---------|----------|-------------|-------------|
+| SQL-SENSITIVE-COLUMN | HIGH | 3.5.1 or 3.3.1 (dynamic -- see docs/requirement-mapping.md) | Sensitive column detected in CREATE TABLE; PAN columns route to 3.5.1, SAD columns route to 3.3.1 |
+| SQL-TEXT-TYPE | HIGH | 3.5.1 | Plaintext column type (text/varchar) for sensitive column |
+| GORM-SENSITIVE-TAG | HIGH | 3.5.1 or 3.3.1 (dynamic -- see docs/requirement-mapping.md) | GORM tag references sensitive column; PAN routes to 3.5.1, SAD routes to 3.3.1 |
+| GORM-NO-ENCRYPT-HOOK | HIGH | 3.5.1 | GORM model missing BeforeCreate/BeforeSave encrypt hook |
+
 ### Dependency Scanner (check_dependencies)
 
 | Rule ID | Severity | Requirement | Description |
