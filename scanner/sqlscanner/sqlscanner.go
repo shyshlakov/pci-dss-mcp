@@ -31,7 +31,6 @@ import (
 	"github.com/shyshlakov/pci-dss-mcp/scanner/internal/sensitivedata"
 )
 
-
 func requirementForSQLColumn(name string) string {
 	switch sensitivedata.Classify(name) {
 	case sensitivedata.KindPAN:

@@ -74,63 +74,79 @@ func TestRequirementMappingGuardSyntheticDrift(t *testing.T) {
 		wantSubstr string
 	}{
 		{
-			name:       "missing_docs",
-			source:     map[string]map[srcEmit]bool{"RULE-X": {{primary: "3.3.1"}: true}},
-			docs:       map[string]docsRow{},
-			check:      func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) { checkSourceHasDocs(s, d, r) },
+			name:   "missing_docs",
+			source: map[string]map[srcEmit]bool{"RULE-X": {{primary: "3.3.1"}: true}},
+			docs:   map[string]docsRow{},
+			check: func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) {
+				checkSourceHasDocs(s, d, r)
+			},
 			wantErrors: 1,
 			wantSubstr: "RULE-X",
 		},
 		{
-			name:       "orphan_docs",
-			source:     map[string]map[srcEmit]bool{},
-			docs:       map[string]docsRow{"RULE-Y": {ruleID: "RULE-Y", primary: "3.3.1"}},
-			check:      func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) { checkDocsHasSource(d, s, r) },
+			name:   "orphan_docs",
+			source: map[string]map[srcEmit]bool{},
+			docs:   map[string]docsRow{"RULE-Y": {ruleID: "RULE-Y", primary: "3.3.1"}},
+			check: func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) {
+				checkDocsHasSource(d, s, r)
+			},
 			wantErrors: 1,
 			wantSubstr: "RULE-Y",
 		},
 		{
-			name:       "orphan_docs_waived",
-			source:     map[string]map[srcEmit]bool{},
-			docs:       map[string]docsRow{"RULE-Y": {ruleID: "RULE-Y", primary: "3.3.1", coverageNote: "dynamic emit via helper"}},
-			check:      func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) { checkDocsHasSource(d, s, r) },
+			name:   "orphan_docs_waived",
+			source: map[string]map[srcEmit]bool{},
+			docs:   map[string]docsRow{"RULE-Y": {ruleID: "RULE-Y", primary: "3.3.1", coverageNote: "dynamic emit via helper"}},
+			check: func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) {
+				checkDocsHasSource(d, s, r)
+			},
 			wantErrors: 0,
 		},
 		{
-			name:       "mapping_drift",
-			source:     map[string]map[srcEmit]bool{"RULE-Z": {{primary: "3.3.1"}: true}},
-			docs:       map[string]docsRow{"RULE-Z": {ruleID: "RULE-Z", primary: "3.5.1"}},
-			check:      func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) { checkMappingMatches(d, s, r) },
+			name:   "mapping_drift",
+			source: map[string]map[srcEmit]bool{"RULE-Z": {{primary: "3.3.1"}: true}},
+			docs:   map[string]docsRow{"RULE-Z": {ruleID: "RULE-Z", primary: "3.5.1"}},
+			check: func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) {
+				checkMappingMatches(d, s, r)
+			},
 			wantErrors: 1,
 			wantSubstr: "RULE-Z",
 		},
 		{
-			name:       "mapping_drift_waived",
-			source:     map[string]map[srcEmit]bool{"RULE-W": {{primary: "3.3.1"}: true}},
-			docs:       map[string]docsRow{"RULE-W": {ruleID: "RULE-W", primary: "3.5.1", coverageNote: "dynamic emit — see source"}},
-			check:      func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) { checkMappingMatches(d, s, r) },
+			name:   "mapping_drift_waived",
+			source: map[string]map[srcEmit]bool{"RULE-W": {{primary: "3.3.1"}: true}},
+			docs:   map[string]docsRow{"RULE-W": {ruleID: "RULE-W", primary: "3.5.1", coverageNote: "dynamic emit — see source"}},
+			check: func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) {
+				checkMappingMatches(d, s, r)
+			},
 			wantErrors: 0,
 		},
 		{
-			name:       "mapping_empty_source_no_waiver",
-			source:     map[string]map[srcEmit]bool{"RULE-V": {}},
-			docs:       map[string]docsRow{"RULE-V": {ruleID: "RULE-V", primary: "3.5.1"}},
-			check:      func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) { checkMappingMatches(d, s, r) },
+			name:   "mapping_empty_source_no_waiver",
+			source: map[string]map[srcEmit]bool{"RULE-V": {}},
+			docs:   map[string]docsRow{"RULE-V": {ruleID: "RULE-V", primary: "3.5.1"}},
+			check: func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) {
+				checkMappingMatches(d, s, r)
+			},
 			wantErrors: 1,
 			wantSubstr: "RULE-V",
 		},
 		{
-			name:       "mapping_empty_source_waived",
-			source:     map[string]map[srcEmit]bool{"RULE-U": {}},
-			docs:       map[string]docsRow{"RULE-U": {ruleID: "RULE-U", primary: "3.5.1", coverageNote: "dynamic emit"}},
-			check:      func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) { checkMappingMatches(d, s, r) },
+			name:   "mapping_empty_source_waived",
+			source: map[string]map[srcEmit]bool{"RULE-U": {}},
+			docs:   map[string]docsRow{"RULE-U": {ruleID: "RULE-U", primary: "3.5.1", coverageNote: "dynamic emit"}},
+			check: func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) {
+				checkMappingMatches(d, s, r)
+			},
 			wantErrors: 0,
 		},
 		{
-			name:       "mapping_exact_match",
-			source:     map[string]map[srcEmit]bool{"RULE-T": {{primary: "3.5.1", related: "3.4.1,10.2.1"}: true}},
-			docs:       map[string]docsRow{"RULE-T": {ruleID: "RULE-T", primary: "3.5.1", related: []string{"3.4.1", "10.2.1"}}},
-			check:      func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) { checkMappingMatches(d, s, r) },
+			name:   "mapping_exact_match",
+			source: map[string]map[srcEmit]bool{"RULE-T": {{primary: "3.5.1", related: "3.4.1,10.2.1"}: true}},
+			docs:   map[string]docsRow{"RULE-T": {ruleID: "RULE-T", primary: "3.5.1", related: []string{"3.4.1", "10.2.1"}}},
+			check: func(d map[string]docsRow, s map[string]map[srcEmit]bool, r func(string, ...any)) {
+				checkMappingMatches(d, s, r)
+			},
 			wantErrors: 0,
 		},
 	}
