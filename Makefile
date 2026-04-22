@@ -1,5 +1,5 @@
 .PHONY: build test lint vet clean run build-fixture test-fixture scan-fixture \
-        tools fmt-check check ci
+        tools fmt-check check ci validate-server-json
 
 BINARY := pci-dss-mcp
 MODULE := github.com/shyshlakov/pci-dss-mcp
@@ -73,3 +73,15 @@ check: tools fmt-check vet lint test test-fixture build
 # ci is an alias for check. Use from local development when you want to
 # mirror exactly what the CI workflows run.
 ci: check
+
+MCP_SCHEMA_URL := https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json
+
+validate-server-json:
+	@test -f server.json || { echo "server.json missing at repo root"; exit 1; }
+	@command -v npx >/dev/null 2>&1 || { echo "npx required (install Node.js 18+)"; exit 1; }
+	@command -v curl >/dev/null 2>&1 || { echo "curl required"; exit 1; }
+	@tmpdir=$$(mktemp -d) && \
+		curl -sSLf "$(MCP_SCHEMA_URL)" -o "$$tmpdir/server.schema.json" && \
+		npx --yes ajv-cli@^5 validate --spec=draft7 --strict=false -s "$$tmpdir/server.schema.json" -d server.json && \
+		rm -rf "$$tmpdir"
+	@echo "server.json: valid"
