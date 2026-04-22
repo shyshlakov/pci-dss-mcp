@@ -39,24 +39,48 @@ EOF
 )
 
 TMP_DIR=$(mktemp -d)
-trap 'rm -rf "$TMP_DIR"' EXIT
+CONTAINER_NAME="pci-dss-mcp-smoke-$$"
+FEEDER_PID=""
+DOCKER_PID=""
+cleanup() {
+  if [ -n "$DOCKER_PID" ]; then
+    kill -9 "$DOCKER_PID" 2>/dev/null || true
+  fi
+  if [ -n "$FEEDER_PID" ]; then
+    kill -9 "$FEEDER_PID" 2>/dev/null || true
+  fi
+  docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+  rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
 FIFO_IN="$TMP_DIR/in"
+RESP_FILE="$TMP_DIR/resp.jsonl"
 mkfifo "$FIFO_IN"
+: >"$RESP_FILE"
 
-{ printf '%s\n' "$REQUEST"; sleep 60; } >"$FIFO_IN" &
+{ printf '%s\n' "$REQUEST"; exec tail -f /dev/null; } >"$FIFO_IN" &
 FEEDER_PID=$!
 
-RESPONSE=$(docker run -i --rm \
+docker run -i --rm --name "$CONTAINER_NAME" \
   --mount "type=bind,src=${FIXTURE_HOST},dst=/projects/fixture,readonly" \
-  "$IMAGE" <"$FIFO_IN" | while IFS= read -r line; do
-    printf '%s\n' "$line"
-    if [[ "$line" == \{*\"id\":2* ]]; then
-      break
-    fi
-  done)
+  "$IMAGE" <"$FIFO_IN" >"$RESP_FILE" 2>/dev/null &
+DOCKER_PID=$!
 
-kill "$FEEDER_PID" 2>/dev/null || true
-wait "$FEEDER_PID" 2>/dev/null || true
+deadline=$(( $(date +%s) + 120 ))
+while [ "$(date +%s)" -lt "$deadline" ]; do
+  if grep -qE '^\{.*"id":2' "$RESP_FILE" 2>/dev/null; then
+    break
+  fi
+  sleep 1
+done
+
+docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+kill -9 "$FEEDER_PID" 2>/dev/null || true
+wait "$DOCKER_PID" 2>/dev/null || true
+FEEDER_PID=""
+DOCKER_PID=""
+
+RESPONSE=$(cat "$RESP_FILE")
 
 SUMMARY=$(printf '%s\n' "$RESPONSE" \
   | grep -E '^\{.*"id":2' \
