@@ -5,6 +5,31 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## [0.5.1] - 2026-04-22
+
+### Added
+
+- Docker distribution path. pci-dss-mcp is now published as a signed multi-arch OCI image on GitHub Container Registry (`ghcr.io/shyshlakov/pci-dss-mcp`). Every release ships `linux/amd64` and `linux/arm64` manifests signed with Sigstore keyless OIDC. Claude Desktop / Claude Code / Cursor can now run pci-dss-mcp via `docker run -i --rm` without a local Go toolchain, PATH setup, or the macOS `codesign` provenance workaround.
+- MCP Registry listing at `registry.modelcontextprotocol.io/v0/servers/io.github.shyshlakov/pci-dss-mcp`. Registry verifies ownership via the `io.modelcontextprotocol.server.name` OCI annotation on the published image.
+- `server.json` canonical manifest at repo root, validated against the MCP 2025-12-11 schema by the new `make validate-server-json` target.
+- `make docker-smoke` target that runs the Docker image against `testdata/vulnerable-payment-service` and asserts byte-identical severity parity with the go-install path (CRITICAL=49 HIGH=89 MEDIUM=27 LOW=0 INFO=59). Release workflow gates push on this target.
+- `.github/workflows/release-docker.yml` single consolidated workflow: validates `server.json`, patches version from the git tag, builds multi-arch, runs the smoke gate, signs with cosign, publishes to the MCP Registry. Zero secrets beyond the default `GITHUB_TOKEN`; three OIDC-scoped permissions only (`id-token: write`, `contents: read`, `packages: write`).
+
+### Changed
+
+- `README.md` rewritten Docker-first. `## Install` now leads with `### Docker (Recommended)`; the go-install flow moves under `### Install from source` and retains the macOS `codesign` + PATH-resolution subsubsections (H4). The former `## Setup` section is replaced by three `## Usage with Claude Desktop / ## Usage with Claude Code / ## Usage with Cursor` H2 sections, each carrying a Docker JSON config block using the canonical `--mount type=bind,src=<host>,dst=/projects/<name>,readonly` convention. A new `### Cosign verification` subsection documents the optional keyless verify flow.
+
+### Unchanged
+
+- Scanner detection logic. No scanner code changed in this release. Fixture severity counts on `testdata/vulnerable-payment-service` remain 49/89/27/0/59 byte-for-byte with v0.5.0.
+- The 14 MCP tool surface. Tool names, parameters, and output schemas are identical to v0.5.0.
+- `go install github.com/shyshlakov/pci-dss-mcp@latest` remains a supported parallel install path for Go developers; the Docker path is additive, not a replacement.
+- `requirement_id` semantics from v0.5.0 (PAN vs SAD split, AUTH-HARDCODED-PWD primary 8.6.2, CRYPTO-HARDCODED-KEY related 8.6.2, pcidb 3.6.1.2 correction).
+
+### Semver
+
+- PATCH v0.5.0 -> v0.5.1. Every change in this release is additive distribution (new image, new registry listing, new Makefile targets, new workflow, README rewrite). No scanner behavior change, no tool contract change, no JSON shape change. Go-install users with existing MCP configs do not need to do anything — v0.5.1 is a superset.
+
 ## [0.5.0] - 2026-04-21
 
 ### Changed (BREAKING for consumers grouping by requirement_id)
