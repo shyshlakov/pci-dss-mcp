@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.shyshlakov/pci-dss-mcp",
+  "title": "PCI DSS v4.0.1 Compliance Checker",
+  "description": "Narrow-and-deep PCI DSS v4.0.1 compliance scanner for Go payment services, delivered as an MCP server",
+  "websiteUrl": "https://github.com/shyshlakov/pci-dss-mcp",
+  "repository": {
+    "url": "https://github.com/shyshlakov/pci-dss-mcp",
+    "source": "github"
+  },
+  "version": "0.5.1",
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.1",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
