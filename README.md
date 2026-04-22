@@ -138,37 +138,49 @@ Use this JSON variant in place of the Docker block in any of the Usage sections 
 
 For Cursor add `"type": "stdio"` next to `"command"`. For Claude Code use `claude mcp add --scope user pci-dss-mcp -- "$(which pci-dss-mcp)"` instead of a JSON file.
 
-## Setup
+## Usage with Claude Desktop
 
-pci-dss-mcp runs over MCP stdio. **All client configs require the absolute path** — bare command names do not work because GUI clients do not inherit shell `PATH`.
-
-### Claude Desktop
-
-Edit `claude_desktop_config.json` (`~/Library/Application Support/Claude/` on macOS):
+Edit `claude_desktop_config.json` (`~/Library/Application Support/Claude/` on macOS; `%APPDATA%\Claude\` on Windows):
 
 ```json
 {
   "mcpServers": {
     "pci-dss-mcp": {
-      "command": "/absolute/path/to/pci-dss-mcp",
-      "args": [],
-      "env": {}
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--mount", "type=bind,src=/Users/you/path/to/your-project,dst=/projects/your-project,readonly",
+        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.1"
+      ]
     }
   }
 }
 ```
 
-Restart Claude Desktop after saving.
+Replace `/Users/you/path/to/your-project` with the absolute host path to the code you want to scan. The `dst=/projects/your-project` path is the in-container mount point — reference it in prompts as `/projects/your-project`, not the host path. Restart Claude Desktop after saving.
 
-### Claude Code
+If you installed pci-dss-mcp via `go install` instead of Docker, use the `### Install from source` subsection's JSON config variant.
+
+## Usage with Claude Code
+
+Register via the `claude mcp add` CLI:
 
 ```bash
-claude mcp add --scope user pci-dss-mcp -- "$(which pci-dss-mcp)"
+claude mcp add --scope user pci-dss-mcp -- \
+  docker run -i --rm \
+  --mount "type=bind,src=$(pwd),dst=/projects/workspace,readonly" \
+  ghcr.io/shyshlakov/pci-dss-mcp:v0.5.1
 ```
 
-Verify: `claude mcp list`
+This binds your current directory to `/projects/workspace` inside the container. After registration, ask Claude Code to scan `/projects/workspace` (not the host path).
 
-### Cursor
+Verify registration: `claude mcp list`
+
+If you installed pci-dss-mcp via `go install` instead of Docker, see the `### Install from source` subsection for the equivalent `claude mcp add` command against the absolute binary path.
+
+## Usage with Cursor
 
 Edit `~/.cursor/mcp.json`:
 
@@ -177,19 +189,36 @@ Edit `~/.cursor/mcp.json`:
   "mcpServers": {
     "pci-dss-mcp": {
       "type": "stdio",
-      "command": "/absolute/path/to/pci-dss-mcp",
-      "args": [],
-      "env": {}
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--mount", "type=bind,src=/Users/you/path/to/your-project,dst=/projects/your-project,readonly",
+        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.1"
+      ]
     }
   }
 }
 ```
+
+Restart Cursor after saving. As with Claude Desktop, reference the in-container path `/projects/your-project` in prompts.
+
+If you installed pci-dss-mcp via `go install` instead of Docker, see the `### Install from source` subsection for the equivalent Cursor config variant.
 
 ### Reloading after a rebuild
 
 - **Claude Desktop:** quit and relaunch
 - **Claude Code:** `/mcp reload` or restart session
 - **Cursor:** restart Cursor
+
+### Path convention for prompts
+
+When you reference a scan target in prompts, use the in-container path (whatever you chose as `dst=`), not the host path. Example:
+
+> Scan `/projects/your-project` for PCI DSS violations and give me a triage summary.
+
+This is the single path-translation discipline the Docker path asks of you. The go-install path does not need this translation.
 
 ## Use Cases
 
