@@ -33,13 +33,30 @@ fi
 
 REQUEST=$(cat <<'EOF'
 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","clientInfo":{"name":"docker-smoke","version":"1"},"capabilities":{}}}
-{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"generate_compliance_report","arguments":{"path":"/projects/fixture","limit":-1}}}
+{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"generate_compliance_report","arguments":{"path":"/projects/fixture"}}}
 EOF
 )
 
-RESPONSE=$(printf '%s\n' "$REQUEST" | docker run -i --rm \
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT
+FIFO_IN="$TMP_DIR/in"
+mkfifo "$FIFO_IN"
+
+{ printf '%s\n' "$REQUEST"; sleep 60; } >"$FIFO_IN" &
+FEEDER_PID=$!
+
+RESPONSE=$(docker run -i --rm \
   --mount "type=bind,src=${FIXTURE_HOST},dst=/projects/fixture,readonly" \
-  "$IMAGE")
+  "$IMAGE" <"$FIFO_IN" | while IFS= read -r line; do
+    printf '%s\n' "$line"
+    if [[ "$line" == \{*\"id\":2* ]]; then
+      break
+    fi
+  done)
+
+kill "$FEEDER_PID" 2>/dev/null || true
+wait "$FEEDER_PID" 2>/dev/null || true
 
 SUMMARY=$(printf '%s\n' "$RESPONSE" \
   | grep -E '^\{.*"id":2' \
@@ -64,10 +81,10 @@ check() {
   fi
 }
 
-check critical "$EXPECTED_CRITICAL"
-check high     "$EXPECTED_HIGH"
-check medium   "$EXPECTED_MEDIUM"
-check low      "$EXPECTED_LOW"
-check info     "$EXPECTED_INFO"
+check critical_findings "$EXPECTED_CRITICAL"
+check high_findings     "$EXPECTED_HIGH"
+check medium_findings   "$EXPECTED_MEDIUM"
+check low_findings      "$EXPECTED_LOW"
+check info_findings     "$EXPECTED_INFO"
 
 echo "OK: Docker severity parity ($EXPECTED_CRITICAL/$EXPECTED_HIGH/$EXPECTED_MEDIUM/$EXPECTED_LOW/$EXPECTED_INFO) on $IMAGE"
