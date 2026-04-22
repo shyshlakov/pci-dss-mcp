@@ -47,28 +47,52 @@ See [docs/comparison.md](docs/comparison.md) for a detailed feature comparison w
 
 ## Install
 
-pci-dss-mcp requires **Go 1.25+**. Two install paths:
+pci-dss-mcp ships as a prebuilt OCI image on ghcr.io and as a Go module. Docker is the recommended path; Go install remains available for Go developers.
 
-### Quick install (released version)
+### Docker (Recommended)
+
+Pull the signed multi-arch image (linux/amd64 + linux/arm64):
 
 ```bash
-go install github.com/shyshlakov/pci-dss-mcp@latest
+docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.5.1
 ```
 
-This compiles the binary and drops it in `$(go env GOPATH)/bin/pci-dss-mcp`
-(usually `~/go/bin/pci-dss-mcp` on macOS and Linux, `%USERPROFILE%\go\bin\pci-dss-mcp.exe` on Windows).
+No Go toolchain, no PATH setup, no macOS provenance workaround. The image carries a `go` runtime internally for taint analysis, so `include_taint: true` (the default) works out of the box.
 
-### Build from source (track main branch)
+Mount the project you want to scan under `/projects/<name>` and let your AI editor talk to the container over stdio (see the Usage sections below).
+
+### Cosign verification (optional)
+
+Every release image is signed with Sigstore keyless OIDC. To verify before use:
 
 ```bash
+DIGEST=$(docker buildx imagetools inspect ghcr.io/shyshlakov/pci-dss-mcp:v0.5.1 --format '{{json .Manifest}}' | jq -r '.digest')
+cosign verify ghcr.io/shyshlakov/pci-dss-mcp@$DIGEST \
+  --certificate-identity-regexp '^https://github.com/shyshlakov/pci-dss-mcp/\.github/workflows/release-docker\.yml@refs/tags/v.+$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+Install cosign locally with `brew install cosign` (macOS) or see [sigstore/cosign](https://github.com/sigstore/cosign#installation).
+
+### Install from source
+
+Requires **Go 1.25+**. Two variants:
+
+```bash
+# Released version
+go install github.com/shyshlakov/pci-dss-mcp@latest
+
+# Main branch
 git clone https://github.com/shyshlakov/pci-dss-mcp.git
 cd pci-dss-mcp
 go install .
 ```
 
-### Find the absolute path to your binary
+This drops the binary at `$(go env GOPATH)/bin/pci-dss-mcp` (usually `~/go/bin/pci-dss-mcp` on macOS and Linux, `%USERPROFILE%\go\bin\pci-dss-mcp.exe` on Windows). The canonical MCP client config JSON for the go-install path lives below under `#### MCP client config (go-install variant)`; the `## Usage with ...` H2 sections carry only the Docker configs.
 
-The MCP client configs in the next section need an **absolute path**:
+#### Find the absolute path to your binary
+
+GUI-spawned MCP clients do not inherit shell PATH, so configs need the absolute path:
 
 ```bash
 which pci-dss-mcp
@@ -77,16 +101,17 @@ which pci-dss-mcp
 
 If `which` returns nothing, use `echo "$(go env GOPATH)/bin/pci-dss-mcp"`.
 
-### macOS provenance fix (required if you see SIGKILL)
+#### macOS provenance fix (SIGKILL on launch)
 
-macOS tags unsigned binaries with a `com.apple.provenance` attribute that can
-cause `SIGKILL` when launched from a GUI-spawned MCP client. The reliable workaround:
+macOS tags unsigned binaries with a `com.apple.provenance` attribute that can cause `SIGKILL` when launched from a GUI-spawned MCP client. The reliable workaround:
 
 ```bash
 codesign --force --sign - "$(which pci-dss-mcp)"
 ```
 
-### Verify
+The Docker path does not hit this issue — the provenance attribute applies only to host-native binaries.
+
+#### Verify the binary runs
 
 ```bash
 pci-dss-mcp < /dev/null
@@ -95,13 +120,9 @@ pci-dss-mcp < /dev/null
 #   level=INFO msg="starting MCP server on stdio"
 ```
 
-## Setup
+#### MCP client config (go-install variant)
 
-pci-dss-mcp runs over MCP stdio. **All client configs require the absolute path** — bare command names do not work because GUI clients do not inherit shell `PATH`.
-
-### Claude Desktop
-
-Edit `claude_desktop_config.json` (`~/Library/Application Support/Claude/` on macOS):
+Use this JSON variant in place of the Docker block in any of the Usage sections below. Replace `/absolute/path/to/pci-dss-mcp` with the output of `which pci-dss-mcp`:
 
 ```json
 {
@@ -115,17 +136,51 @@ Edit `claude_desktop_config.json` (`~/Library/Application Support/Claude/` on ma
 }
 ```
 
-Restart Claude Desktop after saving.
+For Cursor add `"type": "stdio"` next to `"command"`. For Claude Code use `claude mcp add --scope user pci-dss-mcp -- "$(which pci-dss-mcp)"` instead of a JSON file.
 
-### Claude Code
+## Usage with Claude Desktop
 
-```bash
-claude mcp add --scope user pci-dss-mcp -- "$(which pci-dss-mcp)"
+Edit `claude_desktop_config.json` (`~/Library/Application Support/Claude/` on macOS; `%APPDATA%\Claude\` on Windows):
+
+```json
+{
+  "mcpServers": {
+    "pci-dss-mcp": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--mount", "type=bind,src=/Users/you/path/to/your-project,dst=/projects/your-project,readonly",
+        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.1"
+      ]
+    }
+  }
+}
 ```
 
-Verify: `claude mcp list`
+Replace `/Users/you/path/to/your-project` with the absolute host path to the code you want to scan. The `dst=/projects/your-project` path is the in-container mount point — reference it in prompts as `/projects/your-project`, not the host path. Restart Claude Desktop after saving.
 
-### Cursor
+If you installed pci-dss-mcp via `go install` instead of Docker, use the `### Install from source` subsection's JSON config variant.
+
+## Usage with Claude Code
+
+Register via the `claude mcp add` CLI:
+
+```bash
+claude mcp add --scope user pci-dss-mcp -- \
+  docker run -i --rm \
+  --mount "type=bind,src=$(pwd),dst=/projects/workspace,readonly" \
+  ghcr.io/shyshlakov/pci-dss-mcp:v0.5.1
+```
+
+This binds your current directory to `/projects/workspace` inside the container. After registration, ask Claude Code to scan `/projects/workspace` (not the host path).
+
+Verify registration: `claude mcp list`
+
+If you installed pci-dss-mcp via `go install` instead of Docker, see the `### Install from source` subsection for the equivalent `claude mcp add` command against the absolute binary path.
+
+## Usage with Cursor
 
 Edit `~/.cursor/mcp.json`:
 
@@ -134,19 +189,36 @@ Edit `~/.cursor/mcp.json`:
   "mcpServers": {
     "pci-dss-mcp": {
       "type": "stdio",
-      "command": "/absolute/path/to/pci-dss-mcp",
-      "args": [],
-      "env": {}
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--mount", "type=bind,src=/Users/you/path/to/your-project,dst=/projects/your-project,readonly",
+        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.1"
+      ]
     }
   }
 }
 ```
+
+Restart Cursor after saving. As with Claude Desktop, reference the in-container path `/projects/your-project` in prompts.
+
+If you installed pci-dss-mcp via `go install` instead of Docker, see the `### Install from source` subsection for the equivalent Cursor config variant.
 
 ### Reloading after a rebuild
 
 - **Claude Desktop:** quit and relaunch
 - **Claude Code:** `/mcp reload` or restart session
 - **Cursor:** restart Cursor
+
+### Path convention for prompts
+
+When you reference a scan target in prompts, use the in-container path (whatever you chose as `dst=`), not the host path. Example:
+
+> Scan `/projects/your-project` for PCI DSS violations and give me a triage summary.
+
+This is the single path-translation discipline the Docker path asks of you. The go-install path does not need this translation.
 
 ## Use Cases
 
