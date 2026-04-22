@@ -122,8 +122,33 @@ func GetOrInit(ctx context.Context, projectRoot string) *TaintEngine {
 		Tests: false,
 	}
 
+	// Wrap packages.Load in a goroutine + select so the 90s loadCtx actually
+	// returns control to the caller. Context alone is insufficient because
+	// x/tools' parseFiles errgroup workers block on a bounded cpuLimit channel
+	// (packages.go:1377) that does not honor ctx.Done, so on a recursive-parse
+	// deadlock the Load call never returns even after cancel(). We accept a
+	// worker-goroutine leak as the cost of guaranteed bounded scanner latency.
+	type loadResult struct {
+		pkgs []*packages.Package
+		err  error
+	}
+	resultCh := make(chan loadResult, 1)
 	started := time.Now()
-	pkgs, loadErr := packages.Load(cfg, "./...")
+	go func() {
+		pkgs, err := packages.Load(cfg, "./...")
+		resultCh <- loadResult{pkgs: pkgs, err: err}
+	}()
+
+	var (
+		pkgs    []*packages.Package
+		loadErr error
+	)
+	select {
+	case r := <-resultCh:
+		pkgs, loadErr = r.pkgs, r.err
+	case <-loadCtx.Done():
+		loadErr = loadCtx.Err()
+	}
 	elapsed := time.Since(started)
 
 	engine := &TaintEngine{

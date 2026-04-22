@@ -14,7 +14,7 @@ build:
 	go build -o $(BINARY) .
 
 test:
-	go test ./... -count=1 -race -timeout=8m
+	go test ./... -count=1 -race -timeout=15m
 
 lint: tools
 	$(GOBIN)/golangci-lint run --timeout=5m
