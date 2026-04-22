@@ -1,5 +1,5 @@
 .PHONY: build test lint vet clean run build-fixture test-fixture scan-fixture \
-        tools fmt-check check ci validate-server-json
+        tools fmt-check check ci validate-server-json docker-build-local docker-smoke
 
 BINARY := pci-dss-mcp
 MODULE := github.com/shyshlakov/pci-dss-mcp
@@ -85,3 +85,14 @@ validate-server-json:
 		npx --yes ajv-cli@^5 validate --spec=draft7 --strict=false -s "$$tmpdir/server.schema.json" -d server.json && \
 		rm -rf "$$tmpdir"
 	@echo "server.json: valid"
+
+docker-build-local:
+	docker build -t pci-dss-mcp:local .
+
+IMAGE ?= pci-dss-mcp:local
+
+docker-smoke:
+	@if ! docker image inspect $(IMAGE) >/dev/null 2>&1; then \
+		$(MAKE) docker-build-local; \
+	fi
+	bash scripts/docker-smoke.sh $(IMAGE)
