@@ -15,6 +15,8 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
 
 FROM golang:1.25-alpine
 
+RUN apk add --no-cache git
+
 LABEL io.modelcontextprotocol.server.name="io.github.shyshlakov/pci-dss-mcp"
 LABEL org.opencontainers.image.source="https://github.com/shyshlakov/pci-dss-mcp"
 LABEL org.opencontainers.image.description="Narrow-and-deep PCI DSS v4.0.1 compliance scanner for Go payment services, delivered as an MCP server"
