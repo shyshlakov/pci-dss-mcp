@@ -76,67 +76,13 @@ Install cosign locally with `brew install cosign` (macOS) or see [sigstore/cosig
 
 ### Install from source
 
-Requires **Go 1.25+**. Two variants:
+Requires **Go 1.25+**:
 
 ```bash
-# Released version
 go install github.com/shyshlakov/pci-dss-mcp@latest
-
-# Main branch
-git clone https://github.com/shyshlakov/pci-dss-mcp.git
-cd pci-dss-mcp
-go install .
 ```
 
-This drops the binary at `$(go env GOPATH)/bin/pci-dss-mcp` (usually `~/go/bin/pci-dss-mcp` on macOS and Linux, `%USERPROFILE%\go\bin\pci-dss-mcp.exe` on Windows). The canonical MCP client config JSON for the go-install path lives below under `#### MCP client config (go-install variant)`; the `## Usage with ...` H2 sections carry only the Docker configs.
-
-#### Find the absolute path to your binary
-
-GUI-spawned MCP clients do not inherit shell PATH, so configs need the absolute path:
-
-```bash
-which pci-dss-mcp
-# /Users/you/go/bin/pci-dss-mcp
-```
-
-If `which` returns nothing, use `echo "$(go env GOPATH)/bin/pci-dss-mcp"`.
-
-#### macOS provenance fix (SIGKILL on launch)
-
-macOS tags unsigned binaries with a `com.apple.provenance` attribute that can cause `SIGKILL` when launched from a GUI-spawned MCP client. The reliable workaround:
-
-```bash
-codesign --force --sign - "$(which pci-dss-mcp)"
-```
-
-The Docker path does not hit this issue — the provenance attribute applies only to host-native binaries.
-
-#### Verify the binary runs
-
-```bash
-pci-dss-mcp < /dev/null
-# Expected output on stderr:
-#   level=INFO msg="PCI DSS database loaded" requirements=250
-#   level=INFO msg="starting MCP server on stdio"
-```
-
-#### MCP client config (go-install variant)
-
-Use this JSON variant in place of the Docker block in any of the Usage sections below. Replace `/absolute/path/to/pci-dss-mcp` with the output of `which pci-dss-mcp`:
-
-```json
-{
-  "mcpServers": {
-    "pci-dss-mcp": {
-      "command": "/absolute/path/to/pci-dss-mcp",
-      "args": [],
-      "env": {}
-    }
-  }
-}
-```
-
-For Cursor add `"type": "stdio"` next to `"command"`. For Claude Code use `claude mcp add --scope user pci-dss-mcp -- "$(which pci-dss-mcp)"` instead of a JSON file.
+See [docs/install-from-source.md](docs/install-from-source.md) for PATH resolution, the macOS `codesign` provenance workaround, and the MCP client JSON config for the go-install variant.
 
 ## Usage with Claude Desktop
 
@@ -167,7 +113,7 @@ Common mount-root choices:
 - `/Users/you/code` — workspace-per-language users
 - `/Users/you` — broadest; exposes the whole home read-only to the scanner
 
-Only one mount is required. If you installed pci-dss-mcp via `go install` instead of Docker, use the `### Install from source` subsection's JSON config variant.
+Only one mount is required. If you installed pci-dss-mcp via `go install` instead of Docker, use the JSON config variant in [docs/install-from-source.md](docs/install-from-source.md#mcp-client-config-go-install-variant).
 
 ## Usage with Claude Code
 
@@ -184,13 +130,11 @@ This binds your entire `$GOPATH/src` tree at the same absolute path inside the c
 
 Verify registration: `claude mcp list`
 
-If you installed pci-dss-mcp via `go install` instead of Docker, see the `### Install from source` subsection for the equivalent `claude mcp add` command against the absolute binary path.
+If you installed pci-dss-mcp via `go install` instead of Docker, see [docs/install-from-source.md](docs/install-from-source.md#mcp-client-config-go-install-variant) for the equivalent `claude mcp add` command against the absolute binary path.
 
 ## Usage with Cursor
 
-Cursor supports [`${workspaceFolder}` substitution](https://cursor.com/docs/context/mcp) in `mcp.json`, which yields a tighter-scoped mount than Claude Desktop and Claude Code can use today. Prefer the per-project config below; the global-config variant is documented afterwards as a fallback.
-
-**Per-project (recommended).** Create `.cursor/mcp.json` at the repo root:
+Cursor supports [`${workspaceFolder}` substitution](https://cursor.com/docs/context/mcp) in `mcp.json`. Create `.cursor/mcp.json` at the repo root:
 
 ```json
 {
@@ -210,31 +154,7 @@ Cursor supports [`${workspaceFolder}` substitution](https://cursor.com/docs/cont
 }
 ```
 
-Cursor resolves `${workspaceFolder}` to the absolute path of the opened repo, so the mount covers exactly one project, mirrored so host and container see the same absolute path. Commit the file — every teammate who opens the repo gets the same MCP setup without hand-rolling paths.
-
-**Global fallback.** If you want one config across every Cursor workspace, edit `~/.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "pci-dss-mcp": {
-      "type": "stdio",
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "--mount", "type=bind,src=/Users/you/go/src,dst=/Users/you/go/src,readonly",
-        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2"
-      ]
-    }
-  }
-}
-```
-
-Restart Cursor after saving. Broader mount root trades tighter isolation for "one config, any repo under it".
-
-If you installed pci-dss-mcp via `go install` instead of Docker, see the `### Install from source` subsection for the equivalent Cursor config variant.
+Cursor resolves `${workspaceFolder}` to the opened repo's absolute path, so the mount covers exactly one project, mirrored so host and container see the same path. Commit the file — every teammate who opens the repo gets the same MCP setup without hand-rolling paths. For a global Cursor config across every workspace, use the Claude Desktop block above with `~/.cursor/mcp.json`.
 
 ### Reloading after a rebuild
 
