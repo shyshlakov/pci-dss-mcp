@@ -73,7 +73,7 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 		Description: "Run all PCI DSS v4.0.1 scanners + AI-assisted prioritization + file:line " +
 			"enrichment on a Go project in a single call. Default: response_shape \"summary\" " +
 			"with by_severity counts, a capped by_rule histogram (top 10 + more_rules), and " +
-			"top 1 enriched finding per severity, plus pagination.next_cursor for drill-down. " +
+			"top 1 per severity enriched finding, plus pagination.next_cursor for drill-down. " +
 			"min_severity / rule_filter drop the response to shape \"flat\" but still carry " +
 			"summary.by_severity + summary.by_rule for full-scan context. Follow the cursor " +
 			"for the full paginated list.",
