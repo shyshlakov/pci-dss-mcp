@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package auth\n\nconst AdminPassword = \"admin123\"\n\nfunc CheckAdmin(input string) bool {\n\treturn input == AdminPassword\n}\n")

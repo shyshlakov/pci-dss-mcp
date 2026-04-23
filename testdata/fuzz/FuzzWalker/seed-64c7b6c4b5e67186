@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package cache\n\nimport (\n\t\"context\"\n\n\t\"github.com/shyshlakov/pci-dss-mcp/testdata/vulnerable-payment-service/internal/redis\"\n)\n\nfunc CachePaymentCard(ctx context.Context, rdb *redis.Client, cardNumber string) error {\n\treturn rdb.HSet(ctx, \"pan_cache\", \"card\", cardNumber).Err()\n}\n")

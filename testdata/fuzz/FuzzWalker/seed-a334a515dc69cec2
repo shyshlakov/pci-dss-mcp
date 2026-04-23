@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package config\n\nvar defaultApiKey = \"default-placeholder-val\"\n")

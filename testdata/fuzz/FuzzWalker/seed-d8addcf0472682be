@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package http\n\nimport (\n\t\"io\"\n\tstdhttp \"net/http\"\n)\n\nconst PaymentURL = \"http://api.payment.example/charge\"\n\nfunc ChargePlain() ([]byte, error) {\n\tresp, err := stdhttp.Get(PaymentURL)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tdefer resp.Body.Close()\n\treturn io.ReadAll(resp.Body)\n}\n")

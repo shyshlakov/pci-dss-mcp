@@ -1,5 +1,5 @@
 .PHONY: build test lint vet clean run build-fixture test-fixture scan-fixture \
-        tools fmt-check check ci validate-server-json docker-build-local docker-smoke
+        tools fmt-check check ci validate-server-json docker-build-local docker-smoke fuzz
 
 BINARY := pci-dss-mcp
 MODULE := github.com/shyshlakov/pci-dss-mcp
@@ -96,3 +96,21 @@ docker-smoke:
 		$(MAKE) docker-build-local; \
 	fi
 	bash scripts/docker-smoke.sh $(IMAGE)
+
+FUZZ_TARGETS := \
+	scanner/panscanner:FuzzLuhn \
+	scanner:FuzzWalker \
+	scanner/reportscanner:FuzzCursorDecode \
+	scanner/scriptscanner:FuzzScriptScannerHTML
+
+FUZZTIME ?= 10s
+
+fuzz:
+	@set -e; \
+	for spec in $(FUZZ_TARGETS); do \
+		pkg=$${spec%%:*}; \
+		name=$${spec##*:}; \
+		echo ">> fuzz $$pkg $$name ($(FUZZTIME))"; \
+		go test -run=^$$ -fuzz=$$name -fuzztime=$(FUZZTIME) ./$$pkg || exit $$?; \
+	done
+	@echo "all fuzz targets completed"

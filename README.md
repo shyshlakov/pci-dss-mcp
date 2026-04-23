@@ -7,6 +7,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/shyshlakov/pci-dss-mcp?v=2)](https://goreportcard.com/report/github.com/shyshlakov/pci-dss-mcp)
 [![License: MIT](https://img.shields.io/github/license/shyshlakov/pci-dss-mcp)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/shyshlakov/pci-dss-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/shyshlakov/pci-dss-mcp)
+[![CI](https://github.com/shyshlakov/pci-dss-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/shyshlakov/pci-dss-mcp/actions/workflows/ci.yml?query=branch%3Amain)
 [![Release](https://img.shields.io/github/v/release/shyshlakov/pci-dss-mcp?label=release)](https://github.com/shyshlakov/pci-dss-mcp/releases/latest)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-io.github.shyshlakov%2Fpci--dss--mcp-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=pci-dss-mcp)
 
@@ -66,7 +67,7 @@ The binary lands at `$(go env GOPATH)/bin/pci-dss-mcp` and reads your source fil
 Pull the signed multi-arch image (linux/amd64 + linux/arm64):
 
 ```bash
-docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2
+docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3
 ```
 
 The image carries a `go` runtime internally for taint analysis, so `include_taint: true` (the default) works without a host Go toolchain. Useful for CI pipelines, QSA auditors who do not develop Go locally, or any environment where you would rather not install a toolchain to run a scanner.
@@ -82,7 +83,7 @@ Listed in the official MCP Registry as `io.github.shyshlakov/pci-dss-mcp`. Query
 Every release image is signed with Sigstore keyless OIDC. To verify before use:
 
 ```bash
-DIGEST=$(docker buildx imagetools inspect ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2 --format '{{json .Manifest}}' | jq -r '.digest')
+DIGEST=$(docker buildx imagetools inspect ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3 --format '{{json .Manifest}}' | jq -r '.digest')
 cosign verify ghcr.io/shyshlakov/pci-dss-mcp@$DIGEST \
   --certificate-identity-regexp '^https://github.com/shyshlakov/pci-dss-mcp/\.github/workflows/release-docker\.yml@refs/tags/v.+$' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
@@ -104,7 +105,7 @@ Edit `claude_desktop_config.json` (`~/Library/Application Support/Claude/` on ma
         "-i",
         "--rm",
         "--mount", "type=bind,src=/Users/you/go/src,dst=/Users/you/go/src,readonly",
-        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2"
+        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3"
       ]
     }
   }
@@ -129,7 +130,7 @@ Register via the `claude mcp add` CLI:
 claude mcp add --scope user pci-dss-mcp -- \
   docker run -i --rm \
   --mount "type=bind,src=$HOME/go/src,dst=$HOME/go/src,readonly" \
-  ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2
+  ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3
 ```
 
 This binds your entire `$GOPATH/src` tree at the same absolute path inside the container, so "scan this project" works on any repo under `$HOME/go/src` without path translation. Adjust `$HOME/go/src` if your Go workspace lives elsewhere.
@@ -153,7 +154,7 @@ Cursor supports [`${workspaceFolder}` substitution](https://cursor.com/docs/cont
         "-i",
         "--rm",
         "--mount", "type=bind,src=${workspaceFolder},dst=${workspaceFolder},readonly",
-        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2"
+        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3"
       ]
     }
   }
@@ -302,10 +303,32 @@ Contributions welcome. Before opening a PR:
 
 1. **Run `make test`** — all 20+ packages must pass under `-race`
 2. **Run `make test-fixture`** — the golden fixture regression gate is binding for any scanner change
-3. **Match the atomic-commit convention** — conventional commit format (`feat(scope): ...`, `fix(scope): ...`)
-4. **No emoji in code, comments, or commit messages**
+3. **Run `make fuzz`** — 4-target smoke fuzz (Luhn, AST walker, cursor codec, HTML scanner), ~45 seconds wall time. Any new crash seed appearing under `testdata/fuzz/` blocks merge
+4. **Match the atomic-commit convention** — conventional commit format (`feat(scope): ...`, `fix(scope): ...`)
+5. **No emoji in code, comments, or commit messages**
 
 New detection rules **must** follow the fixture TDD cycle: update `testdata/vulnerable-payment-service/` and `EXPECTED-FINDINGS.md` first (RED), implement the scanner change (GREEN), verify `make test-fixture` exits 0.
+
+### Adding a new fuzz target
+
+pci-dss-mcp runs native Go fuzz smoke on every PR (30s/target) and a deep nightly run (30min/target). When a new phase adds a parser — SARIF writer, Semgrep SARIF reader, OpenAPI spec walker, or similar — the phase MUST extend the fuzz harness. Four steps:
+
+1. **Write the target** in a `_fuzz_test.go` file next to the code under test, same package. Property: the target must not panic on any byte input. Example:
+
+   ```go
+   func FuzzMyParser(f *testing.F) {
+       f.Add([]byte(`{"valid": "seed"}`))
+       f.Fuzz(func(t *testing.T, data []byte) { _, _ = ParseMyFormat(data) })
+   }
+   ```
+
+2. **Seed the corpus** by committing at least 3 hand-written `f.Add` calls covering valid input, near-boundary edge cases, and one known-malformed input. For scanners that read files from disk, write a seeder script under `scripts/seed-fuzz-<name>.sh` that copies fixture files into `testdata/fuzz/FuzzMyParser/`.
+
+3. **Wire CI.** Add a new matrix entry for your target in both `.github/workflows/ci.yml` (30s smoke) and `.github/workflows/fuzz-nightly.yml` (30min deep). Both workflows use the same `{name, pkg}` shape — copy an existing entry and change two strings.
+
+4. **Add to `make fuzz`.** Append one line to the `FUZZ_TARGETS` variable in the Makefile: `pkg/path:FuzzMyParser`.
+
+Smoke test locally with `make fuzz FUZZTIME=30s` before pushing. New crash seeds discovered by the nightly run are auto-filed as GitHub issues with reproducer bytes.
 
 ## Roadmap
 

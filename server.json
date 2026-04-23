@@ -8,11 +8,11 @@
     "url": "https://github.com/shyshlakov/pci-dss-mcp",
     "source": "github"
   },
-  "version": "0.5.2",
+  "version": "0.5.3",
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2",
+      "identifier": "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3",
       "transport": {
         "type": "stdio"
       }

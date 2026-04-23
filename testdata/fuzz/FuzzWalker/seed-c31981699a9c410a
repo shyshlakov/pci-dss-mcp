@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package requests\n\ntype TokenizeRequest struct {\n\tCardNumber     string `json:\"card_number\"`\n\tCVV            string `json:\"cvv\"`\n\tExpirationDate string `json:\"expiration_date\"`\n\tHolderName     string `json:\"holder_name\"`\n}\n")

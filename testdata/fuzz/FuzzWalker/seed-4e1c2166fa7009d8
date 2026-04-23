@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package kms_encrypted\n\ntype VaultCard struct {\n\tID     uint               `gorm:\"primaryKey\"`\n\tNumber KMSEncryptedString `gorm:\"column:number\"`\n\tLast4  string             `gorm:\"column:last4\"`\n}\n\nfunc (VaultCard) TableName() string { return \"vault_cards\" }\n")

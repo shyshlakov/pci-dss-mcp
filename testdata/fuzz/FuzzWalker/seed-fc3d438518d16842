@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package responses\n\ntype ExchangeTokenResponse struct {\n\tToken     string `json:\"token\"`\n\tMaskedPAN string `json:\"masked_pan\"`\n\tCVV       string `json:\"cvv\"`\n\tExpiresAt int64  `json:\"expires_at\"`\n}\n")

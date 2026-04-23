@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package real_encrypted\n\ntype CardToken struct {\n\tID     uint         `gorm:\"primaryKey\"`\n\tNumber SecureString `gorm:\"column:number\"`\n\tLast4  string       `gorm:\"column:last4\"`\n}\n\nfunc (CardToken) TableName() string { return \"card_tokens\" }\n")
