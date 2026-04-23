@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("<!DOCTYPE html>\n<html>\n<head>\n  <title>About Us</title>\n</head>\n<body>\n  <h1>About</h1>\n  <script src=\"https://cdn.example.com/util.js\"></script>\n  <script>console.log(\"hi\")</script>\n</body>\n</html>\n")

@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("<!DOCTYPE html>\n<html>\n<head>\n  <title>Checkout - Pay Now</title>\n</head>\n<body>\n  <h1>Checkout</h1>\n  <form action=\"/charge\" method=\"POST\">\n    <input name=\"card_number\" />\n    <button type=\"submit\">Pay</button>\n  </form>\n  <script src=\"https://cdn.example.com/pay.js\"></script>\n  <script>processPayment()</script>\n</body>\n</html>\n")

@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("<!DOCTYPE html>\n<html>\n<head>\n  <title>Payment Confirmation</title>\n  <meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'\">\n</head>\n<body>\n  <p>Payment received</p>\n</body>\n</html>\n")

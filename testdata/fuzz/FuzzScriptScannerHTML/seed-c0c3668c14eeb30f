@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("<!DOCTYPE html>\n<html>\n<head>\n  <title>Payment Page</title>\n  <meta http-equiv=\"Content-Security-Policy\" content=\"script-src 'unsafe-inline'\">\n</head>\n<body>\n  <p>Pay here</p>\n</body>\n</html>\n")
