@@ -1,0 +1,118 @@
+name: Fuzz nightly
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: fuzz-nightly (${{ matrix.target.name }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - name: FuzzLuhn
+            pkg: ./scanner/panscanner/...
+          - name: FuzzWalker
+            pkg: ./scanner/...
+          - name: FuzzCursorDecode
+            pkg: ./scanner/reportscanner/...
+          - name: FuzzScriptScannerHTML
+            pkg: ./scanner/scriptscanner/...
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.25.9"
+
+      - name: Compute ISO week cache key
+        id: cachekey
+        run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore fuzz cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/go-build/fuzz
+          key: fuzz-${{ matrix.target.name }}-${{ steps.cachekey.outputs.week }}
+          restore-keys: |
+            fuzz-${{ matrix.target.name }}-
+
+      - name: Fuzz (30m)
+        id: fuzz
+        run: go test -run=^$ -fuzz=${{ matrix.target.name }} -fuzztime=30m ${{ matrix.target.pkg }}
+
+      - name: Detect new crash seeds
+        if: failure()
+        id: crash
+        run: |
+          new=$(git status --porcelain testdata/fuzz/${{ matrix.target.name }}/ 2>/dev/null | awk '{print $2}' || true)
+          {
+            echo "files<<CRASH_EOF"
+            echo "$new"
+            echo "CRASH_EOF"
+          } >> "$GITHUB_OUTPUT"
+          if [ -n "$new" ]; then
+            {
+              echo "body<<CRASH_EOF"
+              for f in $new; do
+                echo "### $f"
+                echo ""
+                echo '```'
+                head -c 4096 "$f" 2>/dev/null || true
+                echo '```'
+                echo ""
+              done
+              echo "CRASH_EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload crash seeds as artifact
+        if: failure() && steps.crash.outputs.files != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fuzz-crashes-${{ matrix.target.name }}-${{ github.run_id }}
+          path: testdata/fuzz/${{ matrix.target.name }}/
+          retention-days: 30
+
+      - name: Open GitHub issue on new crash
+        if: failure() && steps.crash.outputs.files != ''
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const target = '${{ matrix.target.name }}';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              `Nightly fuzz run discovered a new crash in \`${target}\`.`,
+              ``,
+              `Run: ${runUrl}`,
+              ``,
+              `Reproducer seed bytes (first 4096 bytes each):`,
+              ``,
+              `${{ steps.crash.outputs.body }}`,
+              ``,
+              `Reproduce locally:`,
+              ``,
+              '```',
+              `go test -run=^${target}$ ./... -count=1`,
+              '```',
+              ``
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `fuzz: new crash in ${target}`,
+              body: body,
+              labels: ['fuzz', 'bug']
+            });
