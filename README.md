@@ -188,7 +188,31 @@ If you installed pci-dss-mcp via `go install` instead of Docker, see the `### In
 
 ## Usage with Cursor
 
-Edit `~/.cursor/mcp.json`:
+Cursor supports [`${workspaceFolder}` substitution](https://cursor.com/docs/context/mcp) in `mcp.json`, which yields a tighter-scoped mount than Claude Desktop and Claude Code can use today. Prefer the per-project config below; the global-config variant is documented afterwards as a fallback.
+
+**Per-project (recommended).** Create `.cursor/mcp.json` at the repo root:
+
+```json
+{
+  "mcpServers": {
+    "pci-dss-mcp": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--mount", "type=bind,src=${workspaceFolder},dst=${workspaceFolder},readonly",
+        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.1"
+      ]
+    }
+  }
+}
+```
+
+Cursor resolves `${workspaceFolder}` to the absolute path of the opened repo, so the mount covers exactly one project, mirrored so host and container see the same absolute path. Commit the file — every teammate who opens the repo gets the same MCP setup without hand-rolling paths.
+
+**Global fallback.** If you want one config across every Cursor workspace, edit `~/.cursor/mcp.json`:
 
 ```json
 {
@@ -208,7 +232,7 @@ Edit `~/.cursor/mcp.json`:
 }
 ```
 
-Restart Cursor after saving. The mirrored path (`src=` equals `dst=`) lets you reference projects by their host absolute path in prompts.
+Restart Cursor after saving. Broader mount root trades tighter isolation for "one config, any repo under it".
 
 If you installed pci-dss-mcp via `go install` instead of Docker, see the `### Install from source` subsection for the equivalent Cursor config variant.
 
