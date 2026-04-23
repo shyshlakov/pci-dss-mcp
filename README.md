@@ -47,9 +47,19 @@ See [docs/comparison.md](docs/comparison.md) for a detailed feature comparison w
 
 ## Install
 
-pci-dss-mcp ships as a prebuilt OCI image on ghcr.io and as a Go module. Docker is the recommended path; Go install remains available for Go developers.
+pci-dss-mcp ships as a Go module and as a prebuilt OCI image on ghcr.io. Both paths produce byte-identical scan results on the golden fixture.
 
-### Docker (Recommended)
+### Go install
+
+Requires **Go 1.25+**:
+
+```bash
+go install github.com/shyshlakov/pci-dss-mcp@latest
+```
+
+The binary lands at `$(go env GOPATH)/bin/pci-dss-mcp` and reads your source files directly, so there is no bind-mount step in the Usage sections below. See [docs/install-from-source.md](docs/install-from-source.md) for PATH resolution, the macOS `codesign` provenance workaround, and the MCP client JSON config for the go-install variant.
+
+### Docker
 
 Pull the signed multi-arch image (linux/amd64 + linux/arm64):
 
@@ -57,9 +67,9 @@ Pull the signed multi-arch image (linux/amd64 + linux/arm64):
 docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2
 ```
 
-No Go toolchain, no PATH setup, no macOS provenance workaround. The image carries a `go` runtime internally for taint analysis, so `include_taint: true` (the default) works out of the box.
+The image carries a `go` runtime internally for taint analysis, so `include_taint: true` (the default) works without a host Go toolchain. Useful for CI pipelines, QSA auditors who do not develop Go locally, or any environment where you would rather not install a toolchain to run a scanner.
 
-Mount the project you want to scan under `/projects/<name>` and let your AI editor talk to the container over stdio (see the Usage sections below).
+Mount the project you want to scan under its absolute host path (see the Usage sections below).
 
 ### Cosign verification (optional)
 
@@ -73,16 +83,6 @@ cosign verify ghcr.io/shyshlakov/pci-dss-mcp@$DIGEST \
 ```
 
 Install cosign locally with `brew install cosign` (macOS) or see [sigstore/cosign](https://github.com/sigstore/cosign#installation).
-
-### Install from source
-
-Requires **Go 1.25+**:
-
-```bash
-go install github.com/shyshlakov/pci-dss-mcp@latest
-```
-
-See [docs/install-from-source.md](docs/install-from-source.md) for PATH resolution, the macOS `codesign` provenance workaround, and the MCP client JSON config for the go-install variant.
 
 ## Usage with Claude Desktop
 
