@@ -35,11 +35,11 @@ func setupTestServer(t *testing.T) *mcp.ClientSession {
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
 	// Start server in background.
-	go func() {
-		if err := server.Run(context.Background(), serverTransport); err != nil {
-			return
-		}
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
@@ -65,6 +65,7 @@ func extractText(t *testing.T, result *mcp.CallToolResult) string {
 }
 
 func TestScanPANData_ToolRegistered(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	result, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
@@ -88,6 +89,7 @@ func TestScanPANData_ToolRegistered(t *testing.T) {
 }
 
 func TestScanPANData_ValidPath(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	// Create temp directory with a Go file containing a known violation.
@@ -130,6 +132,7 @@ type Payment struct {
 }
 
 func TestScanPANData_InvalidPath(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -147,6 +150,7 @@ func TestScanPANData_InvalidPath(t *testing.T) {
 }
 
 func TestScanPANData_CleanCode(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	// Create temp directory with only clean code (no violations).
@@ -189,6 +193,7 @@ func HandleRequest(id string) error {
 }
 
 func TestScanPANData_CustomExclude(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	// Create temp directory with a Go file containing violations.
@@ -227,6 +232,7 @@ var cardNumber = "test"
 // field with the right jsonschema annotation (default false, mentions go/packages)
 // and that the tool handler accepts the parameter without error.
 func TestTool_IncludeTaintParam(t *testing.T) {
+	t.Parallel()
 	// 1. Reflect on ScanPANInput and assert IncludeTaint exists with the right tag.
 	rt := reflect.TypeOf(panscanner.ScanPANInput{})
 	field, ok := rt.FieldByName("IncludeTaint")

@@ -45,11 +45,11 @@ func setupTestServer(t *testing.T) *mcp.ClientSession {
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
 	// Start server in background.
-	go func() {
-		if err := server.Run(context.Background(), serverTransport); err != nil {
-			return
-		}
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
@@ -75,6 +75,7 @@ func extractText(t *testing.T, result *mcp.CallToolResult) string {
 }
 
 func TestToolRegistered(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	result, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
@@ -98,6 +99,7 @@ func TestToolRegistered(t *testing.T) {
 }
 
 func TestToolValidPath_WithViolations(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	// Create temp directory with a Go file containing TLS violations.
@@ -147,6 +149,7 @@ var c = &tls.Config{InsecureSkipVerify: true}
 }
 
 func TestToolInvalidPath(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -164,6 +167,7 @@ func TestToolInvalidPath(t *testing.T) {
 }
 
 func TestToolExcludePatterns(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	// Create temp directory with a Go file containing violations.
@@ -199,6 +203,7 @@ var c = &tls.Config{InsecureSkipVerify: true}
 }
 
 func TestToolCleanCode(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	// Create temp directory with clean TLS code.

@@ -45,6 +45,7 @@ func findBySeverity(findings []scanner.Finding, sev scanner.Severity) []scanner.
 // TestCSPHeaderMissing_UnknownResponseType verifies CSP-MISSING is reported at INFO severity
 // for a payment handler with unknown response type.
 func TestCSPHeaderMissing_UnknownResponseType(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -82,6 +83,7 @@ func HandlePayment(w http.ResponseWriter, r *http.Request) {
 // TestCSPHeaderMissing_HTMLHandler verifies CSP-MISSING is reported at HIGH severity
 // for a payment handler that serves HTML.
 func TestCSPHeaderMissing_HTMLHandler(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -113,6 +115,7 @@ func HandlePayment(w http.ResponseWriter, r *http.Request) {
 // TestCSPHeaderMissing_JSONHandler verifies CSP-MISSING is NOT emitted
 // for a JSON API handler.
 func TestCSPHeaderMissing_JSONHandler(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import (
@@ -142,6 +145,7 @@ func HandlePayment(w http.ResponseWriter, r *http.Request) {
 // TestUnsafeCSP verifies CSP-UNSAFE-INLINE, CSP-UNSAFE-EVAL, and
 // CSP-NO-SCRIPT-SRC findings for handlers with weak CSP.
 func TestUnsafeCSP(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		src       string
@@ -218,6 +222,7 @@ func HandleRefund(w http.ResponseWriter, r *http.Request) {
 // TestCSPNonceOverride verifies that unsafe-inline is NOT flagged when a
 // nonce is present (CSP3 spec).
 func TestCSPNonceOverride(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -250,6 +255,7 @@ func HandleCard(w http.ResponseWriter, r *http.Request) {
 // TestCSPSameFileHelper verifies that CSP set in a same-file helper function
 // is detected (1-level resolution).
 func TestCSPSameFileHelper(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -286,6 +292,7 @@ func setSecurityHeaders(w http.ResponseWriter) {
 // TestCSPNonPaymentHandlerSkipped verifies that non-payment handlers produce
 // no findings at all.
 func TestCSPNonPaymentHandlerSkipped(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -314,6 +321,7 @@ func HandleAbout(w http.ResponseWriter, r *http.Request) {
 // TestCSPCleanHandlers verifies that handlers with proper CSP produce only
 // INFO findings (CSP-OK), no HIGH findings.
 func TestCSPCleanHandlers(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -349,6 +357,7 @@ func HandleCheckoutClean(w http.ResponseWriter, r *http.Request) {
 // TestCSPUnanalyzableValue verifies that a CSP header with a variable value
 // (not a string literal) produces a CSP-VALUE-UNANALYZABLE finding.
 func TestCSPUnanalyzableValue(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -381,6 +390,7 @@ func HandlePayment(w http.ResponseWriter, r *http.Request) {
 // Uses c.HTML() (not c.JSON()) because JSON API handlers are correctly skipped
 // by response type detection -- CSP is only required for HTML responses.
 func TestCSPGinHandler(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "github.com/gin-gonic/gin"
@@ -406,6 +416,7 @@ func HandlePayment(c *gin.Context) {
 // TestCSPGinJSONHandlerSkipped verifies that Gin JSON API handlers are correctly
 // skipped by CSP check -- JSON APIs don't serve HTML and don't need CSP headers.
 func TestCSPGinJSONHandlerSkipped(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "github.com/gin-gonic/gin"
@@ -428,6 +439,7 @@ func HandlePayment(c *gin.Context) {
 
 // TestScannerInterface verifies ScriptScanner implements scanner.Scanner.
 func TestScannerInterface(t *testing.T) {
+	t.Parallel()
 	s := New()
 
 	if name := s.Name(); name != "payment_page_scripts" {
@@ -449,6 +461,7 @@ func TestScannerInterface(t *testing.T) {
 
 // TestCSPMetadata verifies that scan metadata is populated correctly.
 func TestCSPMetadata(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -492,6 +505,7 @@ func writeFixtureAtSubdir(t *testing.T, subdir, filename, src string) string {
 // rule 1: a payment handler whose name ends with "Callback" does not emit
 // CSP-MISSING INFO when response type is unknown.
 func TestScriptScanner_CallbackNameSuffixSuppressesCSPMissingInfo(t *testing.T) {
+	t.Parallel()
 	src := `package callbacktest
 
 import "net/http"
@@ -518,6 +532,7 @@ func MastercardCallback(w http.ResponseWriter, r *http.Request) {
 // a payment handler living under a callback/ directory does not emit
 // CSP-MISSING INFO when response type is unknown.
 func TestScriptScanner_CallbackDirSuppressesCSPMissingInfo(t *testing.T) {
+	t.Parallel()
 	src := `package callbacktest
 
 import "net/http"
@@ -544,6 +559,7 @@ func HandlePaymentNotify(w http.ResponseWriter, r *http.Request) {
 // rule 2: a payment handler registered on a /callback/ route does not emit
 // CSP-MISSING INFO when response type is unknown.
 func TestScriptScanner_CallbackRouteSuppressesCSPMissingInfo(t *testing.T) {
+	t.Parallel()
 	src := `package apitest
 
 import "net/http"
@@ -578,6 +594,7 @@ func HandlePaymentNotify(w http.ResponseWriter, r *http.Request) {
 // no-regression guard: a payment handler with unknown response type and no
 // callback signal must STILL emit CSP-MISSING at INFO severity.
 func TestScriptScanner_PaymentHandlerOutsideCallbackStillFiresInfo(t *testing.T) {
+	t.Parallel()
 	src := `package normaltest
 
 import "net/http"
@@ -608,6 +625,7 @@ func HandlePayment(w http.ResponseWriter, r *http.Request) {
 // OR has a Callback-suffixed name, CSP-MISSING must still fire at HIGH
 // severity. Suppression only applies to the unknown-type branch.
 func TestScriptScanner_HTMLHandlerStillFiresHigh(t *testing.T) {
+	t.Parallel()
 	src := `package callbacktest
 
 import "net/http"

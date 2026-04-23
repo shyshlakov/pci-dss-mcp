@@ -13,6 +13,7 @@ import (
 // verified-OK markers remain visible to QSA auditors per the project conventions
 // "INFO for verified-OK" convention. closure.
 func TestTriageSkipsVerifiedOK(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name    string
 		ruleID  string
@@ -61,6 +62,7 @@ func TestTriageSkipsVerifiedOK(t *testing.T) {
 }
 
 func TestIsVerifiedOKRule(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		ruleID string
 		want   bool

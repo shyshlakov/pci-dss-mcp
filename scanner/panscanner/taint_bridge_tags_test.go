@@ -11,6 +11,7 @@ import (
 // HasJSONTag and HasDBTag on a taint.Source to decide whether the enclosing
 // struct is a transit API model, a storage/DB model, or inconclusive.
 func TestStructTagClassification(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		src  taint.Source
@@ -70,6 +71,7 @@ func TestStructTagClassification(t *testing.T) {
 // PCI DSS 3.5.1), so absence of a DB sink is weaker evidence for PAN than for
 // SAD, which MUST be deleted after authorization per PCI DSS 3.3.1.
 func TestNegativeEvidenceTransit(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		src  taint.Source

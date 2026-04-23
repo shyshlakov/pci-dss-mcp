@@ -22,6 +22,7 @@ func writeGoFile(t *testing.T, tmpDir, name, content string) string {
 }
 
 func TestEncryptionScanner_Name(t *testing.T) {
+	t.Parallel()
 	s := cryptoscanner.New()
 	if got := s.Name(); got != "encryption" {
 		t.Errorf("Name() = %q, want %q", got, "encryption")
@@ -29,6 +30,7 @@ func TestEncryptionScanner_Name(t *testing.T) {
 }
 
 func TestEncryptionScanner_Requirements(t *testing.T) {
+	t.Parallel()
 	s := cryptoscanner.New()
 	reqs := s.Requirements()
 	want := map[string]bool{"6.2.4": true, "4.2.1": true}
@@ -45,6 +47,7 @@ func TestEncryptionScanner_Requirements(t *testing.T) {
 // --- Weak Hash Context Scoring (CRYPTO-01) ---
 
 func TestWeakHash_MD5WithSensitiveContext_Critical(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "hash.go", `package test
 
@@ -72,6 +75,7 @@ func hashPassword(password string) []byte {
 }
 
 func TestWeakHash_SHA1WithoutContext_Info(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "hash.go", `package test
 
@@ -101,6 +105,7 @@ func checksumData(data []byte) []byte {
 }
 
 func TestWeakHash_SHA256WithPasswordContext_Critical(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "hash.go", `package test
 
@@ -129,6 +134,7 @@ func hashUserPassword(passwd string) []byte {
 }
 
 func TestWeakHash_SHA256WithoutPasswordContext_NoFindings(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "hash.go", `package test
 
@@ -152,6 +158,7 @@ func checksumFile(data []byte) [32]byte {
 }
 
 func TestWeakHash_DESNewCipher_AtLeastInfo(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "cipher.go", `package test
 
@@ -178,6 +185,7 @@ func encryptData(data []byte) {
 // --- Hardcoded Key Detection (CRYPTO-02) ---
 
 func TestHardcodedKey_Tier1_KeywordPlusLiteral_Critical(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "config.go", `package test
 
@@ -197,6 +205,7 @@ var secretKey = "mysupersecretkey123"
 }
 
 func TestHardcodedKey_Tier2_HighEntropy_High(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	// 15-05: use a genuinely random-looking fixture. A naive A-Z run would now
 	// be filtered by isCharacterSet since an alphabet run of
@@ -219,6 +228,7 @@ var config = "ghp_zX9vQm2tL8jKrB4nYpF6sW1eR7aC"
 }
 
 func TestHardcodedKey_Tier3_Base64_High(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "config.go", `package test
 
@@ -238,6 +248,7 @@ var data = "QUJDREVGR0hJSktMTU5PUFFSU1RVVldY"
 }
 
 func TestHardcodedKey_Tier3_Hex_High(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "config.go", `package test
 
@@ -257,6 +268,7 @@ var hexData = "0123456789abcdef0123456789abcdef"
 }
 
 func TestHardcodedKey_Exclusion_ShortString(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "config.go", `package test
 
@@ -276,6 +288,7 @@ var short = "hello"
 }
 
 func TestHardcodedKey_Exclusion_Semver(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "config.go", `package test
 
@@ -295,6 +308,7 @@ var version = "v1.2.3"
 }
 
 func TestHardcodedKey_Exclusion_URL(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "config.go", `package test
 
@@ -314,6 +328,7 @@ var endpoint = "https://example.com/api"
 }
 
 func TestHardcodedKey_Exclusion_UUID(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "config.go", `package test
 
@@ -335,6 +350,7 @@ var id = "550e8400-e29b-41d4-a716-446655440000"
 // --- Plain HTTP Detection (CRYPTO-03) ---
 
 func TestPlainHTTP_PaymentURL_Critical(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "api.go", `package test
 
@@ -356,6 +372,7 @@ var apiURL = "http://payment.example.com/api"
 }
 
 func TestPlainHTTP_Localhost_Excluded(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "api.go", `package test
 
@@ -375,6 +392,7 @@ var devURL = "http://localhost:8080"
 }
 
 func TestPlainHTTP_Loopback_Excluded(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "api.go", `package test
 
@@ -394,6 +412,7 @@ var devURL = "http://127.0.0.1:9090"
 }
 
 func TestPlainHTTP_HTTPS_NoFinding(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "api.go", `package test
 
@@ -415,6 +434,7 @@ var secureURL = "https://secure.example.com"
 // --- Scope Separation (CRYPTO-04) ---
 
 func TestScopeSeparation_TLSConfig_NoFindings(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "tls.go", `package test
 
@@ -443,6 +463,7 @@ func newTLSConfig() *tls.Config {
 // --- Testdata Fixture Verification ---
 
 func TestCryptoViolationsFixture(t *testing.T) {
+	t.Parallel()
 	// Copy the testdata fixture to a temp dir since the walker always excludes
 	// directories named "testdata" via DefaultExcludeDirs.
 	fixtureSrc := filepath.Join("..", "..", "testdata", "crypto_violations.go")
@@ -496,6 +517,7 @@ func TestCryptoViolationsFixture(t *testing.T) {
 // --- Test PCI-ignore suppression ---
 
 func TestHardcodedKey_PCIIgnore_RawFindingReturned(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	writeGoFile(t, tmpDir, "config.go", `package test
 

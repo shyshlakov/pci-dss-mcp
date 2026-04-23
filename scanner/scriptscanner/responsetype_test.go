@@ -26,6 +26,7 @@ func parseFuncBody(t *testing.T, src string) *ast.BlockStmt {
 }
 
 func TestDetectResponseType(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		src  string

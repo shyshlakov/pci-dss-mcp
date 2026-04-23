@@ -34,6 +34,7 @@ func findByRule(findings []scanner.Finding, ruleID string) []scanner.Finding {
 // --- TLSScanner interface tests ---
 
 func TestTLSScanner_Name(t *testing.T) {
+	t.Parallel()
 	s := New()
 	if got := s.Name(); got != "tls_config" {
 		t.Errorf("Name() = %q, want %q", got, "tls_config")
@@ -41,6 +42,7 @@ func TestTLSScanner_Name(t *testing.T) {
 }
 
 func TestTLSScanner_Requirements(t *testing.T) {
+	t.Parallel()
 	s := New()
 	reqs := s.Requirements()
 	if len(reqs) != 1 || reqs[0] != "4.2.1" {
@@ -51,6 +53,7 @@ func TestTLSScanner_Requirements(t *testing.T) {
 // --- InsecureSkipVerify tests (TLS-01) ---
 
 func TestInsecureSkipVerify_CompositeLiteral_True(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{InsecureSkipVerify: true}
@@ -73,6 +76,7 @@ var c = &tls.Config{InsecureSkipVerify: true}
 }
 
 func TestInsecureSkipVerify_CompositeLiteral_False(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{InsecureSkipVerify: false, MinVersion: tls.VersionTLS12}
@@ -89,6 +93,7 @@ var c = &tls.Config{InsecureSkipVerify: false, MinVersion: tls.VersionTLS12}
 }
 
 func TestInsecureSkipVerify_FieldAssignment_True(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 func f() {
@@ -111,6 +116,7 @@ func f() {
 }
 
 func TestInsecureSkipVerify_FieldAssignment_False(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 func f() {
@@ -130,6 +136,7 @@ func f() {
 }
 
 func TestInsecureSkipVerify_NotPresent(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{MinVersion: tls.VersionTLS12}
@@ -148,6 +155,7 @@ var c = &tls.Config{MinVersion: tls.VersionTLS12}
 // --- MinVersion tests (TLS-02) ---
 
 func TestWeakMinVersion_TLS10(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{MinVersion: tls.VersionTLS10}
@@ -167,6 +175,7 @@ var c = &tls.Config{MinVersion: tls.VersionTLS10}
 }
 
 func TestWeakMinVersion_TLS11(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{MinVersion: tls.VersionTLS11}
@@ -183,6 +192,7 @@ var c = &tls.Config{MinVersion: tls.VersionTLS11}
 }
 
 func TestWeakMinVersion_SSL30(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{MinVersion: tls.VersionSSL30}
@@ -199,6 +209,7 @@ var c = &tls.Config{MinVersion: tls.VersionSSL30}
 }
 
 func TestMinVersion_TLS12_NoFinding(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{MinVersion: tls.VersionTLS12}
@@ -215,6 +226,7 @@ var c = &tls.Config{MinVersion: tls.VersionTLS12}
 }
 
 func TestMinVersion_TLS13_NoFinding(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{MinVersion: tls.VersionTLS13}
@@ -233,6 +245,7 @@ var c = &tls.Config{MinVersion: tls.VersionTLS13}
 // --- Missing MinVersion tests ---
 
 func TestMissingMinVersion_ConfigWithoutIt(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{InsecureSkipVerify: false}
@@ -252,6 +265,7 @@ var c = &tls.Config{InsecureSkipVerify: false}
 }
 
 func TestMissingMinVersion_WithMinVersion_NoFinding(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{MinVersion: tls.VersionTLS12}
@@ -268,6 +282,7 @@ var c = &tls.Config{MinVersion: tls.VersionTLS12}
 }
 
 func TestMissingMinVersion_EmptyConfig(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{}
@@ -289,6 +304,7 @@ var c = &tls.Config{}
 // --- Cipher suite tests (TLS-03) ---
 
 func TestWeakCipher_RC4(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{
@@ -311,6 +327,7 @@ var c = &tls.Config{
 }
 
 func TestWeakCipher_3DES(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{
@@ -330,6 +347,7 @@ var c = &tls.Config{
 }
 
 func TestWeakCipher_RC4_ECDHE(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{
@@ -349,6 +367,7 @@ var c = &tls.Config{
 }
 
 func TestSafeCipher_AES_CBC_NoFinding(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{
@@ -368,6 +387,7 @@ var c = &tls.Config{
 }
 
 func TestSafeCipher_ChaCha20_NoFinding(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{
@@ -389,6 +409,7 @@ var c = &tls.Config{
 // --- Scope separation tests (TLS-04) ---
 
 func TestScopeSeparation_OnlyCryptoUsage_ZeroTLSFindings(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import (
 	"crypto/md5"
@@ -415,6 +436,7 @@ func hash() {
 // --- Import alias tests ---
 
 func TestImportAlias_ResolvedCorrectly(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import ctls "crypto/tls"
 var c = &ctls.Config{InsecureSkipVerify: true}
@@ -433,6 +455,7 @@ var c = &ctls.Config{InsecureSkipVerify: true}
 // --- MinVersion field assignment tests ---
 
 func TestWeakMinVersion_FieldAssignment(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 func f() {
@@ -454,6 +477,7 @@ func f() {
 // --- Ciphers unit tests ---
 
 func TestIsProhibitedCipher(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		want bool
@@ -476,6 +500,7 @@ func TestIsProhibitedCipher(t *testing.T) {
 }
 
 func TestIsWeakTLSVersion(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		want bool
@@ -498,6 +523,7 @@ func TestIsWeakTLSVersion(t *testing.T) {
 // --- Fixture file test ---
 
 func TestFixtureFile_Violations(t *testing.T) {
+	t.Parallel()
 	// Scan the testdata/tls_violations.go fixture directly.
 	// The fixture is at the project root's testdata/ directory.
 	// We need to find it relative to the test.
@@ -554,6 +580,7 @@ func TestFixtureFile_Violations(t *testing.T) {
 // --- Metadata tests ---
 
 func TestScanMetadata(t *testing.T) {
+	t.Parallel()
 	dir := writeGoFile(t, "test.go", `package test
 import "crypto/tls"
 var c = &tls.Config{MinVersion: tls.VersionTLS12}

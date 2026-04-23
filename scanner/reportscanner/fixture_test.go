@@ -13,6 +13,7 @@ import (
 )
 
 func TestVulnerablePaymentServiceFixture(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	// copyFixtureTree strips the "testdata" path segment so scanner.DefaultExcludeDirs
@@ -127,6 +128,7 @@ func TestVulnerablePaymentServiceFixture(t *testing.T) {
 // matches. A failure here with the primary test still passing points at
 // another path-dependent scanner that needs projectRoot plumbed through.
 func TestVulnerablePaymentServiceFixture_LivePath(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	scanRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	contractPath := filepath.Join(scanRoot, "EXPECTED-FINDINGS.md")
@@ -235,6 +237,7 @@ func absInt(x int) int {
 }
 
 func TestReportLayerA_IncludesHistogram(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTree(t, fixtureRoot)
@@ -273,6 +276,7 @@ func TestReportLayerA_IncludesHistogram(t *testing.T) {
 }
 
 func TestReportToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	t.Parallel()
 	db, err := pcidb.New()
 	if err != nil {
 		t.Fatalf("pcidb.New: %v", err)
@@ -280,7 +284,11 @@ func TestReportToolDescription_LayerAHistogramNeedle(t *testing.T) {
 	server := mcp.NewServer(&mcp.Implementation{Name: "report-desc", Version: "v0.0.1"}, nil)
 	RegisterTools(server, db)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	go func() { _ = server.Run(context.Background(), serverTransport) }()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 	client := mcp.NewClient(&mcp.Implementation{Name: "report-desc-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {

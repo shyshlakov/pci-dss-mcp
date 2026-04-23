@@ -32,6 +32,7 @@ func parseInline(t *testing.T, src, funcName string) (*ast.File, *ast.FuncDecl) 
 // TestIsServerToServerCallback_NameSuffix verifies rule 1: handler function
 // name ending in "Callback" (case-insensitive) qualifies.
 func TestIsServerToServerCallback_NameSuffix(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		src      string
@@ -103,6 +104,7 @@ func PaymentHandler(w http.ResponseWriter, r *http.Request) {}
 // TestIsServerToServerCallback_RoutePath verifies rule 2: handler registered
 // on a route path containing "/callback/".
 func TestIsServerToServerCallback_RoutePath(t *testing.T) {
+	t.Parallel()
 	src := `package api
 
 import "net/http"
@@ -127,6 +129,7 @@ func (r *Router) POST(path string, h http.HandlerFunc) {}
 // TestIsServerToServerCallback_RoutePathSelector verifies rule 2 with a
 // method-value reference (h.Process) rather than bare identifier.
 func TestIsServerToServerCallback_RoutePathSelector(t *testing.T) {
+	t.Parallel()
 	src := `package api
 
 import "net/http"
@@ -153,6 +156,7 @@ func Register(router *Router, h *Handler) {
 // TestIsServerToServerCallback_FileInCallbackDir verifies rule 3: file path
 // contains a "callback/" directory segment.
 func TestIsServerToServerCallback_FileInCallbackDir(t *testing.T) {
+	t.Parallel()
 	src := `package callback
 
 import "net/http"
@@ -168,6 +172,7 @@ func Process(w http.ResponseWriter, r *http.Request) {}
 
 // TestIsServerToServerCallback_Negative verifies none-of-the-three case.
 func TestIsServerToServerCallback_Negative(t *testing.T) {
+	t.Parallel()
 	src := `package pay
 
 import "net/http"
@@ -193,6 +198,7 @@ func (r *Router) POST(path string, h http.HandlerFunc) {}
 // "HandleCallbacks" (plural, ends with "callbacks") does NOT match — per
 // the rule is HasSuffix "callback" exactly.
 func TestIsServerToServerCallback_PartialMatchNotEnough(t *testing.T) {
+	t.Parallel()
 	src := `package x
 
 import "net/http"

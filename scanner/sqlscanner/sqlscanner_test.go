@@ -12,6 +12,7 @@ import (
 )
 
 func TestSQLScanner_Name(t *testing.T) {
+	t.Parallel()
 	s := sqlscanner.New()
 	if got, want := s.Name(), "sql_schema"; got != want {
 		t.Errorf("Name() = %q, want %q", got, want)
@@ -19,6 +20,7 @@ func TestSQLScanner_Name(t *testing.T) {
 }
 
 func TestSQLScanner_Requirements(t *testing.T) {
+	t.Parallel()
 	s := sqlscanner.New()
 	reqs := s.Requirements()
 	want := map[string]bool{"3.3.1": false, "3.5.1": false}
@@ -55,6 +57,7 @@ func copyFixtures(t *testing.T, sources ...string) string {
 }
 
 func TestSQLScanner_ScanMigrations(t *testing.T) {
+	t.Parallel()
 	posSrc := filepath.Join("testdata", "migrations", "positive.sql")
 	if _, err := os.Stat(posSrc); err != nil {
 		t.Skipf("fixture missing: %v", err)
@@ -126,6 +129,7 @@ func TestSQLScanner_ScanMigrations(t *testing.T) {
 // TestSQLScanner_ContextAwareSQL verifies that scanSQLFile uses context-aware matching:
 // cards.number fires, users.number does NOT fire.
 func TestSQLScanner_ContextAwareSQL(t *testing.T) {
+	t.Parallel()
 	src := filepath.Join("testdata", "migrations", "context_aware.sql")
 	if _, err := os.Stat(src); err != nil {
 		t.Skipf("fixture missing: %v", err)
@@ -173,6 +177,7 @@ func TestSQLScanner_ContextAwareSQL(t *testing.T) {
 // TestSQLScanner_ContextAwareGorm_Encrypted verifies card_encrypted.go:
 // Number -> INFO (encrypted), no ExpMonth/ExpYear findings (panProtected=true, ).
 func TestSQLScanner_ContextAwareGorm_Encrypted(t *testing.T) {
+	t.Parallel()
 	src := filepath.Join("testdata", "models", "card_encrypted.go")
 	if _, err := os.Stat(src); err != nil {
 		t.Skipf("fixture missing: %v", err)
@@ -213,6 +218,7 @@ func TestSQLScanner_ContextAwareGorm_Encrypted(t *testing.T) {
 // TestSQLScanner_ContextAwareGorm_NoEncrypt verifies card_no_encrypt.go:
 // Number -> HIGH, ExpMonth -> MEDIUM, ExpYear -> MEDIUM.
 func TestSQLScanner_ContextAwareGorm_NoEncrypt(t *testing.T) {
+	t.Parallel()
 	src := filepath.Join("testdata", "models", "card_no_encrypt.go")
 	if _, err := os.Stat(src); err != nil {
 		t.Skipf("fixture missing: %v", err)
@@ -267,6 +273,7 @@ func TestSQLScanner_ContextAwareGorm_NoEncrypt(t *testing.T) {
 }
 
 func TestSQLScanner_ScanGormModels(t *testing.T) {
+	t.Parallel()
 	withHookSrc := filepath.Join("testdata", "models", "with_hook.go")
 	withoutHookSrc := filepath.Join("testdata", "models", "without_hook.go")
 	if _, err := os.Stat(withHookSrc); err != nil {
@@ -337,6 +344,7 @@ func TestSQLScanner_ScanGormModels(t *testing.T) {
 // findings when PAN in the same table is protected (bytea), but kept when PAN is
 // unprotected (text). Non-expiry sensitive columns (like cvv) are never suppressed.
 func TestSQLExpiryExemption(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		sql        string
@@ -458,6 +466,7 @@ func copyFixtureAs(t *testing.T, tmpDir, srcPath, dstName string) {
 // TestCrossRefSQLWithGoEncryption verifies: SQL findings are downgraded/suppressed
 // when a matching Go struct has application-level encryption for the column.
 func TestCrossRefSQLWithGoEncryption(t *testing.T) {
+	t.Parallel()
 	sqlFixture := filepath.Join("testdata", "migrations", "encrypt_crossref.sql")
 	goFixture := filepath.Join("testdata", "models", "card_encrypt_crossref.go")
 	for _, f := range []string{sqlFixture, goFixture} {
@@ -517,6 +526,7 @@ func TestCrossRefSQLWithGoEncryption(t *testing.T) {
 // TestCrossRefNoGoMatch verifies that SQL findings keep original severity
 // when no matching Go struct is found in the project.
 func TestCrossRefNoGoMatch(t *testing.T) {
+	t.Parallel()
 	sqlFixture := filepath.Join("testdata", "migrations", "encrypt_crossref.sql")
 	if _, err := os.Stat(sqlFixture); err != nil {
 		t.Skipf("fixture missing: %v", err)
@@ -542,6 +552,7 @@ func TestCrossRefNoGoMatch(t *testing.T) {
 }
 
 func TestScanFullMigrationDropDowngradeIntegration(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	migDir := filepath.Join(tmp, "migrations")
 	if err := os.MkdirAll(migDir, 0o755); err != nil {
@@ -591,6 +602,7 @@ func TestScanFullMigrationDropDowngradeIntegration(t *testing.T) {
 // meta. In this scenario the CVV SQL-SENSITIVE-COLUMN finding (dropped in
 // a later migration) was left at HIGH instead of being downgraded to INFO.
 func TestScanFullMigrationDropAfterCrossRefSuppression(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	migDir := filepath.Join(tmp, "migrations")
 	if err := os.MkdirAll(migDir, 0o755); err != nil {
@@ -673,6 +685,7 @@ func Encrypt(s string) string { return s }
 // gorm:"...;serializer:json" is a marshaling directive, not encryption-at-rest;
 // suppressing GORM-NO-ENCRYPT-HOOK on it would silently mask unencrypted CHD.
 func TestScanFullSerializerJSONDoesNotSuppressEncryptHookFinding(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	goSrc := `package model

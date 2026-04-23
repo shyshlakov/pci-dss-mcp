@@ -18,11 +18,11 @@ func setupToolServer(t *testing.T) *mcp.ClientSession {
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
-	go func() {
-		if err := server.Run(context.Background(), serverTransport); err != nil {
-			return
-		}
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
@@ -47,6 +47,7 @@ func extractToolText(t *testing.T, result *mcp.CallToolResult) string {
 }
 
 func TestCheckDepsToolRegistered(t *testing.T) {
+	t.Parallel()
 	session := setupToolServer(t)
 
 	tools, err := session.ListTools(context.Background(), nil)
@@ -67,6 +68,7 @@ func TestCheckDepsToolRegistered(t *testing.T) {
 }
 
 func TestUpdateDBToolRegistered(t *testing.T) {
+	t.Parallel()
 	session := setupToolServer(t)
 
 	tools, err := session.ListTools(context.Background(), nil)
@@ -87,6 +89,7 @@ func TestUpdateDBToolRegistered(t *testing.T) {
 }
 
 func TestCheckDepsInvalidMode(t *testing.T) {
+	t.Parallel()
 	session := setupToolServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -110,6 +113,7 @@ func TestCheckDepsInvalidMode(t *testing.T) {
 }
 
 func TestCheckDepsDefaultMode(t *testing.T) {
+	t.Parallel()
 	session := setupToolServer(t)
 
 	// Call without mode — should default to "auto" and return an error

@@ -31,6 +31,7 @@ import (
 // every tool in the same order as main.go, and walks the tool list via
 // tools/list to assert the schema is present.
 func TestAllMCPToolsHaveOutputSchema(t *testing.T) {
+	t.Parallel()
 	db, err := pcidb.New()
 	if err != nil {
 		t.Fatalf("pcidb.New: %v", err)
@@ -55,11 +56,11 @@ func TestAllMCPToolsHaveOutputSchema(t *testing.T) {
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
-	go func() {
-		if err := server.Run(context.Background(), serverTransport); err != nil {
-			return
-		}
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "pci-dss-mcp-schema-client", Version: "test"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
@@ -97,6 +98,7 @@ func TestAllMCPToolsHaveOutputSchema(t *testing.T) {
 // this, AI clients cannot tell which variant they received without parsing
 // the response_shape discriminator by hand.
 func TestOutputSchema_GenerateReport_HasOneOfUnion(t *testing.T) {
+	t.Parallel()
 	db, err := pcidb.New()
 	if err != nil {
 		t.Fatalf("pcidb.New: %v", err)
@@ -106,9 +108,11 @@ func TestOutputSchema_GenerateReport_HasOneOfUnion(t *testing.T) {
 	reportscanner.RegisterTools(server, db)
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	go func() {
-		_ = server.Run(context.Background(), serverTransport)
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "pci-dss-mcp-union-client", Version: "test"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
@@ -181,6 +185,7 @@ func TestOutputSchema_GenerateReport_HasOneOfUnion(t *testing.T) {
 }
 
 func TestAllLayerA_OutputSchemaContainsHistogram(t *testing.T) {
+	t.Parallel()
 	db, err := pcidb.New()
 	if err != nil {
 		t.Fatalf("pcidb.New: %v", err)
@@ -201,7 +206,11 @@ func TestAllLayerA_OutputSchemaContainsHistogram(t *testing.T) {
 	triagescanner.RegisterTools(server, db)
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	go func() { _ = server.Run(context.Background(), serverTransport) }()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 	client := mcp.NewClient(&mcp.Implementation{Name: "layera-schema-client", Version: "test"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {

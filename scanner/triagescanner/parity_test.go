@@ -36,6 +36,7 @@ import (
 // parity assertion now reads the structured payload directly via a typed
 // json.Unmarshal instead of the legacy "JSON:\n..." text suffix.
 func TestTriageReportParity(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
@@ -132,9 +133,11 @@ func newTriageMCPSession(t *testing.T, db *pcidb.DB) *mcp.ClientSession {
 	triagescanner.RegisterTools(server, db)
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	go func() {
-		_ = server.Run(context.Background(), serverTransport)
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "parity-test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)

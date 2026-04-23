@@ -7,6 +7,7 @@ import (
 )
 
 func TestFinding_RelatedRequirements_JSON(t *testing.T) {
+	t.Parallel()
 	t.Run("marshals related_requirements when populated", func(t *testing.T) {
 		f := Finding{
 			RuleID:              "CRYPTO-HARDCODED-KEY",
@@ -71,6 +72,7 @@ func TestFinding_RelatedRequirements_JSON(t *testing.T) {
 }
 
 func TestFormatResult_AlsoSatisfies(t *testing.T) {
+	t.Parallel()
 	t.Run("shows Also satisfies for single related requirement", func(t *testing.T) {
 		result := &ScanResult{
 			Findings: []Finding{

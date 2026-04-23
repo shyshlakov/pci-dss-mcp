@@ -18,9 +18,11 @@ func newRetentionSessionForLayerB(t *testing.T) *mcp.ClientSession {
 	server := mcp.NewServer(&mcp.Implementation{Name: "retention-layerb", Version: "v0.0.1"}, nil)
 	retentionscanner.RegisterTools(server)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	go func() {
-		_ = server.Run(context.Background(), serverTransport)
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 	client := mcp.NewClient(&mcp.Implementation{Name: "retention-layerb-test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {
@@ -71,6 +73,7 @@ func retentionStructuredMap(t *testing.T, result *mcp.CallToolResult) map[string
 }
 
 func TestRetentionLayerB_Default(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForRetention(t, fixtureRoot)
 	result := callRetentionDefault(t, scanRoot)
@@ -91,6 +94,7 @@ func TestRetentionLayerB_Default(t *testing.T) {
 }
 
 func TestRetentionLayerB_TopNPerSeverity_Is3(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForRetention(t, fixtureRoot)
 	result := callRetentionDefault(t, scanRoot)
@@ -105,6 +109,7 @@ func TestRetentionLayerB_TopNPerSeverity_Is3(t *testing.T) {
 }
 
 func TestRetentionLayerB_EmptyBucketsShipAsArray(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForRetention(t, fixtureRoot)
 	result := callRetentionDefault(t, scanRoot)
@@ -122,6 +127,7 @@ func TestRetentionLayerB_EmptyBucketsShipAsArray(t *testing.T) {
 }
 
 func TestRetentionLayerB_Deterministic(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForRetention(t, fixtureRoot)
 	r1 := callRetentionDefault(t, scanRoot)
@@ -143,6 +149,7 @@ func TestRetentionLayerB_Deterministic(t *testing.T) {
 }
 
 func TestRetentionLayerB_ByRuleHistogramSorted(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForRetention(t, fixtureRoot)
 	result := callRetentionDefault(t, scanRoot)
@@ -176,6 +183,7 @@ func TestRetentionLayerB_ByRuleHistogramSorted(t *testing.T) {
 }
 
 func TestRetentionLayerB_SizeBudget20KB(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForRetention(t, fixtureRoot)
 	result := callRetentionDefault(t, scanRoot)
@@ -191,6 +199,7 @@ func TestRetentionLayerB_SizeBudget20KB(t *testing.T) {
 }
 
 func TestRetentionLayerB_CursorRejectsFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newRetentionSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_data_retention",
@@ -208,6 +217,7 @@ func TestRetentionLayerB_CursorRejectsFilterCombo(t *testing.T) {
 }
 
 func TestRetentionLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newRetentionSessionForLayerB(t)
 	tt := []struct {
 		name string
@@ -245,6 +255,7 @@ func TestRetentionLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
 }
 
 func TestRetentionLayerB_FilterSet_StillFlat(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForRetention(t, fixtureRoot)
 	session := newRetentionSessionForLayerB(t)
@@ -265,6 +276,7 @@ func TestRetentionLayerB_FilterSet_StillFlat(t *testing.T) {
 }
 
 func TestRetentionLayerA_SizeBudget(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForRetention(t, fixtureRoot)
 	session := newRetentionSessionForLayerB(t)
@@ -297,6 +309,7 @@ func TestRetentionLayerA_SizeBudget(t *testing.T) {
 }
 
 func TestRetentionToolDescription_SummaryFirstBias(t *testing.T) {
+	t.Parallel()
 	session := newRetentionSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -327,6 +340,7 @@ func TestRetentionToolDescription_SummaryFirstBias(t *testing.T) {
 }
 
 func TestRetentionLayerB_MaxResultSizeChars(t *testing.T) {
+	t.Parallel()
 	session := newRetentionSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -363,6 +377,7 @@ func TestRetentionLayerB_MaxResultSizeChars(t *testing.T) {
 }
 
 func TestRetention_LimitMinusOneRejected(t *testing.T) {
+	t.Parallel()
 	session := newRetentionSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_data_retention",
@@ -389,6 +404,7 @@ func TestRetention_LimitMinusOneRejected(t *testing.T) {
 }
 
 func TestRetentionLayerA_IncludesHistogram(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForRetention(t, fixtureRoot)
 	session := newRetentionSessionForLayerB(t)
@@ -427,6 +443,7 @@ func TestRetentionLayerA_IncludesHistogram(t *testing.T) {
 }
 
 func TestRetentionToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	t.Parallel()
 	session := newRetentionSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {

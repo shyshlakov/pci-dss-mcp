@@ -31,6 +31,7 @@ func createTestFile(t *testing.T) string {
 }
 
 func TestReadCodeSnippet(t *testing.T) {
+	t.Parallel()
 	path := createTestFile(t)
 
 	tests := []struct {
@@ -129,6 +130,7 @@ func TestReadCodeSnippet(t *testing.T) {
 }
 
 func TestCodeSnippetJSON(t *testing.T) {
+	t.Parallel()
 	snippet := &CodeSnippet{
 		Before: "line before",
 		Line:   "flagged line",
@@ -153,6 +155,7 @@ func TestCodeSnippetJSON(t *testing.T) {
 }
 
 func TestFindingMetadata_Populated(t *testing.T) {
+	t.Parallel()
 	f := Finding{
 		RuleID:        "TEST-001",
 		Severity:      SeverityCritical,
@@ -199,6 +202,7 @@ func TestFindingMetadata_Populated(t *testing.T) {
 }
 
 func TestFindingMetadata_OmitEmpty(t *testing.T) {
+	t.Parallel()
 	f := Finding{
 		RuleID:        "TEST-002",
 		Severity:      SeverityHigh,

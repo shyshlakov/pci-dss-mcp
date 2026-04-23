@@ -3,6 +3,7 @@ package keywords
 import "testing"
 
 func TestPaymentFuncTier(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name             string
 		funcName         string
@@ -52,6 +53,7 @@ func TestPaymentFuncTier(t *testing.T) {
 }
 
 func TestFileHasTier1Keyword(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		funcNames []string
@@ -76,6 +78,7 @@ func TestFileHasTier1Keyword(t *testing.T) {
 }
 
 func TestIsPaymentPath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		path string

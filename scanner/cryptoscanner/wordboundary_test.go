@@ -6,6 +6,7 @@ import (
 )
 
 func TestSplitCamelCase(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -114,6 +115,7 @@ func TestSplitCamelCase(t *testing.T) {
 }
 
 func TestIsKeywordAtWordBoundary(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		varName string
@@ -274,6 +276,7 @@ func TestIsKeywordAtWordBoundary(t *testing.T) {
 }
 
 func TestIsKeywordAtWordBoundaryAllKeywords(t *testing.T) {
+	t.Parallel()
 	// Verify all keyRelatedKeywords work with the boundary function.
 	// Each keyword should match when it's the last word of a varName.
 	for _, kw := range keyRelatedKeywords {

@@ -9,6 +9,7 @@ import (
 )
 
 func TestArgLooksLikeSignatureMiddleware(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name string
 		expr string
@@ -41,6 +42,7 @@ func TestArgLooksLikeSignatureMiddleware(t *testing.T) {
 }
 
 func TestResetWebhookMiddlewareCache(t *testing.T) {
+	t.Parallel()
 	ResetWebhookMiddlewareCache()
 	dir := t.TempDir()
 	src := `package x
@@ -74,6 +76,7 @@ func OnEvent() {}
 }
 
 func TestHasSignatureMiddlewareCoverageCrossFile(t *testing.T) {
+	t.Parallel()
 	ResetWebhookMiddlewareCache()
 	dir := t.TempDir()
 	router := `package x
@@ -103,6 +106,7 @@ func OnPaymentEvent(w http.ResponseWriter, r *http.Request) {}
 }
 
 func TestHasSignatureMiddlewareCoverageNoMatch(t *testing.T) {
+	t.Parallel()
 	ResetWebhookMiddlewareCache()
 	dir := t.TempDir()
 	src := `package x
@@ -126,6 +130,7 @@ func OnEvent() {}
 }
 
 func TestHasSignatureMiddlewareWrapper(t *testing.T) {
+	t.Parallel()
 	ResetWebhookMiddlewareCache()
 	dir := t.TempDir()
 	src := `package x
@@ -146,6 +151,7 @@ func OnEvent(w http.ResponseWriter, r *http.Request) {}
 }
 
 func TestSignatureIsTrustedMiddlewarePackage(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		path string
 		want bool

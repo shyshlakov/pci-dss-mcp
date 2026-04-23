@@ -50,20 +50,16 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 
 	tool := &mcp.Tool{
 		Name: "generate_compliance_report",
-		Description: "Plain compliance report. For scan + AI triage + file:line enrichment " +
-			"in a single call, prefer triage_findings - it is the recommended entry point " +
-			"for interactive \"scan this project\" prompts. Use this tool when you need " +
-			"audit-artifact output (requirement-level pass/fail without triage) or CI " +
-			"pass/fail gates. " +
-			"Run all PCI DSS v4.0.1 compliance scanners against a Go project and generate " +
-			"a three-layer hybrid compliance report. Default unfiltered call returns a compact " +
-			"summary (metadata, totals, requirement_statuses, top 20 findings per severity, and a " +
-			"cursor for follow-up). Supply min_severity / rule_filter / limit to get a paged flat " +
-			"list (60 per page with cursor), or cursor=<token> to resume a prior session " +
-			"(10-minute TTL). Prefer the default shape for mixed queries; min_severity / " +
-			"rule_filter drop to response_shape \"flat\" but still carry summary.by_severity + " +
-			"summary.by_rule for full-scan context. Taint analysis is ON by default; set " +
-			"include_taint=false for fast dev iteration.",
+		Description: "Raw PCI DSS v4.0.1 compliance report without AI triage — intended for " +
+			"CI gates, audit artifacts, and requirement-level pass/fail lists. " +
+			"For interactive \"scan this project\" prompts call triage_findings instead. " +
+			"Default unfiltered call returns a compact summary (metadata, totals, " +
+			"requirement_statuses, top 20 findings per severity, cursor for follow-up). " +
+			"Supply min_severity / rule_filter / limit to get a paged flat list (60 per page " +
+			"with cursor), or cursor=<token> to resume a prior session (10-minute TTL). " +
+			"min_severity / rule_filter drop the response to shape \"flat\" but still carry " +
+			"summary.by_severity + summary.by_rule for full-scan context. Taint analysis is ON " +
+			"by default; set include_taint=false for fast dev iteration.",
 		Meta: mcp.Meta{"anthropic/maxResultSizeChars": 20000},
 	}
 	if schema, err := buildOutputSchemaUnion(); err == nil {

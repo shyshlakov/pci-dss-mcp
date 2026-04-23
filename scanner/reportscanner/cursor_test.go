@@ -8,6 +8,7 @@ import (
 )
 
 func TestCursorRoundTrip(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name string
 		in   cursorPayload
@@ -38,6 +39,7 @@ func TestCursorRoundTrip(t *testing.T) {
 }
 
 func TestCursorEncode_UsesRawURLEncoding(t *testing.T) {
+	t.Parallel()
 	enc, err := encodeCursor(cursorPayload{SID: "sid-x", Off: 1, Tool: "t"})
 	if err != nil {
 		t.Fatalf("encodeCursor err: %v", err)
@@ -48,6 +50,7 @@ func TestCursorEncode_UsesRawURLEncoding(t *testing.T) {
 }
 
 func TestCursorDecode_MalformedBase64(t *testing.T) {
+	t.Parallel()
 	tt := []string{
 		"not-base64-!@#",
 		"====",
@@ -78,6 +81,7 @@ func TestCursorDecode_MalformedJSON(t *testing.T) {
 }
 
 func TestCursorDecode_MissingTool_OK(t *testing.T) {
+	t.Parallel()
 	p := cursorPayload{SID: "sid-y", Off: 7, Tool: ""}
 	enc, err := encodeCursor(p)
 	if err != nil {

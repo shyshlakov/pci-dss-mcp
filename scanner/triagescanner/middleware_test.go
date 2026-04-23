@@ -7,6 +7,7 @@ import (
 )
 
 func TestDiscoverMiddleware_FindsUseAndGroup(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create a file matching "router" path pattern with Use and Group calls.
@@ -55,6 +56,7 @@ func Setup(r *gin.Engine) {
 }
 
 func TestDiscoverMiddleware_FiltersPathPatterns(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create file in "middleware" directory -- should be scanned.
@@ -104,6 +106,7 @@ func helper() {}
 }
 
 func TestFindMiddlewareRegistrations(t *testing.T) {
+	t.Parallel()
 	src := `package main
 
 func setup() {
@@ -140,6 +143,7 @@ func setup() {
 }
 
 func TestFindRouteRegistrations(t *testing.T) {
+	t.Parallel()
 	src := `package main
 
 func setup() {
@@ -172,6 +176,7 @@ func setup() {
 }
 
 func TestExtractCallArgNames(t *testing.T) {
+	t.Parallel()
 	src := `package main
 
 func setup() {

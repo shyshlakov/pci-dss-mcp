@@ -148,6 +148,7 @@ func scoreCalibSpec(t *testing.T, spec calibSpec) (int, []string, bool) {
 }
 
 func TestPaymentBaselineRecall(t *testing.T) {
+	t.Parallel()
 	passed := 0
 	for _, spec := range paymentBaseline {
 		score, sig, ctx := scoreCalibSpec(t, spec)
@@ -166,6 +167,7 @@ func TestPaymentBaselineRecall(t *testing.T) {
 }
 
 func TestNonPaymentBaselineFPGuard(t *testing.T) {
+	t.Parallel()
 	fpCount := 0
 	for _, spec := range nonPaymentBaseline {
 		score, sig, ctx := scoreCalibSpec(t, spec)
@@ -188,6 +190,7 @@ func TestNonPaymentBaselineFPGuard(t *testing.T) {
 // TestCoreWhitelistFrozen guards the irreducible core of the payment
 // path whitelist. Any future trim MUST NOT touch these four segments.
 func TestCoreWhitelistFrozen(t *testing.T) {
+	t.Parallel()
 	core := []string{"/payment", "/payments", "/billing", "/checkout"}
 	for _, c := range core {
 		found := false

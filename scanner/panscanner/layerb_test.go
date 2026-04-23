@@ -18,9 +18,11 @@ func newPANSessionForLayerB(t *testing.T) *mcp.ClientSession {
 	server := mcp.NewServer(&mcp.Implementation{Name: "pan-layerb", Version: "v0.0.1"}, nil)
 	panscanner.RegisterTools(server)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	go func() {
-		_ = server.Run(context.Background(), serverTransport)
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 	client := mcp.NewClient(&mcp.Implementation{Name: "pan-layerb-test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {
@@ -71,6 +73,7 @@ func panStructuredMap(t *testing.T, result *mcp.CallToolResult) map[string]any {
 }
 
 func TestPANLayerB_Default(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForPAN(t, fixtureRoot)
 	result := callPANDefault(t, scanRoot)
@@ -95,6 +98,7 @@ func TestPANLayerB_Default(t *testing.T) {
 }
 
 func TestPANLayerB_TopNPerSeverity_Is3(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForPAN(t, fixtureRoot)
 	result := callPANDefault(t, scanRoot)
@@ -112,6 +116,7 @@ func TestPANLayerB_TopNPerSeverity_Is3(t *testing.T) {
 }
 
 func TestPANLayerB_EmptyBucket(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForPAN(t, fixtureRoot)
 	result := callPANDefault(t, scanRoot)
@@ -131,6 +136,7 @@ func TestPANLayerB_EmptyBucket(t *testing.T) {
 }
 
 func TestPANLayerB_Deterministic(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForPAN(t, fixtureRoot)
 	r1 := callPANDefault(t, scanRoot)
@@ -152,6 +158,7 @@ func TestPANLayerB_Deterministic(t *testing.T) {
 }
 
 func TestPANLayerB_ByRuleHistogramSorted(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForPAN(t, fixtureRoot)
 	result := callPANDefault(t, scanRoot)
@@ -182,6 +189,7 @@ func TestPANLayerB_ByRuleHistogramSorted(t *testing.T) {
 }
 
 func TestPANLayerB_SizeBudget20KB(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForPAN(t, fixtureRoot)
 	result := callPANDefault(t, scanRoot)
@@ -197,6 +205,7 @@ func TestPANLayerB_SizeBudget20KB(t *testing.T) {
 }
 
 func TestPANLayerB_CursorRejectsFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newPANSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "scan_pan_data",
@@ -214,6 +223,7 @@ func TestPANLayerB_CursorRejectsFilterCombo(t *testing.T) {
 }
 
 func TestPANLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newPANSessionForLayerB(t)
 	tt := []struct {
 		name string
@@ -251,6 +261,7 @@ func TestPANLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
 }
 
 func TestPANLayerB_FilterSet_StillFlat(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForPAN(t, fixtureRoot)
 	session := newPANSessionForLayerB(t)
@@ -271,6 +282,7 @@ func TestPANLayerB_FilterSet_StillFlat(t *testing.T) {
 }
 
 func TestPANLayerB_FilterSet_HasCursor(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForPAN(t, fixtureRoot)
 	session := newPANSessionForLayerB(t)
@@ -300,6 +312,7 @@ func TestPANLayerB_FilterSet_HasCursor(t *testing.T) {
 }
 
 func TestPANToolDescription_SummaryFirstBias(t *testing.T) {
+	t.Parallel()
 	session := newPANSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -330,6 +343,7 @@ func TestPANToolDescription_SummaryFirstBias(t *testing.T) {
 }
 
 func TestPANLayerA_SizeBudget(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForPAN(t, fixtureRoot)
 	session := newPANSessionForLayerB(t)
@@ -362,6 +376,7 @@ func TestPANLayerA_SizeBudget(t *testing.T) {
 }
 
 func TestPANLayerB_MaxResultSizeChars(t *testing.T) {
+	t.Parallel()
 	session := newPANSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -398,6 +413,7 @@ func TestPANLayerB_MaxResultSizeChars(t *testing.T) {
 }
 
 func TestPAN_LimitMinusOneRejected(t *testing.T) {
+	t.Parallel()
 	session := newPANSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "scan_pan_data",
@@ -424,6 +440,7 @@ func TestPAN_LimitMinusOneRejected(t *testing.T) {
 }
 
 func TestPANLayerA_IncludesHistogram(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForPAN(t, fixtureRoot)
 	session := newPANSessionForLayerB(t)
@@ -467,6 +484,7 @@ func TestPANLayerA_IncludesHistogram(t *testing.T) {
 }
 
 func TestPANToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	t.Parallel()
 	session := newPANSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {

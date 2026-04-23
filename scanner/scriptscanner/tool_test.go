@@ -20,11 +20,11 @@ func setupToolTestServer(t *testing.T) *mcp.ClientSession {
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
-	go func() {
-		if err := server.Run(context.Background(), serverTransport); err != nil {
-			return
-		}
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
@@ -39,6 +39,7 @@ func setupToolTestServer(t *testing.T) *mcp.ClientSession {
 // TestToolRegistration verifies the check_payment_page_scripts tool is registered
 // with the correct name and appears in the tool list.
 func TestToolRegistration(t *testing.T) {
+	t.Parallel()
 	session := setupToolTestServer(t)
 
 	result, err := session.ListTools(context.Background(), nil)
@@ -69,6 +70,7 @@ func TestToolRegistration(t *testing.T) {
 // TestToolInputValidation verifies that calling the tool with an empty path
 // returns an error response.
 func TestToolInputValidation(t *testing.T) {
+	t.Parallel()
 	session := setupToolTestServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{

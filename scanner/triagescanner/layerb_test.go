@@ -19,9 +19,11 @@ func newTriageSessionForLayerB(t *testing.T, db *pcidb.DB) *mcp.ClientSession {
 	server := mcp.NewServer(&mcp.Implementation{Name: "triage-layerb", Version: "v0.0.1"}, nil)
 	triagescanner.RegisterTools(server, db)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	go func() {
-		_ = server.Run(context.Background(), serverTransport)
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 	client := mcp.NewClient(&mcp.Implementation{Name: "layerb-test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {
@@ -70,6 +72,7 @@ func structuredMap(t *testing.T, result *mcp.CallToolResult) map[string]any {
 }
 
 func TestTriageLayerB_Default(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForTriage(t, fixtureRoot)
 	result := callTriageDefault(t, scanRoot)
@@ -107,6 +110,7 @@ func TestTriageLayerB_Default(t *testing.T) {
 }
 
 func TestTriageLayerB_TopNPerSeverity_Is1(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForTriage(t, fixtureRoot)
 	result := callTriageDefault(t, scanRoot)
@@ -127,6 +131,7 @@ func TestTriageLayerB_TopNPerSeverity_Is1(t *testing.T) {
 }
 
 func TestTriageLayerB_Deterministic(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForTriage(t, fixtureRoot)
 	r1 := callTriageDefault(t, scanRoot)
@@ -148,6 +153,7 @@ func TestTriageLayerB_Deterministic(t *testing.T) {
 }
 
 func TestTriageLayerB_ByRuleHistogramSorted(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForTriage(t, fixtureRoot)
 	result := callTriageDefault(t, scanRoot)
@@ -181,6 +187,7 @@ func TestTriageLayerB_ByRuleHistogramSorted(t *testing.T) {
 }
 
 func TestTriageLayerB_SizeBudget20KB(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForTriage(t, fixtureRoot)
 	result := callTriageDefault(t, scanRoot)
@@ -196,6 +203,7 @@ func TestTriageLayerB_SizeBudget20KB(t *testing.T) {
 }
 
 func TestTriageLayerB_CursorRejectsFilterCombo(t *testing.T) {
+	t.Parallel()
 	db, err := pcidb.New()
 	if err != nil {
 		t.Fatalf("pcidb.New: %v", err)
@@ -217,6 +225,7 @@ func TestTriageLayerB_CursorRejectsFilterCombo(t *testing.T) {
 }
 
 func TestTriageLayerB_FilterSet_StillFlat(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForTriage(t, fixtureRoot)
 	db, err := pcidb.New()
@@ -247,6 +256,7 @@ func TestTriageLayerB_FilterSet_StillFlat(t *testing.T) {
 }
 
 func TestTriageToolDescription_SummaryFirstBias(t *testing.T) {
+	t.Parallel()
 	db, err := pcidb.New()
 	if err != nil {
 		t.Fatalf("pcidb.New: %v", err)
@@ -281,6 +291,7 @@ func TestTriageToolDescription_SummaryFirstBias(t *testing.T) {
 }
 
 func TestTriageLayerA_SizeBudget(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForTriage(t, fixtureRoot)
 	db, err := pcidb.New()
@@ -320,6 +331,7 @@ func TestTriageLayerA_SizeBudget(t *testing.T) {
 }
 
 func TestTriageLayerB_MaxResultSizeChars(t *testing.T) {
+	t.Parallel()
 	db, err := pcidb.New()
 	if err != nil {
 		t.Fatalf("pcidb.New: %v", err)
@@ -360,6 +372,7 @@ func TestTriageLayerB_MaxResultSizeChars(t *testing.T) {
 }
 
 func TestTriage_LimitMinusOneRejected(t *testing.T) {
+	t.Parallel()
 	db, err := pcidb.New()
 	if err != nil {
 		t.Fatalf("pcidb.New: %v", err)
@@ -390,6 +403,7 @@ func TestTriage_LimitMinusOneRejected(t *testing.T) {
 }
 
 func TestTriageLayerA_IncludesHistogram(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForTriage(t, fixtureRoot)
 	db, err := pcidb.New()
@@ -438,6 +452,7 @@ func TestTriageLayerA_IncludesHistogram(t *testing.T) {
 }
 
 func TestTriageToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	t.Parallel()
 	db, err := pcidb.New()
 	if err != nil {
 		t.Fatalf("pcidb.New: %v", err)

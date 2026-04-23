@@ -7,6 +7,7 @@ import (
 )
 
 func TestFilterFindings(t *testing.T) {
+	t.Parallel()
 	sample := []scanner.Finding{
 		{RuleID: "PAN-KEYWORD", Severity: scanner.SeverityHigh},
 		{RuleID: "PAN-TYPE", Severity: scanner.SeverityHigh},
@@ -58,6 +59,7 @@ func TestFilterFindings(t *testing.T) {
 }
 
 func TestFilterFindings_DoesNotMutateInput(t *testing.T) {
+	t.Parallel()
 	input := []scanner.Finding{
 		{RuleID: "A", Severity: scanner.SeverityHigh},
 		{RuleID: "B", Severity: scanner.SeverityMedium},
@@ -77,6 +79,7 @@ func TestFilterFindings_DoesNotMutateInput(t *testing.T) {
 }
 
 func TestSeverityRank(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		sev  scanner.Severity
 		want int
@@ -97,6 +100,7 @@ func TestSeverityRank(t *testing.T) {
 }
 
 func TestSeverityFromString(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input  string
 		want   scanner.Severity

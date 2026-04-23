@@ -21,6 +21,7 @@ func parseSrc(t *testing.T, src string) (*ast.File, *token.FileSet) {
 }
 
 func TestHandlerNameRegex(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name  string
 		match bool
@@ -47,6 +48,7 @@ func TestHandlerNameRegex(t *testing.T) {
 }
 
 func TestS2SClassifierThreshold(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name   string
 		strong int
@@ -72,6 +74,7 @@ func TestS2SClassifierThreshold(t *testing.T) {
 }
 
 func TestS2SClassifierNegativeSignal(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name string
 		body string
@@ -118,6 +121,7 @@ func TestS2SClassifierNegativeSignal(t *testing.T) {
 }
 
 func TestS2SDowngradeTag(t *testing.T) {
+	t.Parallel()
 	src := `package p
 
 import (
@@ -162,6 +166,7 @@ func ProcessStripeWebhook(body []byte, sig []byte, secret []byte) {
 }
 
 func TestApplyS2SDowngradeNoOpOnOtherRules(t *testing.T) {
+	t.Parallel()
 	src := `package p
 func H() {}`
 	file, fset := parseSrc(t, src)

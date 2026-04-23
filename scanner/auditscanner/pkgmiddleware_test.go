@@ -17,6 +17,7 @@ func testdataDir() string {
 // middleware registered in crossfile_middleware.go (requestLogger on
 // apiV1Group).
 func TestPkgMiddleware_CrossFileCoverage(t *testing.T) {
+	t.Parallel()
 	ResetPackageCache()
 	td := testdataDir()
 	handlerFile := filepath.Join(td, "crossfile_handler.go")
@@ -29,6 +30,7 @@ func TestPkgMiddleware_CrossFileCoverage(t *testing.T) {
 // TestPkgMiddleware_CrossFileUncovered verifies that a payment handler
 // registered on a group WITHOUT logger middleware still returns false.
 func TestPkgMiddleware_CrossFileUncovered(t *testing.T) {
+	t.Parallel()
 	ResetPackageCache()
 	td := testdataDir()
 	nocoverFile := filepath.Join(td, "crossfile_nocover.go")
@@ -42,6 +44,7 @@ func TestPkgMiddleware_CrossFileUncovered(t *testing.T) {
 // from an external package whose import path contains "middleware" triggers the
 // heuristic trust, marking the handler as covered.
 func TestPkgMiddleware_ExternalPackageHeuristic(t *testing.T) {
+	t.Parallel()
 	ResetPackageCache()
 	td := testdataDir()
 	externalFile := filepath.Join(td, "crossfile_external_mw.go")
@@ -55,6 +58,7 @@ func TestPkgMiddleware_ExternalPackageHeuristic(t *testing.T) {
 // registered on a sub-group (sub:= group.Group("/tokens/v1")) inherits
 // middleware coverage from the parent group.
 func TestPkgMiddleware_ParentChildGroupInheritance(t *testing.T) {
+	t.Parallel()
 	ResetPackageCache()
 	td := testdataDir()
 	handlerFile := filepath.Join(td, "crossfile_handler.go")
@@ -68,6 +72,7 @@ func TestPkgMiddleware_ParentChildGroupInheritance(t *testing.T) {
 // TestPkgMiddleware_CacheHit verifies that calling hasLoggingCoverageInPackage
 // twice for the same package directory only parses once (cache hit).
 func TestPkgMiddleware_CacheHit(t *testing.T) {
+	t.Parallel()
 	ResetPackageCache()
 	td := testdataDir()
 	handlerFile := filepath.Join(td, "crossfile_handler.go")
@@ -95,6 +100,7 @@ func TestPkgMiddleware_CacheHit(t *testing.T) {
 // uses the same argLooksLikeLogger function from auditscanner.go, not a
 // reimplemented version.
 func TestPkgMiddleware_ArgLooksLikeLoggerReuse(t *testing.T) {
+	t.Parallel()
 	// This test verifies the function is importable/callable from this package.
 	// If argLooksLikeLogger were moved or renamed, this would fail to compile.
 	// The function is tested separately in auditscanner_test.go; here we just

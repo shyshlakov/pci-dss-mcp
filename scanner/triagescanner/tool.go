@@ -70,18 +70,13 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 
 	tool := &mcp.Tool{
 		Name: toolNameTriage,
-		Description: "RECOMMENDED entry point for \"scan this project\" prompts - runs all " +
-			"PCI DSS v4.0.1 compliance scanners AND applies AI-assisted prioritization " +
-			"+ file:line enrichment in a single call. You do NOT need to call " +
-			"generate_compliance_report separately; this tool already runs the same " +
-			"scanner pipeline. Use generate_compliance_report only when you need a plain " +
-			"compliance report without triage (audit artifacts, CI pass/fail gates). " +
-			"Default: returns response_shape \"summary\" with by_severity counts, a " +
-			"capped by_rule histogram (top 10 + more_rules), and top 1 per severity " +
-			"enriched finding - plus a pagination.next_cursor for drill-down. " +
-			"Prefer this for mixed queries; min_severity / rule_filter drop to " +
-			"response_shape \"flat\" but still carry summary.by_severity + summary.by_rule " +
-			"for full-scan context. Follow the cursor for the full paginated list.",
+		Description: "Run all PCI DSS v4.0.1 scanners + AI-assisted prioritization + file:line " +
+			"enrichment on a Go project in a single call. Default: response_shape \"summary\" " +
+			"with by_severity counts, a capped by_rule histogram (top 10 + more_rules), and " +
+			"top 1 per severity enriched finding, plus pagination.next_cursor for drill-down. " +
+			"min_severity / rule_filter drop the response to shape \"flat\" but still carry " +
+			"summary.by_severity + summary.by_rule for full-scan context. Follow the cursor " +
+			"for the full paginated list.",
 		Meta:         mcp.Meta{"anthropic/maxResultSizeChars": 20000},
 		OutputSchema: schema,
 	}

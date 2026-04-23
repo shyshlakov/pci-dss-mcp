@@ -28,6 +28,7 @@ func createTestZIP(vulns map[string]Vulnerability) []byte {
 }
 
 func TestDownloadAndBuildCache(t *testing.T) {
+	t.Parallel()
 	goVuln := Vulnerability{
 		ID:      "GHSA-go-1234",
 		Summary: "Vulnerability in Go package",

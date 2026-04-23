@@ -23,7 +23,11 @@ func newCrossToolSession(t *testing.T) *mcp.ClientSession {
 	triagescanner.RegisterTools(server, db)
 	panscanner.RegisterTools(server)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	go func() { _ = server.Run(context.Background(), serverTransport) }()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 	client := mcp.NewClient(&mcp.Implementation{Name: "layerb-crosstool-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {
@@ -34,6 +38,7 @@ func newCrossToolSession(t *testing.T) *mcp.ClientSession {
 }
 
 func TestLayerB_CrossTool_SizeBudget(t *testing.T) {
+	t.Parallel()
 	fixture := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	absFixture, err := filepath.Abs(fixture)
 	if err != nil {

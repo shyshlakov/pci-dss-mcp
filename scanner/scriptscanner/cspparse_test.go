@@ -3,6 +3,7 @@ package scriptscanner
 import "testing"
 
 func TestParseCSP(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string

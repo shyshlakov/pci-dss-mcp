@@ -36,6 +36,7 @@ func initGitRepo(t *testing.T) string {
 }
 
 func TestGitTrackedFiles(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
@@ -70,6 +71,7 @@ func TestGitTrackedFiles(t *testing.T) {
 }
 
 func TestGitTrackedFilesFilters(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
@@ -107,6 +109,7 @@ func TestGitTrackedFilesFilters(t *testing.T) {
 }
 
 func TestGitTrackedFilesFallback(t *testing.T) {
+	t.Parallel()
 	// Use a non-git directory -- should fall back to WalkFiles.
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "main.go"), "package main")
@@ -130,6 +133,7 @@ func TestGitTrackedFilesFallback(t *testing.T) {
 }
 
 func TestGitTrackedFilesAbsolutePaths(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
@@ -155,6 +159,7 @@ func TestGitTrackedFilesAbsolutePaths(t *testing.T) {
 }
 
 func TestGitTrackedFilesSkipTestSegmentAtIncludeTestsFalse(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
@@ -193,6 +198,7 @@ func TestGitTrackedFilesSkipTestSegmentAtIncludeTestsFalse(t *testing.T) {
 }
 
 func TestGitTrackedFilesIncludeTestSegmentAtIncludeTestsTrue(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}

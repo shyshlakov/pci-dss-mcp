@@ -6,6 +6,7 @@ import (
 )
 
 func TestParseIgnoreFile_NotExists(t *testing.T) {
+	t.Parallel()
 	rules, err := ParseIgnoreFile("/nonexistent/.pci-dss-mcp-ignore")
 	if err != nil {
 		t.Fatalf("missing file should return nil error, got: %v", err)
@@ -16,6 +17,7 @@ func TestParseIgnoreFile_NotExists(t *testing.T) {
 }
 
 func TestParseIgnoreFile_VariousRules(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, ".pci-dss-mcp-ignore", `# This is a comment
 config/test.json:*
@@ -62,6 +64,7 @@ testdata/**
 }
 
 func TestParseIgnoreFile_EmptyLines(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, ".pci-dss-mcp-ignore", `
 
@@ -81,6 +84,7 @@ testdata/**
 }
 
 func TestMatchesRule_FileWildcard(t *testing.T) {
+	t.Parallel()
 	rule := IgnoreRule{Pattern: "config/test.json", Line: 0}
 
 	if !MatchesRule(rule, "config/test.json", 1) {
@@ -95,6 +99,7 @@ func TestMatchesRule_FileWildcard(t *testing.T) {
 }
 
 func TestMatchesRule_SpecificLine(t *testing.T) {
+	t.Parallel()
 	rule := IgnoreRule{Pattern: "config/prod.json", Line: 15}
 
 	if !MatchesRule(rule, "config/prod.json", 15) {
@@ -106,6 +111,7 @@ func TestMatchesRule_SpecificLine(t *testing.T) {
 }
 
 func TestMatchesRule_DoubleStarGlob(t *testing.T) {
+	t.Parallel()
 	rule := IgnoreRule{Pattern: "testdata/**", Line: 0}
 
 	if !MatchesRule(rule, "testdata/foo.go", 1) {
@@ -120,6 +126,7 @@ func TestMatchesRule_DoubleStarGlob(t *testing.T) {
 }
 
 func TestMatchesRule_SimpleGlob(t *testing.T) {
+	t.Parallel()
 	rule := IgnoreRule{Pattern: "*.env", Line: 0}
 
 	if !MatchesRule(rule, "secrets.env", 1) {
@@ -134,6 +141,7 @@ func TestMatchesRule_SimpleGlob(t *testing.T) {
 }
 
 func TestParseExcludePackageDirective(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, ".pci-dss-mcp-ignore", `# test ignore file
 exclude-package: internal/card/**
@@ -173,6 +181,7 @@ testdata/**
 }
 
 func TestParseExcludePackageDirective_EmptyPattern(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, ".pci-dss-mcp-ignore", `exclude-package:
 exclude-package:
@@ -189,6 +198,7 @@ exclude-package: internal/card/**
 }
 
 func TestParseIgnoreFile_BackwardsCompat(t *testing.T) {
+	t.Parallel()
 	// Legacy ParseIgnoreFile must still return only IgnoreRule entries even
 	// when exclude-package directives are present, with the original signature
 	// preserved for existing scanner/suppression callers.
@@ -211,6 +221,7 @@ config/test.json:*
 }
 
 func TestMatchesAnyRule(t *testing.T) {
+	t.Parallel()
 	rules := []IgnoreRule{
 		{Pattern: "config/test.json", Line: 0, SourceLine: 1},
 		{Pattern: "testdata/**", Line: 0, SourceLine: 2},

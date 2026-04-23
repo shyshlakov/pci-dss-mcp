@@ -3,6 +3,7 @@ package analysis
 import "testing"
 
 func TestIsSensitiveFieldName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		want bool
@@ -40,6 +41,7 @@ func TestIsSensitiveFieldName(t *testing.T) {
 }
 
 func TestIsSensitiveVarName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		want bool

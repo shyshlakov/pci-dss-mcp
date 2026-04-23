@@ -11,6 +11,7 @@ import (
 // --- Inline suppression tests ---
 
 func TestInlineSuppression_Go(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "main.go", `package main
 
@@ -40,6 +41,7 @@ var anotherKey = "secret123"
 }
 
 func TestInlineSuppression_Go_NoSpace(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "main.go", `package main
 
@@ -61,6 +63,7 @@ var secretKey = "hunter2" //pci-ignore:reason
 }
 
 func TestInlineSuppression_Go_EmptyReason(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "main.go", `package main
 
@@ -82,6 +85,7 @@ var secretKey = "hunter2" // pci-ignore:
 }
 
 func TestInlineSuppression_Yaml(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "config.yaml", `password: secret123 # pci-ignore: test environment
 `)
@@ -101,6 +105,7 @@ func TestInlineSuppression_Yaml(t *testing.T) {
 }
 
 func TestInlineSuppression_Yml(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "config.yml", `api_key: test123 # pci-ignore: dev only
 `)
@@ -117,6 +122,7 @@ func TestInlineSuppression_Yml(t *testing.T) {
 }
 
 func TestInlineSuppression_Env(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, ".env", `SECRET=value123 # pci-ignore: dev only
 `)
@@ -133,6 +139,7 @@ func TestInlineSuppression_Env(t *testing.T) {
 }
 
 func TestInlineSuppression_Toml(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "config.toml", `secret = "value" # pci-ignore: config override
 `)
@@ -149,6 +156,7 @@ func TestInlineSuppression_Toml(t *testing.T) {
 }
 
 func TestInlineSuppression_HTML(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "page.html", `<script src="http://cdn.example.com/lib.js"></script> <!-- pci-ignore: template exception -->
 `)
@@ -168,6 +176,7 @@ func TestInlineSuppression_HTML(t *testing.T) {
 }
 
 func TestInlineSuppression_Tmpl(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "page.tmpl", `<script src="x"></script> <!-- pci-ignore: reason -->
 `)
@@ -184,6 +193,7 @@ func TestInlineSuppression_Tmpl(t *testing.T) {
 }
 
 func TestInlineSuppression_Gohtml(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "page.gohtml", `<script src="x"></script> <!-- pci-ignore: reason -->
 `)
@@ -200,6 +210,7 @@ func TestInlineSuppression_Gohtml(t *testing.T) {
 }
 
 func TestInlineSuppression_JSON_NoSupport(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "config.json", `{"key": "value", "comment": "// pci-ignore: reason"}
 `)
@@ -216,6 +227,7 @@ func TestInlineSuppression_JSON_NoSupport(t *testing.T) {
 }
 
 func TestInlineSuppression_WrongLine(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "main.go", `package main
 
@@ -235,6 +247,7 @@ var secretKey = "hunter2"
 }
 
 func TestInlineSuppression_FileNotFound(t *testing.T) {
+	t.Parallel()
 	findings := []scanner.Finding{
 		{FilePath: "/nonexistent/file.go", Line: 1, RuleID: "TEST"},
 	}
@@ -247,6 +260,7 @@ func TestInlineSuppression_FileNotFound(t *testing.T) {
 }
 
 func TestInlineSuppression_MultipleFindings(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	writeFile(t, dir, "main.go", `package main
 
@@ -277,6 +291,7 @@ var key3 = "secret3" // pci-ignore: also known
 // --- Ignore file integration tests ---
 
 func TestIgnoreFile_Integration_GlobSuppression(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create.pci-dss-mcp-ignore with glob rule.
@@ -304,6 +319,7 @@ var key = "secret"
 }
 
 func TestIgnoreFile_Integration_FileWildcard(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	writeFile(t, dir, ".pci-dss-mcp-ignore", `config/test.json:*
@@ -325,6 +341,7 @@ func TestIgnoreFile_Integration_FileWildcard(t *testing.T) {
 }
 
 func TestIgnoreFile_Integration_SpecificLine(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	writeFile(t, dir, ".pci-dss-mcp-ignore", `config/prod.json:15
@@ -348,6 +365,7 @@ func TestIgnoreFile_Integration_SpecificLine(t *testing.T) {
 // --- Package exclusion tests ---
 
 func TestApplyPackageExclusions(t *testing.T) {
+	t.Parallel()
 	findings := []scanner.Finding{
 		{RuleID: "AUTH-MISSING-MFA", FilePath: "internal/card/game.go", Line: 10},
 		{RuleID: "PAN-KEYWORD", FilePath: "internal/payment/core.go", Line: 19},
@@ -382,6 +400,7 @@ func TestApplyPackageExclusions(t *testing.T) {
 }
 
 func TestApplyPackageExclusions_NoRules(t *testing.T) {
+	t.Parallel()
 	findings := []scanner.Finding{
 		{RuleID: "AUTH-MISSING-MFA", FilePath: "internal/card/game.go"},
 	}
@@ -395,6 +414,7 @@ func TestApplyPackageExclusions_NoRules(t *testing.T) {
 }
 
 func TestApplyPackageExclusions_NoFindings(t *testing.T) {
+	t.Parallel()
 	rules := []ExcludePackageRule{{Pattern: "internal/card/**", SourceLine: 1}}
 	filtered, reports := ApplyPackageExclusions(nil, ".", rules)
 	if filtered != nil {
@@ -406,6 +426,7 @@ func TestApplyPackageExclusions_NoFindings(t *testing.T) {
 }
 
 func TestApplyPackageExclusions_NoMatch(t *testing.T) {
+	t.Parallel()
 	findings := []scanner.Finding{
 		{RuleID: "PAN-KEYWORD", FilePath: "internal/payment/core.go", Line: 19},
 	}
@@ -423,6 +444,7 @@ func TestApplyPackageExclusions_NoMatch(t *testing.T) {
 }
 
 func TestApplyPackageExclusions_AbsolutePaths(t *testing.T) {
+	t.Parallel()
 	root := "/tmp/proj"
 	findings := []scanner.Finding{
 		{RuleID: "AUTH-MISSING-MFA", FilePath: "/tmp/proj/internal/card/game.go", Line: 10},

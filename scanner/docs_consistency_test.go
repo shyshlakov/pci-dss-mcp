@@ -36,6 +36,7 @@ var (
 )
 
 func TestDocsConsistency(t *testing.T) {
+	t.Parallel()
 	canonical := loadDocsTable(t)
 	severity := loadSeverityTable(t)
 	coverage := loadPciCoverageTable(t)
@@ -58,6 +59,7 @@ func TestDocsConsistency(t *testing.T) {
 }
 
 func TestDocsConsistencySyntheticDrift(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name       string
 		severity   map[string]severityRow

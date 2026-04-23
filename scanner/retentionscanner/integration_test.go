@@ -33,11 +33,11 @@ func setupIntegrationServer(t *testing.T) *mcp.ClientSession {
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
 	// Start server in background.
-	go func() {
-		if err := server.Run(context.Background(), serverTransport); err != nil {
-			return
-		}
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
@@ -66,6 +66,7 @@ func extractIntegrationText(t *testing.T, result *mcp.CallToolResult) string {
 // data retention violations: calls check_data_retention via MCP client,
 // validates that findings contain expected rule IDs and file references.
 func TestIntegration_RetentionFindings(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	// Copy Go fixture to a temp dir (walker excludes "testdata" directories).
@@ -129,6 +130,7 @@ func TestIntegration_RetentionFindings(t *testing.T) {
 // TestIntegration_CleanDirectory verifies that scanning a directory with no
 // retention violations returns zero findings.
 func TestIntegration_CleanDirectory(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	tmpDir := t.TempDir()
@@ -167,6 +169,7 @@ func HandleHealth(w http.ResponseWriter, r *http.Request) {
 // TestIntegration_InvalidPath verifies the MCP round-trip returns IsError=true
 // for a nonexistent path.
 func TestIntegration_InvalidPath(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{

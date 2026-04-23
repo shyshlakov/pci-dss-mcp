@@ -21,7 +21,11 @@ func newReportSessionForLayerA(t *testing.T) *mcp.ClientSession {
 	server := mcp.NewServer(&mcp.Implementation{Name: "report-layera", Version: "v0.0.1"}, nil)
 	reportscanner.RegisterTools(server, db)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	go func() { _ = server.Run(context.Background(), serverTransport) }()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 	client := mcp.NewClient(&mcp.Implementation{Name: "layera-test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {
@@ -32,6 +36,7 @@ func newReportSessionForLayerA(t *testing.T) *mcp.ClientSession {
 }
 
 func TestReportLayerA_SizeBudget(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	absFixture, err := filepath.Abs(fixtureRoot)
 	if err != nil {

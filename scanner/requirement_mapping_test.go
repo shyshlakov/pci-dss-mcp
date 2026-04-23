@@ -48,6 +48,7 @@ func (r docsRow) waived() bool {
 }
 
 func TestRequirementMappingGuard(t *testing.T) {
+	t.Parallel()
 	docs := loadDocsTable(t)
 	source := walkSourceEmits(t)
 
@@ -65,6 +66,7 @@ func TestRequirementMappingGuard(t *testing.T) {
 }
 
 func TestRequirementMappingGuardSyntheticDrift(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name       string
 		source     map[string]map[srcEmit]bool

@@ -10,6 +10,7 @@ import (
 )
 
 func TestVerifyValueBody(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name           string
 		typeName       string
@@ -223,6 +224,7 @@ func (p *PointerValuer) Scan(v interface{}) error { return nil }
 }
 
 func TestBuildVerifiedTypeMap(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name      string
 		src       string
@@ -300,6 +302,7 @@ func mapKeys(m map[string]*valuerTypeInfo) []string {
 }
 
 func TestBareTypeName(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name     string
 		input    string
@@ -330,6 +333,7 @@ func TestBareTypeName(t *testing.T) {
 }
 
 func TestApplyVerifiedTypeFixupSliceField(t *testing.T) {
+	t.Parallel()
 	src := `package p
 import (
 	"crypto/aes"

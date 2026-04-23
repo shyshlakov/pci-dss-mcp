@@ -21,6 +21,7 @@ func writeEnvTemp(t *testing.T, content string) string {
 }
 
 func TestScanEnvFile(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		content       string
@@ -130,6 +131,7 @@ func TestScanEnvFile(t *testing.T) {
 }
 
 func TestScanEnvFileLineNumbers(t *testing.T) {
+	t.Parallel()
 	content := `# Database config
 DB_HOST=localhost
 DB_PORT=5432
@@ -161,6 +163,7 @@ CARD_NUMBER=4111111111111111
 }
 
 func TestScanEnvFileErrorHandling(t *testing.T) {
+	t.Parallel()
 	// Non-existent file should return error.
 	_, _, err := scanEnvFile("/nonexistent/.env")
 	if err == nil {
@@ -169,6 +172,7 @@ func TestScanEnvFileErrorHandling(t *testing.T) {
 }
 
 func TestScanEnvFileRequirementID(t *testing.T) {
+	t.Parallel()
 	content := "CARD_NUMBER=4111111111111111\n"
 	path := writeEnvTemp(t, content)
 	findings, _, err := scanEnvFile(path)
@@ -183,6 +187,7 @@ func TestScanEnvFileRequirementID(t *testing.T) {
 }
 
 func TestScanEnvFileSuggestion(t *testing.T) {
+	t.Parallel()
 	content := "DATA=4111111111111111\n"
 	path := writeEnvTemp(t, content)
 	findings, _, err := scanEnvFile(path)

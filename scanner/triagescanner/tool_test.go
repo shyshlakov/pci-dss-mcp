@@ -58,11 +58,11 @@ func setupTriageServer(t *testing.T) *mcp.ClientSession {
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
-	go func() {
-		if err := server.Run(context.Background(), serverTransport); err != nil {
-			return
-		}
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
@@ -119,6 +119,7 @@ func copyFixtures(t *testing.T) string {
 }
 
 func TestTriageToolIntegration_WithViolations(t *testing.T) {
+	t.Parallel()
 	session := setupTriageServer(t)
 	tmpDir := copyFixtures(t)
 
@@ -187,6 +188,7 @@ func TestTriageToolIntegration_WithViolations(t *testing.T) {
 }
 
 func TestTriageToolIntegration_CleanProject(t *testing.T) {
+	t.Parallel()
 	session := setupTriageServer(t)
 	tmpDir := t.TempDir()
 
@@ -228,6 +230,7 @@ func TestTriageToolIntegration_CleanProject(t *testing.T) {
 }
 
 func TestTriageToolIntegration_DefaultPath(t *testing.T) {
+	t.Parallel()
 	session := setupTriageServer(t)
 
 	// Call with empty path -- should default to "." and not error.
@@ -250,6 +253,7 @@ func TestTriageToolIntegration_DefaultPath(t *testing.T) {
 }
 
 func TestTriageToolIntegration_InvalidDepMode(t *testing.T) {
+	t.Parallel()
 	session := setupTriageServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{

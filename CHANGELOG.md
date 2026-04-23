@@ -5,6 +5,37 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## [0.5.2] - 2026-04-23
+
+### Added
+
+- MCP `InitializeResult.instructions` populated via `mcp.ServerOptions{Instructions: ...}`. Claude Desktop, Claude Code, and VSCode inject this block into the system prompt on every turn, so models learn entry-point selection (triage_findings vs generate_compliance_report vs single-scanner tools), Docker mount recovery hints, and taint-engine performance expectations before they pick a tool. Follows the [official MCP server-instructions guidance](https://blog.modelcontextprotocol.io/posts/2025-11-03-using-server-instructions/). `main_test.go` asserts the text stays under a 250-word budget and mentions every tool name + recovery hint the instructions promise.
+- `.cursor/mcp.json` per-project example with `${workspaceFolder}` substitution. Cursor resolves the variable to the opened repo's absolute path, so the mirrored bind mount covers exactly one project at the same absolute path inside the container.
+
+### Changed
+
+- README recommends mirrored-path bind mounts (`src=dst=$HOME/go/src`) instead of the `/projects/<name>` convention previously suggested. With mirrored paths, the container sees files at the exact same absolute path the host uses, so "scan this project" prompts resolve on the first tool call without any path translation. The canonical `$GOPATH/src` mount root uniformly covers github.com, gitlab.com, and bitbucket.org sub-trees. The `/projects/<name>` convention is still valid but requires the model to rewrite paths in every prompt, which empirically breaks the first call in Claude Code.
+- `generate_compliance_report` tool description cleaned up. Earlier wording led with "For scan + AI triage + file:line enrichment" — text that describes `triage_findings`, not this tool, and was steering models toward the wrong entry point. Description now correctly scopes the tool to CI gates / audit artifacts / raw requirement pass-fail lists.
+- `triage_findings` tool description trimmed. Cross-tool disambiguation ("you do NOT need to call generate_compliance_report separately") moved into server instructions where it is read first, before the model chooses a tool.
+- `Dockerfile` runtime stage installs `git` (`apk add --no-cache git`) so `scanner/gitwalker.go` enumerates tracked files via `git ls-files` instead of falling back to a filesystem walk on every scan. Silences 12 warnings per run on real-world repositories. Severity counts unchanged.
+- `.github/workflows/release-docker.yml`: all six `docker/*` actions pinned to commit SHAs (`docker/setup-qemu-action`, `docker/setup-buildx-action`, `docker/login-action`, `docker/metadata-action`, two `docker/build-push-action` uses). `Dockerfile` base images pinned to `golang:1.25-alpine@sha256:5caaf1cca9dc...`. Recovers OpenSSF Scorecard Pinned-Dependencies from 5 to 10.
+- `Makefile` `test` target grows `-timeout=15m`. Without the timeout a single flaky ubuntu-latest runner left the CI job wedged for 23 minutes on a lock-convoy in `internal/taint` goroutines (see [`internal/taint/engine.go` docstring](internal/taint/engine.go)).
+
+### Fixed
+
+- `internal/taint.GetOrInit` now wraps `packages.Load` in a goroutine and selects on `loadCtx.Done()`. x/tools v0.44.0 `parseFiles` errgroup workers block on a bounded `cpuLimit` channel (packages.go:1377) that does not honor `ctx.Done`, so on a recursive-parse deadlock the load never returned even after the 90-second timeout fired `cancel()`. The select now enforces the 90-second ceiling regardless of upstream x/tools behavior; on timeout the scanner degrades gracefully via the existing `loadOK=false` path.
+- README `### Install from source` subsection now mentions `git` dependency explicitly under the Docker image description for users who want to replicate the container's scanner behavior on a host install.
+
+### Unchanged
+
+- Scanner detection logic. Fixture severity counts remain 49/89/27/0/59 byte-for-byte.
+- The 14 MCP tool surface. Tool names, parameters, and output schemas are identical to v0.5.1.
+- `go install github.com/shyshlakov/pci-dss-mcp@latest` remains a supported parallel install path.
+
+### Semver
+
+- PATCH v0.5.1 -> v0.5.2. Release contains docs, CI hardening, and internal taint timeout hardening. No scanner behavior change, no tool contract change, no JSON shape change.
+
 ## [0.5.1] - 2026-04-22
 
 ### Added

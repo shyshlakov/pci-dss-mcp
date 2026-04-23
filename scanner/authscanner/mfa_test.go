@@ -13,6 +13,7 @@ import (
 // cross-cutting router plumbing; the real handlers live on the embedded
 // router and are analyzed separately.
 func TestIsDelegationOnlyHandler(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		src  string
@@ -120,6 +121,7 @@ func (x *W) ServeHTTP(w http.ResponseWriter, r *http.Request) { serveIt(w, r) }`
 // fixture currently IS flagged; flip to GREEN after the helper is wired
 // into checkPaymentHandler.)
 func TestDetectMissingMFA_DelegationFixture(t *testing.T) {
+	t.Parallel()
 	src := `package delegation
 import "net/http"
 type DispatchRouter interface{ http.Handler }

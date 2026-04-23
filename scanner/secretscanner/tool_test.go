@@ -23,11 +23,11 @@ func setupTestServer(t *testing.T) *mcp.ClientSession {
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
 	// Start server in background.
-	go func() {
-		if err := server.Run(context.Background(), serverTransport); err != nil {
-			return
-		}
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
@@ -53,6 +53,7 @@ func extractToolText(t *testing.T, result *mcp.CallToolResult) string {
 }
 
 func TestToolRegistered(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	result, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
@@ -76,6 +77,7 @@ func TestToolRegistered(t *testing.T) {
 }
 
 func TestToolValidPath(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	// Copy fixtures to a temp dir (walker excludes "testdata" directories).
@@ -115,6 +117,7 @@ func TestToolValidPath(t *testing.T) {
 }
 
 func TestToolInvalidPath(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -132,6 +135,7 @@ func TestToolInvalidPath(t *testing.T) {
 }
 
 func TestToolExcludePatterns(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	// Create a temp dir with a secrets file.

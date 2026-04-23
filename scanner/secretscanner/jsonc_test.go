@@ -8,6 +8,7 @@ import (
 )
 
 func TestStripJSONComments(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    string
@@ -101,6 +102,7 @@ func TestStripJSONComments(t *testing.T) {
 
 // TestStripJSONCommentsValidJSON verifies that stripped output is valid JSON.
 func TestStripJSONCommentsValidJSON(t *testing.T) {
+	t.Parallel()
 	inputs := []string{
 		`{"key": "val" // comment
 		}`,
@@ -128,6 +130,7 @@ func TestStripJSONCommentsValidJSON(t *testing.T) {
 // TestParseJSONFileJSONC verifies the full integration: ParseJSONFile succeeds
 // on a.jsonc file with comments.
 func TestParseJSONFileJSONC(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	content := `{
   // Database configuration

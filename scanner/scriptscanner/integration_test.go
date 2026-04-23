@@ -48,11 +48,11 @@ func setupIntegrationServer(t *testing.T) *mcp.ClientSession {
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
 	// Start server in background.
-	go func() {
-		if err := server.Run(context.Background(), serverTransport); err != nil {
-			return
-		}
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
@@ -93,6 +93,7 @@ func copyFixture(t *testing.T, fixturePath, dstDir string) {
 // TestIntegration_GoCSPFindings verifies the full MCP round-trip for Go CSP
 // violations: CSP-MISSING, CSP-UNSAFE-INLINE, CSP-UNSAFE-EVAL.
 func TestIntegration_GoCSPFindings(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	fixtureSrc := filepath.Join("..", "..", "testdata", "script_violations.go")
@@ -138,6 +139,7 @@ func TestIntegration_GoCSPFindings(t *testing.T) {
 // TestIntegration_HTMLFindings verifies the full MCP round-trip for HTML
 // template violations: SRI-MISSING, NONCE-MISSING, FIM-REQUIRED.
 func TestIntegration_HTMLFindings(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	fixtureSrc := filepath.Join("..", "..", "testdata", "script_violations.html")
@@ -180,6 +182,7 @@ func TestIntegration_HTMLFindings(t *testing.T) {
 // TestIntegration_CombinedScan verifies that scanning a directory with both Go
 // and HTML violations returns findings from both in a single response.
 func TestIntegration_CombinedScan(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	goFixture := filepath.Join("..", "..", "testdata", "script_violations.go")
@@ -227,6 +230,7 @@ func TestIntegration_CombinedScan(t *testing.T) {
 // TestIntegration_CleanDirectory verifies that scanning a directory with no
 // violations returns "No violations found."
 func TestIntegration_CleanDirectory(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	// Create a clean Go file with a non-payment handler.
@@ -266,6 +270,7 @@ func HandleHealth(w http.ResponseWriter, r *http.Request) {
 // TestIntegration_InvalidPath verifies the MCP round-trip returns IsError=true
 // for a nonexistent path.
 func TestIntegration_InvalidPath(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{

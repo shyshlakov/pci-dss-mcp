@@ -68,6 +68,7 @@ func projectRoot(t *testing.T) string {
 }
 
 func TestPANViolationsFixture(t *testing.T) {
+	t.Parallel()
 	root := projectRoot(t)
 	fixtureGo := filepath.Join(root, "testdata", "pan_violations.go")
 	fixtureEnv := filepath.Join(root, "testdata", ".env")
@@ -145,6 +146,7 @@ func TestPANViolationsFixture(t *testing.T) {
 }
 
 func TestPANViolationsEnvFixture(t *testing.T) {
+	t.Parallel()
 	root := projectRoot(t)
 	fixtureEnv := filepath.Join(root, "testdata", ".env")
 
@@ -178,6 +180,7 @@ func TestPANViolationsEnvFixture(t *testing.T) {
 }
 
 func TestCleanHandlerZeroFindings(t *testing.T) {
+	t.Parallel()
 	root := projectRoot(t)
 	cleanFile := filepath.Join(root, "testdata", "clean_handler.go")
 

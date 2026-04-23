@@ -17,6 +17,7 @@ import (
 // --- hasResponseWriterParam tests ---
 
 func TestHasResponseWriterParam(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -63,6 +64,7 @@ func plainWriter(w int) {}
 // --- detectErrorLeaksInBody tests ---
 
 func TestDetectErrorLeaks_HTTPError(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -81,6 +83,7 @@ func doWork() error { return nil }
 }
 
 func TestDetectErrorLeaks_FmtFprintf(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import (
@@ -102,6 +105,7 @@ func doWork() error { return nil }
 }
 
 func TestDetectErrorLeaks_WriteBytes(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -120,6 +124,7 @@ func doWork() error { return nil }
 }
 
 func TestDetectErrorLeaks_JsonEncode(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import (
@@ -141,6 +146,7 @@ func doWork() error { return nil }
 }
 
 func TestDetectErrorLeaks_StaticMessage_NoFinding(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -161,6 +167,7 @@ func doWork() error { return nil }
 }
 
 func TestDetectErrorLeaks_NonStdErrName(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -181,6 +188,7 @@ func doWork() error { return nil }
 // --- Integration test: ScanWithExclusions ---
 
 func TestErrorScanner_ScanWithExclusions(t *testing.T) {
+	t.Parallel()
 	// Copy the testdata fixture to a temp dir since the walker excludes
 	// directories named "testdata" via DefaultExcludeDirs.
 	fixtureSrc := filepath.Join("..", "..", "testdata", "error_violations.go")
@@ -243,6 +251,7 @@ func TestErrorScanner_ScanWithExclusions(t *testing.T) {
 }
 
 func TestErrorScanner_ScanWithExclusions_CleanHandler(t *testing.T) {
+	t.Parallel()
 	// The clean_handler.go in testdata has a HandlePayment that uses generic error messages.
 	fixtureSrc := filepath.Join("..", "..", "testdata", "clean_handler.go")
 	srcBytes, err := os.ReadFile(fixtureSrc)
@@ -268,6 +277,7 @@ func TestErrorScanner_ScanWithExclusions_CleanHandler(t *testing.T) {
 }
 
 func TestErrorScanner_Name(t *testing.T) {
+	t.Parallel()
 	s := errorscanner.New()
 	if got := s.Name(); got != "error_handling" {
 		t.Errorf("Name() = %q, want %q", got, "error_handling")
@@ -275,6 +285,7 @@ func TestErrorScanner_Name(t *testing.T) {
 }
 
 func TestErrorScanner_Requirements(t *testing.T) {
+	t.Parallel()
 	s := errorscanner.New()
 	reqs := s.Requirements()
 	if len(reqs) != 1 || reqs[0] != "6.2.4" {

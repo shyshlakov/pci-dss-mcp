@@ -7,6 +7,7 @@ import (
 )
 
 func TestResolveSeverity(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		vuln     *Vulnerability
@@ -94,6 +95,7 @@ func TestResolveSeverity(t *testing.T) {
 }
 
 func TestParseCVSSBaseScore(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		vector    string
@@ -152,6 +154,7 @@ func TestParseCVSSBaseScore(t *testing.T) {
 }
 
 func TestIsAffected(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		moduleVersion string
@@ -296,6 +299,7 @@ func TestIsAffected(t *testing.T) {
 }
 
 func TestDeduplicateVulns(t *testing.T) {
+	t.Parallel()
 	t.Run("groups GHSA and GO entries sharing CVE alias", func(t *testing.T) {
 		vulns := []*Vulnerability{
 			{

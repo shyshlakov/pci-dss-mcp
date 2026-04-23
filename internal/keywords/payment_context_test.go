@@ -43,6 +43,7 @@ func containsSignal(signals []string, want string) bool {
 // Layer 1 — signal isolation. One entry per signal asserting both weight
 // and breakdown label.
 func TestScoreSignalIsolation(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		src       string
@@ -110,6 +111,7 @@ func TestScoreSignalIsolation(t *testing.T) {
 
 // Layer 2 — combined real-world shapes.
 func TestScoreCombinedSignals(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		src     string
@@ -164,6 +166,7 @@ func TestScoreCombinedSignals(t *testing.T) {
 
 // Layer 3 — negative cases (false positive prevention).
 func TestScoreNegativeCases(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		src     string
@@ -211,6 +214,7 @@ func Noop() {}`,
 // the deprecated 19.2 API — each scan session gets its own cache
 // automatically.
 func TestScoreCacheIsolation(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	src := `package p; func Foo() {}`
 	file, err := parser.ParseFile(fset, "a.go", src, parser.AllErrors)
@@ -249,6 +253,7 @@ func TestScoreCacheIsolation(t *testing.T) {
 }
 
 func TestPackageInfoFromFile(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	src := `package p
 import (
@@ -289,6 +294,7 @@ func Foo() {}
 // Pre-fix the cache key was filename#funcName, so the second method
 // returned the first method's stale score (FP and FN both directions).
 func TestScoreCacheDistinguishesMethodsBySharedName(t *testing.T) {
+	t.Parallel()
 	const src = `package p
 
 type Card struct{ Number string }

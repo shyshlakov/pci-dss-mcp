@@ -10,6 +10,7 @@ import (
 
 // TestExtractDBTag covers gorm/db/sql tag parsing.
 func TestExtractDBTag(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		tag        string
@@ -61,6 +62,7 @@ func TestExtractDBTag(t *testing.T) {
 
 // TestParseGormStructs covers the six behavior cases for GORM struct parsing.
 func TestParseGormStructs(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name               string
 		src                string
@@ -196,6 +198,7 @@ type User struct {
 
 // TestHookEncryptedFields verifies field-level encryption detection.
 func TestHookEncryptedFields(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		src  string
@@ -283,6 +286,7 @@ func (c *Card) AfterFind(tx interface{}) error {
 
 // TestResolveStructTableName verifies table name resolution.
 func TestResolveStructTableName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		src        string
@@ -351,6 +355,7 @@ type User struct {}
 
 // TestParseGormStructsWithContext verifies context-aware struct parsing.
 func TestParseGormStructsWithContext(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name            string
 		src             string
@@ -451,6 +456,7 @@ func (c *BadCard) TableName() string { return "cards" }
 
 // TestParseGormStructs_Fixtures exercises the shared testdata/models fixtures.
 func TestParseGormStructs_Fixtures(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		path               string
 		wantStructName     string
