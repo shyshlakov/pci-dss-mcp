@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package tokens\n\nimport \"net/http\"\n\nfunc TokenizeCardExchange(w http.ResponseWriter, r *http.Request) {\n\tif err := exchangeWork(r); err != nil {\n\t\tw.Write([]byte(err.Error()))\n\t\treturn\n\t}\n\tw.WriteHeader(http.StatusOK)\n}\n\nfunc exchangeWork(_ *http.Request) error { return nil }\n")

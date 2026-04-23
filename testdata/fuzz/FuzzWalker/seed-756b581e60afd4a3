@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package crypto\n\nconst AESKey = \"0123456789abcdef0123456789abcdef\"\n\nfunc GetKey() string { return AESKey }\n")

@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package exchange\n\nimport (\n\t\"fmt\"\n\t\"net/http\"\n\n\t_ \"github.com/go-jose/go-jose/v4\"\n)\n\nfunc Execute(w http.ResponseWriter, r *http.Request) {\n\tif err := doWork(); err != nil {\n\t\tfmt.Fprintf(w, \"exchange failed: %v\", err)\n\t}\n}\n\nfunc doWork() error {\n\treturn fmt.Errorf(\"placeholder\")\n}\n")

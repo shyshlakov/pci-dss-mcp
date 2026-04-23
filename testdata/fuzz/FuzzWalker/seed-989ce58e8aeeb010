@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package cache\n\nimport (\n\t\"context\"\n\n\t\"github.com/shyshlakov/pci-dss-mcp/testdata/vulnerable-payment-service/internal/redis\"\n)\n\nfunc StoreCVV(ctx context.Context, rdb *redis.Client, id, cvv string) error {\n\treturn rdb.Set(ctx, \"cvv:\"+id, cvv, redis.KeepTTL).Err()\n}\n")

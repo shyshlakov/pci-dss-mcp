@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package checkout\n\nimport (\n\t\"html/template\"\n\t\"net/http\"\n)\n\nfunc RenderCheckoutDynamic(w http.ResponseWriter, r *http.Request) {\n\tpolicy := buildPolicy(r)\n\tw.Header().Set(\"Content-Security-Policy\", policy)\n\ttmpl := template.Must(template.New(\"dyn\").Parse(\"<html><body>Pay</body></html>\"))\n\tif err := tmpl.Execute(w, nil); err != nil {\n\t\thttp.Error(w, \"render failed\", http.StatusInternalServerError)\n\t}\n}\n\nfunc buildPolicy(_ *http.Request) string { return \"default-src 'self'\" }\n")

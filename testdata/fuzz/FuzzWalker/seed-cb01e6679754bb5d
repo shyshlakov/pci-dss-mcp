@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package helper_encrypted\n\ntype CardData struct {\n\tID     uint                  `gorm:\"primaryKey\"`\n\tNumber HelperEncryptedString `gorm:\"column:number\"`\n\tLast4  string                `gorm:\"column:last4\"`\n}\n\nfunc (CardData) TableName() string { return \"card_data\" }\n")

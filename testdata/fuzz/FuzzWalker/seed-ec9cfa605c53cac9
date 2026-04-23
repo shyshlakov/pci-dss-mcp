@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package crypto\n\nvar aes256HexKey = \"4a6f686e446f65313233343536373839306162636465666768696a6b6c6d6e6f\"\n")

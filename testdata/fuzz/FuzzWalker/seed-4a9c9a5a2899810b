@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package admin\n\nimport (\n\t\"fmt\"\n\t\"net/http\"\n)\n\nfunc GetLogs(w http.ResponseWriter, r *http.Request) {\n\tfmt.Println(\"logs requested by\", r.RemoteAddr)\n\tw.WriteHeader(http.StatusOK)\n\tw.Write([]byte(\"[]\"))\n}\n")

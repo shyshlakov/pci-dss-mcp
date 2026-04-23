@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package tokens\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n)\n\nfunc CardMetadata(w http.ResponseWriter, r *http.Request) {\n\tif err := buildMeta(r); err != nil {\n\t\t// pci:fixture intentional ERR-LEAK-ENCODE — do not copy\n\t\tjson.NewEncoder(w).Encode(err)\n\t\treturn\n\t}\n\tw.WriteHeader(http.StatusOK)\n}\n\nfunc buildMeta(_ *http.Request) error { return nil }\n")

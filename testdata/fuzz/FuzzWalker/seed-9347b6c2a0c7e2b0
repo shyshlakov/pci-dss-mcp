@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package tokens\n\nimport (\n\t\"fmt\"\n\t\"net/http\"\n)\n\nfunc Detokenize(w http.ResponseWriter, r *http.Request) {\n\tif err := lookup(r); err != nil {\n\t\tfmt.Fprintf(w, \"tokenization failed: %v\", err)\n\t\treturn\n\t}\n\tw.WriteHeader(http.StatusOK)\n}\n\nfunc lookup(_ *http.Request) error { return nil }\n")
