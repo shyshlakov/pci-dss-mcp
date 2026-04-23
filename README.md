@@ -151,7 +151,7 @@ Edit `claude_desktop_config.json` (`~/Library/Application Support/Claude/` on ma
         "run",
         "-i",
         "--rm",
-        "--mount", "type=bind,src=/Users/you/path/to/your-project,dst=/projects/your-project,readonly",
+        "--mount", "type=bind,src=/Users/you/go/src,dst=/Users/you/go/src,readonly",
         "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.1"
       ]
     }
@@ -159,9 +159,15 @@ Edit `claude_desktop_config.json` (`~/Library/Application Support/Claude/` on ma
 }
 ```
 
-Replace `/Users/you/path/to/your-project` with the absolute host path to the code you want to scan. The `dst=/projects/your-project` path is the in-container mount point — reference it in prompts as `/projects/your-project`, not the host path. Restart Claude Desktop after saving.
+Replace `/Users/you/go/src` with the absolute parent directory that contains the Go repositories you want scannable. Both `src=` and `dst=` are the same path: the container sees your code under the same absolute path as your host, so Claude can pass the exact project path to the scanner without any translation. Restart Claude Desktop after saving.
 
-If you installed pci-dss-mcp via `go install` instead of Docker, use the `### Install from source` subsection's JSON config variant.
+Common mount-root choices:
+
+- `/Users/you/go/src` — canonical `$GOPATH/src` layout (covers github.com, gitlab.com, bitbucket.org sub-trees)
+- `/Users/you/code` — workspace-per-language users
+- `/Users/you` — broadest; exposes the whole home read-only to the scanner
+
+Only one mount is required. If you installed pci-dss-mcp via `go install` instead of Docker, use the `### Install from source` subsection's JSON config variant.
 
 ## Usage with Claude Code
 
@@ -170,11 +176,11 @@ Register via the `claude mcp add` CLI:
 ```bash
 claude mcp add --scope user pci-dss-mcp -- \
   docker run -i --rm \
-  --mount "type=bind,src=$(pwd),dst=/projects/workspace,readonly" \
+  --mount "type=bind,src=$HOME/go/src,dst=$HOME/go/src,readonly" \
   ghcr.io/shyshlakov/pci-dss-mcp:v0.5.1
 ```
 
-This binds your current directory to `/projects/workspace` inside the container. After registration, ask Claude Code to scan `/projects/workspace` (not the host path).
+This binds your entire `$GOPATH/src` tree at the same absolute path inside the container, so "scan this project" works on any repo under `$HOME/go/src` without path translation. Adjust `$HOME/go/src` if your Go workspace lives elsewhere.
 
 Verify registration: `claude mcp list`
 
@@ -194,7 +200,7 @@ Edit `~/.cursor/mcp.json`:
         "run",
         "-i",
         "--rm",
-        "--mount", "type=bind,src=/Users/you/path/to/your-project,dst=/projects/your-project,readonly",
+        "--mount", "type=bind,src=/Users/you/go/src,dst=/Users/you/go/src,readonly",
         "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.1"
       ]
     }
@@ -202,7 +208,7 @@ Edit `~/.cursor/mcp.json`:
 }
 ```
 
-Restart Cursor after saving. As with Claude Desktop, reference the in-container path `/projects/your-project` in prompts.
+Restart Cursor after saving. The mirrored path (`src=` equals `dst=`) lets you reference projects by their host absolute path in prompts.
 
 If you installed pci-dss-mcp via `go install` instead of Docker, see the `### Install from source` subsection for the equivalent Cursor config variant.
 
@@ -212,13 +218,9 @@ If you installed pci-dss-mcp via `go install` instead of Docker, see the `### In
 - **Claude Code:** `/mcp reload` or restart session
 - **Cursor:** restart Cursor
 
-### Path convention for prompts
+### Mount layout
 
-When you reference a scan target in prompts, use the in-container path (whatever you chose as `dst=`), not the host path. Example:
-
-> Scan `/projects/your-project` for PCI DSS violations and give me a triage summary.
-
-This is the single path-translation discipline the Docker path asks of you. The go-install path does not need this translation.
+Because `src=` and `dst=` mirror the same absolute path, the container sees files at exactly the same path your host uses. Prompts reference the normal host absolute path — no `/projects/<name>` translation. If a scan returns 0 checked files on a valid Go project, your mount root almost certainly does not cover that project's absolute path; widen the mount (or add a second one).
 
 ## Use Cases
 
