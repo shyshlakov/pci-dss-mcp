@@ -67,7 +67,7 @@ The binary lands at `$(go env GOPATH)/bin/pci-dss-mcp` and reads your source fil
 Pull the signed multi-arch image (linux/amd64 + linux/arm64):
 
 ```bash
-docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2
+docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3
 ```
 
 The image carries a `go` runtime internally for taint analysis, so `include_taint: true` (the default) works without a host Go toolchain. Useful for CI pipelines, QSA auditors who do not develop Go locally, or any environment where you would rather not install a toolchain to run a scanner.
@@ -83,7 +83,7 @@ Listed in the official MCP Registry as `io.github.shyshlakov/pci-dss-mcp`. Query
 Every release image is signed with Sigstore keyless OIDC. To verify before use:
 
 ```bash
-DIGEST=$(docker buildx imagetools inspect ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2 --format '{{json .Manifest}}' | jq -r '.digest')
+DIGEST=$(docker buildx imagetools inspect ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3 --format '{{json .Manifest}}' | jq -r '.digest')
 cosign verify ghcr.io/shyshlakov/pci-dss-mcp@$DIGEST \
   --certificate-identity-regexp '^https://github.com/shyshlakov/pci-dss-mcp/\.github/workflows/release-docker\.yml@refs/tags/v.+$' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
@@ -105,7 +105,7 @@ Edit `claude_desktop_config.json` (`~/Library/Application Support/Claude/` on ma
         "-i",
         "--rm",
         "--mount", "type=bind,src=/Users/you/go/src,dst=/Users/you/go/src,readonly",
-        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2"
+        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3"
       ]
     }
   }
@@ -130,7 +130,7 @@ Register via the `claude mcp add` CLI:
 claude mcp add --scope user pci-dss-mcp -- \
   docker run -i --rm \
   --mount "type=bind,src=$HOME/go/src,dst=$HOME/go/src,readonly" \
-  ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2
+  ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3
 ```
 
 This binds your entire `$GOPATH/src` tree at the same absolute path inside the container, so "scan this project" works on any repo under `$HOME/go/src` without path translation. Adjust `$HOME/go/src` if your Go workspace lives elsewhere.
@@ -154,7 +154,7 @@ Cursor supports [`${workspaceFolder}` substitution](https://cursor.com/docs/cont
         "-i",
         "--rm",
         "--mount", "type=bind,src=${workspaceFolder},dst=${workspaceFolder},readonly",
-        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2"
+        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3"
       ]
     }
   }
