@@ -7,6 +7,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/shyshlakov/pci-dss-mcp?v=2)](https://goreportcard.com/report/github.com/shyshlakov/pci-dss-mcp)
 [![License: MIT](https://img.shields.io/github/license/shyshlakov/pci-dss-mcp)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/shyshlakov/pci-dss-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/shyshlakov/pci-dss-mcp)
+[![Release](https://img.shields.io/github/v/release/shyshlakov/pci-dss-mcp?label=release)](https://github.com/shyshlakov/pci-dss-mcp/releases/latest)
+[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-io.github.shyshlakov%2Fpci--dss--mcp-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=pci-dss-mcp)
 
 ---
 
@@ -70,6 +72,10 @@ docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.5.2
 The image carries a `go` runtime internally for taint analysis, so `include_taint: true` (the default) works without a host Go toolchain. Useful for CI pipelines, QSA auditors who do not develop Go locally, or any environment where you would rather not install a toolchain to run a scanner.
 
 Mount the project you want to scan under its absolute host path (see the Usage sections below).
+
+### MCP Registry
+
+Listed in the official MCP Registry as `io.github.shyshlakov/pci-dss-mcp`. Query via `curl 'https://registry.modelcontextprotocol.io/v0/servers?search=pci-dss-mcp'`. This is the canonical metadata entry that downstream catalogs (glama.ai, mcp.so) auto-ingest. For installation into Claude Desktop, Claude Code, or Cursor **today**, use the Docker or `go install` paths above — those clients don't yet resolve by Registry name. Auto-published on every tag via the release workflow.
 
 ### Cosign verification (optional)
 
