@@ -303,10 +303,32 @@ Contributions welcome. Before opening a PR:
 
 1. **Run `make test`** — all 20+ packages must pass under `-race`
 2. **Run `make test-fixture`** — the golden fixture regression gate is binding for any scanner change
-3. **Match the atomic-commit convention** — conventional commit format (`feat(scope): ...`, `fix(scope): ...`)
-4. **No emoji in code, comments, or commit messages**
+3. **Run `make fuzz`** — 4-target smoke fuzz (Luhn, AST walker, cursor codec, HTML scanner), ~45 seconds wall time. Any new crash seed appearing under `testdata/fuzz/` blocks merge
+4. **Match the atomic-commit convention** — conventional commit format (`feat(scope): ...`, `fix(scope): ...`)
+5. **No emoji in code, comments, or commit messages**
 
 New detection rules **must** follow the fixture TDD cycle: update `testdata/vulnerable-payment-service/` and `EXPECTED-FINDINGS.md` first (RED), implement the scanner change (GREEN), verify `make test-fixture` exits 0.
+
+### Adding a new fuzz target
+
+pci-dss-mcp runs native Go fuzz smoke on every PR (30s/target) and a deep nightly run (30min/target). When a new phase adds a parser — SARIF writer, Semgrep SARIF reader, OpenAPI spec walker, or similar — the phase MUST extend the fuzz harness. Four steps:
+
+1. **Write the target** in a `_fuzz_test.go` file next to the code under test, same package. Property: the target must not panic on any byte input. Example:
+
+   ```go
+   func FuzzMyParser(f *testing.F) {
+       f.Add([]byte(`{"valid": "seed"}`))
+       f.Fuzz(func(t *testing.T, data []byte) { _, _ = ParseMyFormat(data) })
+   }
+   ```
+
+2. **Seed the corpus** by committing at least 3 hand-written `f.Add` calls covering valid input, near-boundary edge cases, and one known-malformed input. For scanners that read files from disk, write a seeder script under `scripts/seed-fuzz-<name>.sh` that copies fixture files into `testdata/fuzz/FuzzMyParser/`.
+
+3. **Wire CI.** Add a new matrix entry for your target in both `.github/workflows/ci.yml` (30s smoke) and `.github/workflows/fuzz-nightly.yml` (30min deep). Both workflows use the same `{name, pkg}` shape — copy an existing entry and change two strings.
+
+4. **Add to `make fuzz`.** Append one line to the `FUZZ_TARGETS` variable in the Makefile: `pkg/path:FuzzMyParser`.
+
+Smoke test locally with `make fuzz FUZZTIME=30s` before pushing. New crash seeds discovered by the nightly run are auto-filed as GitHub issues with reproducer bytes.
 
 ## Roadmap
 
