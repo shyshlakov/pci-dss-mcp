@@ -19,11 +19,11 @@ func newTriageSessionForLayerB(t *testing.T, db *pcidb.DB) *mcp.ClientSession {
 	server := mcp.NewServer(&mcp.Implementation{Name: "triage-layerb", Version: "v0.0.1"}, nil)
 	triagescanner.RegisterTools(server, db)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-	go func() {
-		_ = server.Run(ctx, serverTransport)
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 	client := mcp.NewClient(&mcp.Implementation{Name: "layerb-test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {

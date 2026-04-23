@@ -55,13 +55,11 @@ func TestAllMCPToolsHaveOutputSchema(t *testing.T) {
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-	go func() {
-		if err := server.Run(ctx, serverTransport); err != nil {
-			return
-		}
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "pci-dss-mcp-schema-client", Version: "test"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
@@ -108,11 +106,11 @@ func TestOutputSchema_GenerateReport_HasOneOfUnion(t *testing.T) {
 	reportscanner.RegisterTools(server, db)
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-	go func() {
-		_ = server.Run(ctx, serverTransport)
-	}()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "pci-dss-mcp-union-client", Version: "test"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
@@ -205,9 +203,11 @@ func TestAllLayerA_OutputSchemaContainsHistogram(t *testing.T) {
 	triagescanner.RegisterTools(server, db)
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-	go func() { _ = server.Run(ctx, serverTransport) }()
+	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server.Connect: %v", err)
+	}
+	t.Cleanup(func() { _ = serverSession.Close() })
 	client := mcp.NewClient(&mcp.Implementation{Name: "layera-schema-client", Version: "test"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {
