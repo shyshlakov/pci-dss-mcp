@@ -280,7 +280,9 @@ func TestReportToolDescription_LayerAHistogramNeedle(t *testing.T) {
 	server := mcp.NewServer(&mcp.Implementation{Name: "report-desc", Version: "v0.0.1"}, nil)
 	RegisterTools(server, db)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	go func() { _ = server.Run(context.Background(), serverTransport) }()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go func() { _ = server.Run(ctx, serverTransport) }()
 	client := mcp.NewClient(&mcp.Implementation{Name: "report-desc-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {
