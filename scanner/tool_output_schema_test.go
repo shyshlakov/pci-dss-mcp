@@ -55,8 +55,10 @@ func TestAllMCPToolsHaveOutputSchema(t *testing.T) {
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
 	go func() {
-		if err := server.Run(context.Background(), serverTransport); err != nil {
+		if err := server.Run(ctx, serverTransport); err != nil {
 			return
 		}
 	}()
@@ -106,8 +108,10 @@ func TestOutputSchema_GenerateReport_HasOneOfUnion(t *testing.T) {
 	reportscanner.RegisterTools(server, db)
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
 	go func() {
-		_ = server.Run(context.Background(), serverTransport)
+		_ = server.Run(ctx, serverTransport)
 	}()
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "pci-dss-mcp-union-client", Version: "test"}, nil)
@@ -201,7 +205,9 @@ func TestAllLayerA_OutputSchemaContainsHistogram(t *testing.T) {
 	triagescanner.RegisterTools(server, db)
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	go func() { _ = server.Run(context.Background(), serverTransport) }()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go func() { _ = server.Run(ctx, serverTransport) }()
 	client := mcp.NewClient(&mcp.Implementation{Name: "layera-schema-client", Version: "test"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {

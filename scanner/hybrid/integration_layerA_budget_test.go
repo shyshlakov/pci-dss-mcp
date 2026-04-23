@@ -46,7 +46,9 @@ func newAllToolsSession(t *testing.T) *mcp.ClientSession {
 	tlsscanner.RegisterTools(server)
 	triagescanner.RegisterTools(server, db)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	go func() { _ = server.Run(context.Background(), serverTransport) }()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go func() { _ = server.Run(ctx, serverTransport) }()
 	client := mcp.NewClient(&mcp.Implementation{Name: "layera-budget-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {

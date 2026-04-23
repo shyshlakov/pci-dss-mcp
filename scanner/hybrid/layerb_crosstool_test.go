@@ -23,7 +23,9 @@ func newCrossToolSession(t *testing.T) *mcp.ClientSession {
 	triagescanner.RegisterTools(server, db)
 	panscanner.RegisterTools(server)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	go func() { _ = server.Run(context.Background(), serverTransport) }()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go func() { _ = server.Run(ctx, serverTransport) }()
 	client := mcp.NewClient(&mcp.Implementation{Name: "layerb-crosstool-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
 	if err != nil {

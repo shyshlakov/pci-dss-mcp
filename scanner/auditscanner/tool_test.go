@@ -23,8 +23,10 @@ func setupTestServer(t *testing.T) *mcp.ClientSession {
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
 	// Start server in background.
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
 	go func() {
-		if err := server.Run(context.Background(), serverTransport); err != nil {
+		if err := server.Run(ctx, serverTransport); err != nil {
 			return
 		}
 	}()

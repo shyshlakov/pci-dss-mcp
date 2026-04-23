@@ -132,8 +132,10 @@ func newTriageMCPSession(t *testing.T, db *pcidb.DB) *mcp.ClientSession {
 	triagescanner.RegisterTools(server, db)
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
 	go func() {
-		_ = server.Run(context.Background(), serverTransport)
+		_ = server.Run(ctx, serverTransport)
 	}()
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "parity-test-client", Version: "v0.0.1"}, nil)

@@ -21,8 +21,10 @@ func newDepSessionForLayerB(t *testing.T) *mcp.ClientSession {
 	server := mcp.NewServer(&mcp.Implementation{Name: "dep-layerb", Version: "v0.0.1"}, nil)
 	depscanner.RegisterTools(server)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
 	go func() {
-		_ = server.Run(context.Background(), serverTransport)
+		_ = server.Run(ctx, serverTransport)
 	}()
 	client := mcp.NewClient(&mcp.Implementation{Name: "dep-layerb-test-client", Version: "v0.0.1"}, nil)
 	session, err := client.Connect(context.Background(), clientTransport, nil)
