@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package testutil\n\nvar dbPasswd = \"fixture-42\"\n\nfunc DBPasswd() string {\n\treturn dbPasswd\n}\n")

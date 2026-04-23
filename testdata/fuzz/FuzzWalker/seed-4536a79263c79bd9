@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package checkout\n\nimport (\n\t\"html/template\"\n\t\"net/http\"\n)\n\nfunc RenderCheckoutNoScript(w http.ResponseWriter, r *http.Request) {\n\tw.Header().Set(\"Content-Security-Policy\", \"frame-ancestors 'none'\")\n\ttmpl := template.Must(template.New(\"noscript\").Parse(\"<html><body>Pay</body></html>\"))\n\tif err := tmpl.Execute(w, nil); err != nil {\n\t\thttp.Error(w, \"render failed\", http.StatusInternalServerError)\n\t}\n}\n")

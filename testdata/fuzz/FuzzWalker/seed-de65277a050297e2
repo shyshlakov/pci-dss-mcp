@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package auth\n\nimport \"fmt\"\n\ntype Policy struct {\n\tMinPasswordLength int\n}\n\nvar Default = Policy{MinPasswordLength: 8}\n\nfunc Validate(password string) error {\n\tif len(password) < 8 {\n\t\treturn fmt.Errorf(\"password too short\")\n\t}\n\treturn nil\n}\n")

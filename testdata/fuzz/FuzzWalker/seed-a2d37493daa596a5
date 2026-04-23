@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package auth\n\nimport \"net/http\"\n\nfunc AuthorizeCharge(w http.ResponseWriter, r *http.Request) {\n\tcard := []byte(\"4111111111111111\")\n\tfor i := range card {\n\t\tcard[i] = 0\n\t}\n\tauthorizeCard(card)\n\tw.WriteHeader(http.StatusOK)\n}\n\nfunc authorizeCard(_ []byte) {}\n")

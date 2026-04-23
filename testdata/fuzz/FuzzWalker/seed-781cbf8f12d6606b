@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package callback\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n)\n\nfunc MastercardWebhook(w http.ResponseWriter, r *http.Request) {\n\tvar payload map[string]any\n\tif err := json.NewDecoder(r.Body).Decode(&payload); err != nil {\n\t\thttp.Error(w, \"bad payload\", http.StatusBadRequest)\n\t\treturn\n\t}\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tw.WriteHeader(http.StatusOK)\n\tif _, err := w.Write([]byte(`{\"status\":\"ok\"}`)); err != nil {\n\t\treturn\n\t}\n}\n")

@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package helper_encrypted\n\nimport (\n\t\"database/sql/driver\"\n\t\"errors\"\n)\n\ntype HelperEncryptedString string\n\nfunc (hes HelperEncryptedString) Value() (driver.Value, error) {\n\treturn EncryptPAN(string(hes))\n}\n\nfunc (hes *HelperEncryptedString) Scan(value interface{}) error {\n\tif value == nil {\n\t\t*hes = \"\"\n\t\treturn nil\n\t}\n\tb, ok := value.([]byte)\n\tif !ok {\n\t\treturn errors.New(\"HelperEncryptedString.Scan: expected []byte\")\n\t}\n\t*hes = HelperEncryptedString(b)\n\treturn nil\n}\n")

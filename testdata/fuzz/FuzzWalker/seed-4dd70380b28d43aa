@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package crypto_filter_cases\n\nimport \"errors\"\n\nvar ErrInvalidToken = errors.New(\"token has expired and cannot be refreshed\")\n")

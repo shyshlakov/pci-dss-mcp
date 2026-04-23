@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package banking\n\ntype HybridPaymentAccount struct {\n\tAccountNumber string\n\tIBAN          string\n\tCVV           string\n\tExpiryMonth   int\n\tCardNumber    string\n}\n")

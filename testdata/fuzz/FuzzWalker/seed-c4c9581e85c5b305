@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package payment\n\nimport \"net/http\"\n\nfunc Charge(w http.ResponseWriter, r *http.Request) {\n\tcard := []byte(\"4111111111111111\")\n\tprocessCharge(card)\n\tw.WriteHeader(http.StatusOK)\n\tw.Write([]byte(\"ok\"))\n\tfor i := range card {\n\t\tcard[i] = 0\n\t}\n}\n\nfunc processCharge(_ []byte) {}\n")

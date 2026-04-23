@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package crypto_filter_cases\n\nvar tokenFieldKey = \"AccessTokenField\"\n")

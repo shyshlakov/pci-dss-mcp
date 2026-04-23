@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package crypto\n\nimport \"crypto/md5\"\n\nfunc HashPassword(password string) [16]byte {\n\treturn md5.Sum([]byte(password))\n}\n")

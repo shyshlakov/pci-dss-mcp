@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package checkout\n\nimport (\n\t\"html/template\"\n\t\"net/http\"\n)\n\nfunc RenderCheckout(w http.ResponseWriter, r *http.Request) {\n\ttmpl := template.Must(template.New(\"checkout\").Parse(\"<html><body>Pay</body></html>\"))\n\tif err := tmpl.Execute(w, nil); err != nil {\n\t\thttp.Error(w, \"render failed\", http.StatusInternalServerError)\n\t}\n}\n")

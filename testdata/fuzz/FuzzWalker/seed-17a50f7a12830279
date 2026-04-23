@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package e2e\n\nconst MockCardNumber = \"4111111111111111\"\nconst MockAPIKey = \"sk_live_abcdef1234567890abcdef\"\n")

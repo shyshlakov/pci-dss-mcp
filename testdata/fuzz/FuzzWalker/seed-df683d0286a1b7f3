@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("// Package handler is a placeholder root for payment-service HTTP handler subpackages.\n// Wave 2 plans populate subdirectories (tokens, admin, checkout, payment, callback).\npackage handler\n")

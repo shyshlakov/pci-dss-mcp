@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("package http\n\nimport (\n\t\"github.com/gin-gonic/gin\"\n\n\ttokens \"github.com/shyshlakov/pci-dss-mcp/testdata/vulnerable-payment-service/internal/http/handler/tokens\"\n)\n\nfunc RegisterRoutes(r *gin.Engine) {\n\tr.POST(\"/tokenize\", gin.WrapF(tokens.Tokenize))\n}\n")
