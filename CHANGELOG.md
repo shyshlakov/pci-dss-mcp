@@ -5,6 +5,26 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## [0.5.3] - 2026-04-23
+
+### Added
+
+- Native Go fuzz coverage for four high-risk parser surfaces: `FuzzLuhn` (scanner/panscanner — the Luhn PAN checksum validator), `FuzzWalker` (scanner — go/ast parse + inspect pipeline that every AST-based scanner walks), `FuzzCursorDecode` (scanner/reportscanner — the base64 + JSON pagination cursor codec from the v0.2.1 hybrid-response work), and `FuzzScriptScannerHTML` (scanner/scriptscanner — HTML tokenizer + CSP parser + SRI extractor stack). Every target has a committed seed corpus under `testdata/fuzz/`; mutator-discovered crashes auto-save there and become permanent regression fixtures. Closes OpenSSF Scorecard Fuzzing alert #5.
+- `make fuzz` Makefile target runs all four targets for 10 seconds each (~45s total wall time). `FUZZTIME=30s make fuzz` override supported for deeper local smoke.
+- `.github/workflows/ci.yml` adds a `fuzz-smoke` matrix job. Every PR targeting main runs 30 seconds per target, in parallel. Fails the PR on any new crash seed appearing under `testdata/fuzz/`. Replays committed seeds deterministically before fuzzing so seed regressions also block merge. All four third-party actions SHA-pinned, keeping OpenSSF Scorecard Pinned-Dependencies at 10/10.
+- `.github/workflows/fuzz-nightly.yml` new workflow runs at 03:00 UTC daily (+ `workflow_dispatch`). Matrix over the same four targets, 30 minutes per target (~35min wall time). Caches `~/.cache/go-build/fuzz` weekly (ISO week key) so corpus accumulates across nights. On crash: uploads the new seed file as an artifact and auto-opens a GitHub issue with reproducer bytes via `actions/github-script@v7`. Job-scoped `issues: write` permission; workflow-scoped `contents: read`.
+- `README.md` gains a CI status badge, a fourth pre-PR item under Contributing (`make fuzz`), and a new `### Adding a new fuzz target` subsection documenting the four-step extension recipe (target file + seed corpus + CI matrix + Makefile line). Contributors adding a new parser scanner get a concrete four-step recipe for extending fuzz coverage.
+
+### Unchanged
+
+- Scanner detection logic. Fixture severity counts on `testdata/vulnerable-payment-service` remain 49/89/27/0/59 byte-for-byte with v0.5.2.
+- The 14 MCP tool surface. Tool names, parameters, and output schemas are identical to v0.5.2.
+- `go install github.com/shyshlakov/pci-dss-mcp@latest` and `docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3` remain the two supported install paths; both produce byte-identical scan results.
+
+### Semver
+
+- PATCH v0.5.2 -> v0.5.3. Release contains dev tooling (`make fuzz`), CI infrastructure (PR fuzz-smoke + nightly fuzz workflows), and documentation (extension guide). No scanner behavior change, no tool contract change, no JSON shape change. MCP clients pinned to `v0.5` see zero behavior difference.
+
 ## [0.5.2] - 2026-04-23
 
 ### Added
