@@ -3,6 +3,7 @@ package sensitivedata
 import "testing"
 
 func TestClassify(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name string
 		in   string

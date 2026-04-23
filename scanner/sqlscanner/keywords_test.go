@@ -4,6 +4,7 @@ import "testing"
 
 // TestIsCardContextTable verifies card/payment table detection.
 func TestIsCardContextTable(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		want bool
@@ -34,6 +35,7 @@ func TestIsCardContextTable(t *testing.T) {
 
 // TestIsSensitiveColumnInContext verifies context-aware column matching.
 func TestIsSensitiveColumnInContext(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		tableName    string

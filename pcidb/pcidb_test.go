@@ -6,6 +6,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -16,6 +17,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestDBCount(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -27,6 +29,7 @@ func TestDBCount(t *testing.T) {
 }
 
 func TestLookupDetectable(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -47,6 +50,7 @@ func TestLookupDetectable(t *testing.T) {
 }
 
 func TestLookupNonDetectable(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -61,6 +65,7 @@ func TestLookupNonDetectable(t *testing.T) {
 }
 
 func TestLookupNonexistent(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -72,6 +77,7 @@ func TestLookupNonexistent(t *testing.T) {
 }
 
 func TestDetectableHaveTestingProcedure(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -84,6 +90,7 @@ func TestDetectableHaveTestingProcedure(t *testing.T) {
 }
 
 func TestAllRequirementsHaveIDAndTitle(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -99,6 +106,7 @@ func TestAllRequirementsHaveIDAndTitle(t *testing.T) {
 }
 
 func TestNoDuplicateRequirementIDs(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -113,6 +121,7 @@ func TestNoDuplicateRequirementIDs(t *testing.T) {
 }
 
 func TestRequirementIDFormat(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -127,6 +136,7 @@ func TestRequirementIDFormat(t *testing.T) {
 }
 
 func TestDetectableCount(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -138,6 +148,7 @@ func TestDetectableCount(t *testing.T) {
 }
 
 func TestGhostRequirementsNotDetectable(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -161,6 +172,7 @@ func TestGhostRequirementsNotDetectable(t *testing.T) {
 }
 
 func TestDetectableRequirementsHaveCoverageScope(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -173,6 +185,7 @@ func TestDetectableRequirementsHaveCoverageScope(t *testing.T) {
 }
 
 func TestNotCheckedWithCoveredBy(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -200,6 +213,7 @@ func TestNotCheckedWithCoveredBy(t *testing.T) {
 }
 
 func TestAllReturnsAllRequirements(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -211,6 +225,7 @@ func TestAllReturnsAllRequirements(t *testing.T) {
 }
 
 func TestAllTwelveCategoriesPresent(t *testing.T) {
+	t.Parallel()
 	db, err := New()
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)

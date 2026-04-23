@@ -10,6 +10,7 @@ import (
 )
 
 func TestTriageEngine_CachesFileParsing(t *testing.T) {
+	t.Parallel()
 	// Create a temp Go file.
 	dir := t.TempDir()
 	goFile := filepath.Join(dir, "handler.go")
@@ -60,6 +61,7 @@ func handler() {
 }
 
 func TestTriageEngine_NonGoFile(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	envFile := filepath.Join(dir, ".env")
 	if err := os.WriteFile(envFile, []byte("DB_HOST=localhost\nDB_PASS=secret123\nDB_PORT=5432\n"), 0644); err != nil {
@@ -94,6 +96,7 @@ func TestTriageEngine_NonGoFile(t *testing.T) {
 }
 
 func TestTriageEngine_Metadata(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	goFile := filepath.Join(dir, "main.go")
 	if err := os.WriteFile(goFile, []byte("package main\nfunc main() {}\n"), 0644); err != nil {
@@ -134,6 +137,7 @@ func TestTriageEngine_Metadata(t *testing.T) {
 }
 
 func TestTriageEngine_HintGeneration(t *testing.T) {
+	t.Parallel()
 	engine := NewTriageEngine()
 
 	tests := []struct {
@@ -167,6 +171,7 @@ func TestTriageEngine_HintGeneration(t *testing.T) {
 }
 
 func TestTriageEngine_MissingFile(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	engine := NewTriageEngine()
@@ -192,6 +197,7 @@ func TestTriageEngine_MissingFile(t *testing.T) {
 }
 
 func TestTriageEngine_FileLocationClassified(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	testDir := filepath.Join(dir, "test")
 	if err := os.MkdirAll(testDir, 0755); err != nil {

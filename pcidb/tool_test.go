@@ -61,6 +61,7 @@ func setupTestClient(t *testing.T) *mcp.ClientSession {
 }
 
 func TestExplainRequirementValidID(t *testing.T) {
+	t.Parallel()
 	session := setupTestClient(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -90,6 +91,7 @@ func TestExplainRequirementValidID(t *testing.T) {
 }
 
 func TestExplainRequirementTestingProcedure(t *testing.T) {
+	t.Parallel()
 	session := setupTestClient(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -110,6 +112,7 @@ func TestExplainRequirementTestingProcedure(t *testing.T) {
 }
 
 func TestExplainRequirementNonDetectable(t *testing.T) {
+	t.Parallel()
 	session := setupTestClient(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -139,6 +142,7 @@ func TestExplainRequirementNonDetectable(t *testing.T) {
 }
 
 func TestExplainRequirementNonexistent(t *testing.T) {
+	t.Parallel()
 	session := setupTestClient(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -163,6 +167,7 @@ func TestExplainRequirementNonexistent(t *testing.T) {
 }
 
 func TestExplainRequirementWhitespaceTrimming(t *testing.T) {
+	t.Parallel()
 	session := setupTestClient(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -183,6 +188,7 @@ func TestExplainRequirementWhitespaceTrimming(t *testing.T) {
 }
 
 func TestExplainRequirementNewInV4(t *testing.T) {
+	t.Parallel()
 	session := setupTestClient(t)
 
 	// 3.4.2 is new_in_v4
@@ -204,6 +210,7 @@ func TestExplainRequirementNewInV4(t *testing.T) {
 }
 
 func TestExplainRequirementToolRegistered(t *testing.T) {
+	t.Parallel()
 	session := setupTestClient(t)
 
 	result, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})

@@ -34,6 +34,7 @@ const triageFixturePerFindingBudgetBytes = 2 * 1024
 // is staged via the same copy helper as parity_test.go to bypass
 // scanner.DefaultExcludeDirs "testdata" exclusion.
 func TestTriageOutputBudget(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")

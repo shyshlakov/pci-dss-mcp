@@ -3,6 +3,7 @@ package retentionscanner
 import "testing"
 
 func TestIsDevConfigPath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		path string
@@ -35,6 +36,7 @@ func TestIsDevConfigPath(t *testing.T) {
 }
 
 func TestDevPathTriageHint(t *testing.T) {
+	t.Parallel()
 	hint := devPathTriageHint()
 	const wantPrefix = "downgrade:dev_path_skipped | "
 	if len(hint) <= len(wantPrefix) || hint[:len(wantPrefix)] != wantPrefix {

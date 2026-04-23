@@ -24,6 +24,7 @@ func newTestDB(t *testing.T) *pcidb.DB {
 }
 
 func TestReportGenerator_NewHas11Scanners(t *testing.T) {
+	t.Parallel()
 	db := newTestDB(t)
 	gen := NewReportGenerator(db)
 
@@ -35,6 +36,7 @@ func TestReportGenerator_NewHas11Scanners(t *testing.T) {
 // TestReportGenerator_RegistersSQLScanner ensures sql_schema is included in the
 // default scanner slice.
 func TestReportGenerator_RegistersSQLScanner(t *testing.T) {
+	t.Parallel()
 	db := newTestDB(t)
 	gen := NewReportGenerator(db)
 
@@ -51,6 +53,7 @@ func TestReportGenerator_RegistersSQLScanner(t *testing.T) {
 }
 
 func TestReportGenerator_EmptyDir(t *testing.T) {
+	t.Parallel()
 	db := newTestDB(t)
 	gen := NewReportGenerator(db)
 
@@ -100,6 +103,7 @@ func TestReportGenerator_EmptyDir(t *testing.T) {
 }
 
 func TestReportJSON_Schema(t *testing.T) {
+	t.Parallel()
 	report := &ComplianceReport{
 		Metadata: ReportMetadata{
 			GeneratedAt:  "2026-04-10T12:00:00Z",
@@ -183,6 +187,7 @@ func TestReportJSON_Schema(t *testing.T) {
 }
 
 func TestReportRequirementStatus_Logic(t *testing.T) {
+	t.Parallel()
 	db := newTestDB(t)
 	gen := NewReportGenerator(db)
 
@@ -227,6 +232,7 @@ func handlePayment(w http.ResponseWriter, r *http.Request) {
 // --- Format tests ---
 
 func TestFormatHumanReadable_Header(t *testing.T) {
+	t.Parallel()
 	report := makeTestReport(3, 2, 1, 0, 0, 0)
 	output := FormatHumanReadable(report)
 
@@ -242,6 +248,7 @@ func TestFormatHumanReadable_Header(t *testing.T) {
 }
 
 func TestFormatHumanReadable_LowInfoShown(t *testing.T) {
+	t.Parallel()
 	report := makeTestReport(0, 0, 0, 2, 1, 0)
 	output := FormatHumanReadable(report)
 
@@ -254,6 +261,7 @@ func TestFormatHumanReadable_LowInfoShown(t *testing.T) {
 }
 
 func TestFormatHumanReadable_SuppressedNote(t *testing.T) {
+	t.Parallel()
 	report := makeTestReport(1, 0, 0, 0, 0, 2)
 	output := FormatHumanReadable(report)
 
@@ -266,6 +274,7 @@ func TestFormatHumanReadable_SuppressedNote(t *testing.T) {
 }
 
 func TestFormatHumanReadable_CategoryGrouping(t *testing.T) {
+	t.Parallel()
 	report := &ComplianceReport{
 		Metadata: ReportMetadata{TargetPath: "/test", GeneratedAt: "2026-04-10T12:00:00Z"},
 		Summary:  ReportSummary{Critical: 1, High: 1},
@@ -288,6 +297,7 @@ func TestFormatHumanReadable_CategoryGrouping(t *testing.T) {
 }
 
 func TestFormatHumanReadable_Footer(t *testing.T) {
+	t.Parallel()
 	report := &ComplianceReport{
 		Metadata: ReportMetadata{TargetPath: "/test", GeneratedAt: "2026-04-10T12:00:00Z"},
 		Summary: ReportSummary{
@@ -323,6 +333,7 @@ func TestFormatHumanReadable_Footer(t *testing.T) {
 }
 
 func TestFormatHumanReadable_ZeroFindings(t *testing.T) {
+	t.Parallel()
 	report := &ComplianceReport{
 		Metadata: ReportMetadata{TargetPath: "/test", GeneratedAt: "2026-04-10T12:00:00Z", TotalFiles: 50, TotalLines: 3000},
 		Summary:  ReportSummary{},
@@ -339,6 +350,7 @@ func TestFormatHumanReadable_ZeroFindings(t *testing.T) {
 }
 
 func TestFormatHumanReadable_FindingFormat(t *testing.T) {
+	t.Parallel()
 	report := &ComplianceReport{
 		Metadata: ReportMetadata{TargetPath: "/test", GeneratedAt: "2026-04-10T12:00:00Z"},
 		Summary:  ReportSummary{Critical: 1},
@@ -367,6 +379,7 @@ func TestFormatHumanReadable_FindingFormat(t *testing.T) {
 // --- Accuracy annotation and cross-mapping tests ---
 
 func TestReportAccuracyAnnotations(t *testing.T) {
+	t.Parallel()
 	db := newTestDB(t)
 	gen := NewReportGenerator(db)
 
@@ -400,6 +413,7 @@ func TestReportAccuracyAnnotations(t *testing.T) {
 }
 
 func TestReportNotCheckedParentCoverage(t *testing.T) {
+	t.Parallel()
 	db := newTestDB(t)
 	gen := NewReportGenerator(db)
 
@@ -429,6 +443,7 @@ func TestReportNotCheckedParentCoverage(t *testing.T) {
 }
 
 func TestReportCrossMappingPropagation(t *testing.T) {
+	t.Parallel()
 	db := newTestDB(t)
 	gen := NewReportGenerator(db)
 
@@ -475,6 +490,7 @@ func encrypt(data []byte) ([]byte, error) {
 }
 
 func TestFormatHumanReadable_AccuracyNotes(t *testing.T) {
+	t.Parallel()
 	report := &ComplianceReport{
 		Metadata: ReportMetadata{TargetPath: "/test", GeneratedAt: "2026-04-10T12:00:00Z"},
 		Summary:  ReportSummary{Pass: 1},
@@ -506,6 +522,7 @@ func TestFormatHumanReadable_AccuracyNotes(t *testing.T) {
 }
 
 func TestFormatHumanReadable_CrossReference(t *testing.T) {
+	t.Parallel()
 	report := &ComplianceReport{
 		Metadata: ReportMetadata{TargetPath: "/test", GeneratedAt: "2026-04-10T12:00:00Z"},
 		Summary:  ReportSummary{Pass: 1},
@@ -530,6 +547,7 @@ func TestFormatHumanReadable_CrossReference(t *testing.T) {
 }
 
 func TestFormatHumanReadable_NotCheckedParent(t *testing.T) {
+	t.Parallel()
 	report := &ComplianceReport{
 		Metadata: ReportMetadata{TargetPath: "/test", GeneratedAt: "2026-04-10T12:00:00Z"},
 		Summary:  ReportSummary{NotCheckedCount: 1},
@@ -551,6 +569,7 @@ func TestFormatHumanReadable_NotCheckedParent(t *testing.T) {
 }
 
 func TestFormatHumanReadable_AlsoSatisfies(t *testing.T) {
+	t.Parallel()
 	report := &ComplianceReport{
 		Metadata: ReportMetadata{TargetPath: "/test", GeneratedAt: "2026-04-10T12:00:00Z"},
 		Summary:  ReportSummary{Critical: 1},
@@ -582,6 +601,7 @@ func TestFormatHumanReadable_AlsoSatisfies(t *testing.T) {
 // --- GenerateWithOptions tests ---
 
 func TestGenerateWithOptions_BackwardCompatibility(t *testing.T) {
+	t.Parallel()
 	db := newTestDB(t)
 	gen := NewReportGenerator(db)
 
@@ -622,6 +642,7 @@ func TestGenerateWithOptions_BackwardCompatibility(t *testing.T) {
 // GenerateFast/GenerateWithOptions split if future changes add additional
 // default options to Generate().
 func TestGenerateFast_Equivalence(t *testing.T) {
+	t.Parallel()
 	db := newTestDB(t)
 	gen := NewReportGenerator(db)
 
@@ -647,6 +668,7 @@ func TestGenerateFast_Equivalence(t *testing.T) {
 }
 
 func TestGenerateWithOptions_IncludeTests(t *testing.T) {
+	t.Parallel()
 	db := newTestDB(t)
 	gen := NewReportGenerator(db)
 
@@ -664,6 +686,7 @@ func TestGenerateWithOptions_IncludeTests(t *testing.T) {
 }
 
 func TestGenerateWithOptions_DepScanMode(t *testing.T) {
+	t.Parallel()
 	db := newTestDB(t)
 	gen := NewReportGenerator(db)
 
@@ -683,6 +706,7 @@ func TestGenerateWithOptions_DepScanMode(t *testing.T) {
 // --- findings_by_rule and scan_summary tests ---
 
 func TestGroupFindingsByRule(t *testing.T) {
+	t.Parallel()
 	findings := []ReportFinding{
 		{Finding: scanner.Finding{RuleID: "AUDIT-NO-LOG", Severity: scanner.SeverityHigh, RequirementID: "10.2.1", FilePath: "a.go", Line: 1, Description: "no log", Suggestion: "add log"}, ScannerName: "audit"},
 		{Finding: scanner.Finding{RuleID: "AUDIT-NO-LOG", Severity: scanner.SeverityHigh, RequirementID: "10.2.1", FilePath: "b.go", Line: 2, Description: "no log", Suggestion: "add log"}, ScannerName: "audit"},
@@ -721,6 +745,7 @@ func TestGroupFindingsByRule(t *testing.T) {
 }
 
 func TestGroupFindingsByRuleSameSeverity(t *testing.T) {
+	t.Parallel()
 	findings := []ReportFinding{
 		{Finding: scanner.Finding{RuleID: "RULE-A", Severity: scanner.SeverityHigh, RequirementID: "6.2.4", FilePath: "a.go", Line: 1, Description: "test", Suggestion: "fix"}, ScannerName: "test"},
 		{Finding: scanner.Finding{RuleID: "RULE-B", Severity: scanner.SeverityHigh, RequirementID: "6.2.4", FilePath: "b.go", Line: 1, Description: "test", Suggestion: "fix"}, ScannerName: "test"},
@@ -744,6 +769,7 @@ func TestGroupFindingsByRuleSameSeverity(t *testing.T) {
 }
 
 func TestGroupFindingsByRuleEmpty(t *testing.T) {
+	t.Parallel()
 	groups := groupFindingsByRule(nil)
 	if len(groups) != 0 {
 		t.Errorf("got %d groups for nil input, want 0", len(groups))
@@ -756,6 +782,7 @@ func TestGroupFindingsByRuleEmpty(t *testing.T) {
 }
 
 func TestBuildScanSummary(t *testing.T) {
+	t.Parallel()
 	findings := []ReportFinding{
 		{Finding: scanner.Finding{RuleID: "A", Severity: scanner.SeverityCritical, RequirementID: "3.3.1", FilePath: "a.go", Line: 1, Description: "t", Suggestion: "f"}, ScannerName: "pan_data"},
 		{Finding: scanner.Finding{RuleID: "B", Severity: scanner.SeverityHigh, RequirementID: "6.2.4", FilePath: "b.go", Line: 2, Description: "t", Suggestion: "f"}, ScannerName: "encryption"},
@@ -802,6 +829,7 @@ func TestBuildScanSummary(t *testing.T) {
 }
 
 func TestBuildScanSummaryEmpty(t *testing.T) {
+	t.Parallel()
 	ss := buildScanSummary(nil, 0, 0)
 
 	if ss.TotalFindings != 0 {
@@ -813,6 +841,7 @@ func TestBuildScanSummaryEmpty(t *testing.T) {
 }
 
 func TestComplianceReportJSON_NewFields(t *testing.T) {
+	t.Parallel()
 	report := &ComplianceReport{
 		Metadata: ReportMetadata{GeneratedAt: "2026-04-11T12:00:00Z", TargetPath: "/test"},
 		Summary:  ReportSummary{Critical: 1},
@@ -863,6 +892,7 @@ func TestComplianceReportJSON_NewFields(t *testing.T) {
 }
 
 func TestComplianceReportJSON_OmitNewFieldsWhenEmpty(t *testing.T) {
+	t.Parallel()
 	report := &ComplianceReport{
 		Metadata:          ReportMetadata{GeneratedAt: "2026-04-11T12:00:00Z", TargetPath: "/test"},
 		RequirementStatus: map[string]RequirementStatus{},
@@ -978,6 +1008,7 @@ func findCVVPANKeyword(findings []ReportFinding) *ReportFinding {
 // client — no DB sink reachable. The bridge must downgrade PAN-KEYWORD to INFO
 // on the transit-shape file and drop the corresponding PAN-TYPE finding.
 func TestReport_IncludeTaint(t *testing.T) {
+	t.Parallel()
 	fixturePath, err := filepath.Abs(filepath.Join("..", "panscanner", "testdata", "taint", "transit"))
 	if err != nil {
 		t.Fatalf("resolve fixture path: %v", err)
@@ -1089,6 +1120,7 @@ func suppressionEntryFindings(entries []SuppressionEntry) []ReportFinding {
 // test to the new expected behavior and move the /05 requirement IDs
 // from deferred to complete in the roadmap.
 func TestReport_IncludeTaint_DeferredSinks(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	mustWrite := func(path, body string) {
@@ -1190,6 +1222,7 @@ func main() {
 // production entry points safe-by-default (precision > speed), replacing
 // the old opt-in contract.
 func TestReport_IncludeTaint_TriStateDefaultOn(t *testing.T) {
+	t.Parallel()
 	var input ReportInput
 	if input.IncludeTaint != nil {
 		t.Fatal("ReportInput.IncludeTaint zero value must be nil (tri-state pointer) per ")

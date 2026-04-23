@@ -36,6 +36,7 @@ func newReportSessionForLayerA(t *testing.T) *mcp.ClientSession {
 }
 
 func TestReportLayerA_SizeBudget(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	absFixture, err := filepath.Abs(fixtureRoot)
 	if err != nil {

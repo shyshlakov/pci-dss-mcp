@@ -6,6 +6,7 @@ import (
 )
 
 func TestBuildTriageOutputSchemaUnion_IncludesMoreRules(t *testing.T) {
+	t.Parallel()
 	raw, err := buildTriageOutputSchemaUnion()
 	if err != nil {
 		t.Fatalf("buildTriageOutputSchemaUnion: %v", err)

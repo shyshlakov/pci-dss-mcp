@@ -6,6 +6,7 @@ import (
 )
 
 func TestIsTestutilPath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		path string
@@ -36,6 +37,7 @@ func TestIsTestutilPath(t *testing.T) {
 }
 
 func TestTestutilTriageHint(t *testing.T) {
+	t.Parallel()
 	got := testutilTriageHint()
 	if !strings.HasPrefix(got, "downgrade:"+downgradeTagTestutil+" | ") {
 		t.Errorf("testutilTriageHint() = %q, want prefix %q", got, "downgrade:"+downgradeTagTestutil+" | ")

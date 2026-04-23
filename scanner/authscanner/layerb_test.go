@@ -73,6 +73,7 @@ func authStructuredMap(t *testing.T, result *mcp.CallToolResult) map[string]any 
 }
 
 func TestAuthLayerB_Default(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAuth(t, fixtureRoot)
 	result := callAuthDefault(t, scanRoot)
@@ -97,6 +98,7 @@ func TestAuthLayerB_Default(t *testing.T) {
 }
 
 func TestAuthLayerB_TopNPerSeverity_Is3(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAuth(t, fixtureRoot)
 	result := callAuthDefault(t, scanRoot)
@@ -114,6 +116,7 @@ func TestAuthLayerB_TopNPerSeverity_Is3(t *testing.T) {
 }
 
 func TestAuthLayerB_EmptyBucket(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAuth(t, fixtureRoot)
 	result := callAuthDefault(t, scanRoot)
@@ -133,6 +136,7 @@ func TestAuthLayerB_EmptyBucket(t *testing.T) {
 }
 
 func TestAuthLayerB_Deterministic(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAuth(t, fixtureRoot)
 	r1 := callAuthDefault(t, scanRoot)
@@ -154,6 +158,7 @@ func TestAuthLayerB_Deterministic(t *testing.T) {
 }
 
 func TestAuthLayerB_ByRuleHistogramSorted(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAuth(t, fixtureRoot)
 	result := callAuthDefault(t, scanRoot)
@@ -184,6 +189,7 @@ func TestAuthLayerB_ByRuleHistogramSorted(t *testing.T) {
 }
 
 func TestAuthLayerB_SizeBudget20KB(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAuth(t, fixtureRoot)
 	result := callAuthDefault(t, scanRoot)
@@ -199,6 +205,7 @@ func TestAuthLayerB_SizeBudget20KB(t *testing.T) {
 }
 
 func TestAuthLayerB_CursorRejectsFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newAuthSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_auth_strength",
@@ -216,6 +223,7 @@ func TestAuthLayerB_CursorRejectsFilterCombo(t *testing.T) {
 }
 
 func TestAuthLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newAuthSessionForLayerB(t)
 	tt := []struct {
 		name string
@@ -253,6 +261,7 @@ func TestAuthLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
 }
 
 func TestAuthLayerB_FilterSet_StillFlat(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAuth(t, fixtureRoot)
 	session := newAuthSessionForLayerB(t)
@@ -273,6 +282,7 @@ func TestAuthLayerB_FilterSet_StillFlat(t *testing.T) {
 }
 
 func TestAuthLayerB_FilterSet_HasCursor(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAuth(t, fixtureRoot)
 	session := newAuthSessionForLayerB(t)
@@ -302,6 +312,7 @@ func TestAuthLayerB_FilterSet_HasCursor(t *testing.T) {
 }
 
 func TestAuthToolDescription_SummaryFirstBias(t *testing.T) {
+	t.Parallel()
 	session := newAuthSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -332,6 +343,7 @@ func TestAuthToolDescription_SummaryFirstBias(t *testing.T) {
 }
 
 func TestAuthLayerA_SizeBudget(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAuth(t, fixtureRoot)
 	session := newAuthSessionForLayerB(t)
@@ -364,6 +376,7 @@ func TestAuthLayerA_SizeBudget(t *testing.T) {
 }
 
 func TestAuthLayerB_MaxResultSizeChars(t *testing.T) {
+	t.Parallel()
 	session := newAuthSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -400,6 +413,7 @@ func TestAuthLayerB_MaxResultSizeChars(t *testing.T) {
 }
 
 func TestAuth_LimitMinusOneRejected(t *testing.T) {
+	t.Parallel()
 	session := newAuthSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_auth_strength",
@@ -426,6 +440,7 @@ func TestAuth_LimitMinusOneRejected(t *testing.T) {
 }
 
 func TestAuthLayerA_IncludesHistogram(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAuth(t, fixtureRoot)
 	session := newAuthSessionForLayerB(t)
@@ -464,6 +479,7 @@ func TestAuthLayerA_IncludesHistogram(t *testing.T) {
 }
 
 func TestAuthToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	t.Parallel()
 	session := newAuthSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {

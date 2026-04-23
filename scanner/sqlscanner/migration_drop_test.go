@@ -32,6 +32,7 @@ type dropCase struct {
 }
 
 func TestApplyMigrationDropDowngrade(t *testing.T) {
+	t.Parallel()
 	makeFinding := func(rule, path, col string, sev scanner.Severity) scanner.Finding {
 		return scanner.Finding{
 			RuleID:            rule,
@@ -271,6 +272,7 @@ func TestApplyMigrationDropDowngrade(t *testing.T) {
 }
 
 func TestIsMigrationDir(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		in   string
 		want bool
@@ -293,6 +295,7 @@ func TestIsMigrationDir(t *testing.T) {
 }
 
 func TestListOrderedMigrationFilesAbortsOnNonTimestamp(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	if err := os.WriteFile(filepath.Join(tmp, "init.sql"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)

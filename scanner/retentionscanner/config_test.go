@@ -7,6 +7,7 @@ import (
 )
 
 func TestDetectConfigMissingTTL_SkipsNonConfigFiles(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		filename     string

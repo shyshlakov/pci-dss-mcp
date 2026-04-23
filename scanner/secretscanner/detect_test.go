@@ -20,6 +20,7 @@ func testdataDir(t *testing.T) string {
 
 // TestParseEnvFile tests the.env file parser.
 func TestParseEnvFile(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir(t)
 	path := filepath.Join(dir, "secrets.env")
 
@@ -71,6 +72,7 @@ func TestParseEnvFile(t *testing.T) {
 }
 
 func TestParseEnvFile_ExportPrefix(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir(t)
 	path := filepath.Join(dir, "secrets.env")
 
@@ -96,6 +98,7 @@ func TestParseEnvFile_ExportPrefix(t *testing.T) {
 }
 
 func TestParseEnvFile_LineNumbers(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir(t)
 	path := filepath.Join(dir, "secrets.env")
 
@@ -116,6 +119,7 @@ func TestParseEnvFile_LineNumbers(t *testing.T) {
 }
 
 func TestParseEnvFile_NonexistentFile(t *testing.T) {
+	t.Parallel()
 	_, err := ParseEnvFile("/nonexistent/path/to/file.env")
 	if err == nil {
 		t.Error("expected error for nonexistent file, got nil")
@@ -124,6 +128,7 @@ func TestParseEnvFile_NonexistentFile(t *testing.T) {
 
 // TestParseYAMLFile tests the YAML parser with nested keys and line numbers.
 func TestParseYAMLFile(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir(t)
 	path := filepath.Join(dir, "secrets.yaml")
 
@@ -169,6 +174,7 @@ func TestParseYAMLFile(t *testing.T) {
 }
 
 func TestParseYAMLFile_LineNumbers(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir(t)
 	path := filepath.Join(dir, "secrets.yaml")
 
@@ -190,6 +196,7 @@ func TestParseYAMLFile_LineNumbers(t *testing.T) {
 
 // TestParseJSONFile tests the JSON parser with nested keys.
 func TestParseJSONFile(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir(t)
 	path := filepath.Join(dir, "secrets.json")
 
@@ -238,6 +245,7 @@ func TestParseJSONFile(t *testing.T) {
 
 // TestParseTOMLFile tests the TOML parser with nested keys and type conversion.
 func TestParseTOMLFile(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir(t)
 	path := filepath.Join(dir, "secrets.toml")
 
@@ -299,6 +307,7 @@ func TestParseTOMLFile(t *testing.T) {
 // --- SQL Query Exclusion ---
 
 func TestSQLExclusion(t *testing.T) {
+	t.Parallel()
 	t.Run("isSQLQuery unit tests", func(t *testing.T) {
 		tests := []struct {
 			name  string
@@ -392,6 +401,7 @@ func TestSQLExclusion(t *testing.T) {
 }
 
 func TestParseEnvFile_SkipsEmptyValues(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir(t)
 	path := filepath.Join(dir, "secrets.env")
 
@@ -411,6 +421,7 @@ func TestParseEnvFile_SkipsEmptyValues(t *testing.T) {
 // findings in dedicated-dev directories (dev/local/configs/...) are downgraded
 // to SeverityInfo -- one tier below regular dev-context (Medium).
 func TestAnalyzeKeyValue_DedicatedDevDowngradesToInfo(t *testing.T) {
+	t.Parallel()
 	kv := KeyValue{
 		Key:      "DATABASE_PASSWORD",
 		Value:    "actual-looking-pwd-1234",
@@ -436,6 +447,7 @@ func TestAnalyzeKeyValue_DedicatedDevDowngradesToInfo(t *testing.T) {
 // a regular dev-context segment ("fixtures/") still only downgrades ONE tier
 // (Medium), not to Info. "testdata" was removed from devPathSegments in// uses "fixtures/" instead.
 func TestAnalyzeKeyValue_RegularDevDowngradeStaysMedium(t *testing.T) {
+	t.Parallel()
 	kv := KeyValue{
 		Key:      "DATABASE_PASSWORD",
 		Value:    "actual-looking-pwd-1234",
@@ -459,6 +471,7 @@ func TestAnalyzeKeyValue_RegularDevDowngradeStaysMedium(t *testing.T) {
 // retain their original severity. This is the regression guard for the
 // golden fixture silently downgrading when scanned from within the repo.
 func TestAnalyzeKeyValue_TestdataStaysAtOriginalSeverity(t *testing.T) {
+	t.Parallel()
 	kv := KeyValue{
 		Key:      "DATABASE_PASSWORD",
 		Value:    "actual-looking-pwd-1234",
@@ -481,6 +494,7 @@ func TestAnalyzeKeyValue_TestdataStaysAtOriginalSeverity(t *testing.T) {
 // attacker cannot bypass prod override by placing a "dev" segment inside
 // a config/prod/ path -- prod-path short-circuit must win.
 func TestAnalyzeKeyValue_ProdOverrideStaysCritical(t *testing.T) {
+	t.Parallel()
 	kv := KeyValue{
 		Key:      "DATABASE_PASSWORD",
 		Value:    "actual-looking-pwd-1234",
@@ -505,6 +519,7 @@ func TestAnalyzeKeyValue_ProdOverrideStaysCritical(t *testing.T) {
 // *_PATH, *_DIR, *_FILE, *_LOCATION whose values look like filesystem paths
 // are NOT flagged as SEC-CREDENTIAL-KEY.
 func TestAnalyzeKeyValue_SkipPathValueForPathSuffix(t *testing.T) {
+	t.Parallel()
 	cases := []KeyValue{
 		{Key: "VAULT_SECRETS_PATH", Value: "/vault/v1/secrets/data", Line: 1, FilePath: "config/service.env"},
 		{Key: "TOKEN_EXPIRATION_STRATEGY_PATH", Value: "/tokens/exp/strategy", Line: 1, FilePath: "config/service.env"},
@@ -527,6 +542,7 @@ func TestAnalyzeKeyValue_SkipPathValueForPathSuffix(t *testing.T) {
 // *_URL, *_URI, *_ENDPOINT, *_HOST whose values look like URLs or hostnames
 // are NOT flagged as SEC-CREDENTIAL-KEY.
 func TestAnalyzeKeyValue_SkipURLValueForURLSuffix(t *testing.T) {
+	t.Parallel()
 	cases := []KeyValue{
 		{Key: "VTS_AUTH_URL", Value: "https://vts.example.com/auth", Line: 1, FilePath: "config/service.env"},
 		{Key: "API_ENDPOINT", Value: "https://api.example.com/v1", Line: 1, FilePath: "config/service.env"},
@@ -549,6 +565,7 @@ func TestAnalyzeKeyValue_SkipURLValueForURLSuffix(t *testing.T) {
 // discriminator does NOT over-broaden: real credential keys with non-path
 // values still fire SEC-CREDENTIAL-KEY.
 func TestAnalyzeKeyValue_StillFlagsRealSecretsOnCredentialKey(t *testing.T) {
+	t.Parallel()
 	cases := []KeyValue{
 		{Key: "DATABASE_PASSWORD", Value: "real-looking-pass-1234", Line: 1, FilePath: "config/prod/service.env"},
 		{Key: "API_TOKEN", Value: "abc123xyz789", Line: 1, FilePath: "config/prod/service.env"},
@@ -574,6 +591,7 @@ func TestAnalyzeKeyValue_StillFlagsRealSecretsOnCredentialKey(t *testing.T) {
 // (PATH is a prefix, not a suffix) still fires SEC-CREDENTIAL-KEY -- the
 // discriminator is suffix-only.
 func TestAnalyzeKeyValue_SuffixIsPrefixNotSuffix(t *testing.T) {
+	t.Parallel()
 	kv := KeyValue{
 		Key:      "PATH_SECRET",
 		Value:    "xyz12345abcdefgh",
@@ -597,6 +615,7 @@ func TestAnalyzeKeyValue_SuffixIsPrefixNotSuffix(t *testing.T) {
 // --- FP5-01.: Relative path recognition without./ prefix ---
 
 func TestIsPathOrURLValue_RelativePaths(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		val  string
@@ -637,6 +656,7 @@ func TestIsPathOrURLValue_RelativePaths(t *testing.T) {
 // TestAnalyzeKeyValue_RelativePathSkipsCredentialKey verifies: values
 // paths and skip SEC-CREDENTIAL-KEY when key has path suffix.
 func TestAnalyzeKeyValue_RelativePathSkipsCredentialKey(t *testing.T) {
+	t.Parallel()
 	cases := []KeyValue{
 		{Key: "VAULT_SECRETS_PATH", Value: "vault/myapp/dynamic/myapp-secret", Line: 1, FilePath: "config/service.env"},
 		{Key: "TOKEN_EXPIRATION_STRATEGY_PATH", Value: "dev/local/expirationstrategy/strategy.json", Line: 1, FilePath: "config/service.env"},
@@ -657,6 +677,7 @@ func TestAnalyzeKeyValue_RelativePathSkipsCredentialKey(t *testing.T) {
 // TestAnalyzeKeyValue_RealSecretInPathKey verifies regression:
 // SEC-PREFIX still fires for real secrets even in *_PATH keys.
 func TestAnalyzeKeyValue_RealSecretInPathKey(t *testing.T) {
+	t.Parallel()
 	kv := KeyValue{
 		Key:      "SECRET_PATH",
 		Value:    "sk_live_abc123secretkeyvalue123456789012",
@@ -681,6 +702,7 @@ func TestAnalyzeKeyValue_RealSecretInPathKey(t *testing.T) {
 // NOTE: "kv/data/prod_database_pwd" is now correctly recognized as a relative
 // path, so we use a value without slashes to test the conservative case.
 func TestAnalyzeKeyValue_PathSuffixButValueNotPath(t *testing.T) {
+	t.Parallel()
 	kv := KeyValue{
 		Key:      "SECRETS_PATH",
 		Value:    "prod_database_pwd_secret",
@@ -705,6 +727,7 @@ func TestAnalyzeKeyValue_PathSuffixButValueNotPath(t *testing.T) {
 // like "kv/data/prod_database_pwd" are correctly recognized as relative paths
 // and skip SEC-CREDENTIAL-KEY when the key has a path suffix.
 func TestAnalyzeKeyValue_VaultPathSkipsCredentialKey(t *testing.T) {
+	t.Parallel()
 	kv := KeyValue{
 		Key:      "SECRETS_PATH",
 		Value:    "kv/data/prod_database_pwd",
@@ -725,6 +748,7 @@ func TestAnalyzeKeyValue_VaultPathSkipsCredentialKey(t *testing.T) {
 // dev_path_examples_skipped TriageHint. Production-path credentials stay
 // CRITICAL with no TriageHint.
 func TestAnalyzeKeyValueExamplesPathTriageHint(t *testing.T) {
+	t.Parallel()
 	t.Run("examples_dir_downgrades_with_triage_hint", func(t *testing.T) {
 		kv := KeyValue{
 			Key:      "api_key",

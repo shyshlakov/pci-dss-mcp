@@ -163,6 +163,7 @@ func TestSessionCache_Thousand_NoFlake(t *testing.T) {
 }
 
 func TestSessionKey_Stability(t *testing.T) {
+	t.Parallel()
 	k1 := sessionKey("/a/b", "2026-04-17T00:00:00Z", "fh1", true)
 	k2 := sessionKey("/a/b", "2026-04-17T00:00:00Z", "fh1", true)
 	if k1 != k2 {
@@ -178,6 +179,7 @@ func TestSessionKey_Stability(t *testing.T) {
 }
 
 func TestFilterHash_Stability(t *testing.T) {
+	t.Parallel()
 	h1 := filterHash("HIGH", "PAN-*", true)
 	h2 := filterHash("HIGH", "PAN-*", true)
 	if h1 != h2 {

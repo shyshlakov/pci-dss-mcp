@@ -73,6 +73,7 @@ func secretStructuredMap(t *testing.T, result *mcp.CallToolResult) map[string]an
 }
 
 func TestSecretLayerB_Default(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForSecret(t, fixtureRoot)
 	result := callSecretDefault(t, scanRoot)
@@ -97,6 +98,7 @@ func TestSecretLayerB_Default(t *testing.T) {
 }
 
 func TestSecretLayerB_TopNPerSeverity_Is3(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForSecret(t, fixtureRoot)
 	result := callSecretDefault(t, scanRoot)
@@ -111,6 +113,7 @@ func TestSecretLayerB_TopNPerSeverity_Is3(t *testing.T) {
 }
 
 func TestSecretLayerB_EmptyBucketsShipAsArray(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForSecret(t, fixtureRoot)
 	result := callSecretDefault(t, scanRoot)
@@ -128,6 +131,7 @@ func TestSecretLayerB_EmptyBucketsShipAsArray(t *testing.T) {
 }
 
 func TestSecretLayerB_Deterministic(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForSecret(t, fixtureRoot)
 	r1 := callSecretDefault(t, scanRoot)
@@ -149,6 +153,7 @@ func TestSecretLayerB_Deterministic(t *testing.T) {
 }
 
 func TestSecretLayerB_ByRuleHistogramSorted(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForSecret(t, fixtureRoot)
 	result := callSecretDefault(t, scanRoot)
@@ -179,6 +184,7 @@ func TestSecretLayerB_ByRuleHistogramSorted(t *testing.T) {
 }
 
 func TestSecretLayerB_SizeBudget20KB(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForSecret(t, fixtureRoot)
 	result := callSecretDefault(t, scanRoot)
@@ -194,6 +200,7 @@ func TestSecretLayerB_SizeBudget20KB(t *testing.T) {
 }
 
 func TestSecretLayerB_CursorRejectsFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newSecretSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_secrets_in_configs",
@@ -211,6 +218,7 @@ func TestSecretLayerB_CursorRejectsFilterCombo(t *testing.T) {
 }
 
 func TestSecretLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newSecretSessionForLayerB(t)
 	tt := []struct {
 		name string
@@ -248,6 +256,7 @@ func TestSecretLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
 }
 
 func TestSecretLayerB_FilterSet_StillFlat(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForSecret(t, fixtureRoot)
 	session := newSecretSessionForLayerB(t)
@@ -268,6 +277,7 @@ func TestSecretLayerB_FilterSet_StillFlat(t *testing.T) {
 }
 
 func TestSecretLayerA_SizeBudget(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForSecret(t, fixtureRoot)
 	session := newSecretSessionForLayerB(t)
@@ -300,6 +310,7 @@ func TestSecretLayerA_SizeBudget(t *testing.T) {
 }
 
 func TestSecretToolDescription_SummaryFirstBias(t *testing.T) {
+	t.Parallel()
 	session := newSecretSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -330,6 +341,7 @@ func TestSecretToolDescription_SummaryFirstBias(t *testing.T) {
 }
 
 func TestSecretLayerB_MaxResultSizeChars(t *testing.T) {
+	t.Parallel()
 	session := newSecretSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -366,6 +378,7 @@ func TestSecretLayerB_MaxResultSizeChars(t *testing.T) {
 }
 
 func TestSecret_LimitMinusOneRejected(t *testing.T) {
+	t.Parallel()
 	session := newSecretSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_secrets_in_configs",
@@ -392,6 +405,7 @@ func TestSecret_LimitMinusOneRejected(t *testing.T) {
 }
 
 func TestSecretLayerA_IncludesHistogram(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForSecret(t, fixtureRoot)
 	session := newSecretSessionForLayerB(t)
@@ -430,6 +444,7 @@ func TestSecretLayerA_IncludesHistogram(t *testing.T) {
 }
 
 func TestSecretToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	t.Parallel()
 	session := newSecretSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {

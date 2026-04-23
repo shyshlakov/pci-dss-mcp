@@ -11,6 +11,7 @@ import (
 )
 
 func TestFormatHumanReadable_ByteIdentical_Golden(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")

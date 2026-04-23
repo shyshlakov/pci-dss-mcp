@@ -50,6 +50,7 @@ func marshalTriageSummaryToMap(t *testing.T, resp *TriageSummaryResponse) map[st
 }
 
 func TestTriageLayerB_ByRuleCap_15Rules(t *testing.T) {
+	t.Parallel()
 	enriched := synthTriageEnrichedVaryingCounts(t)
 	resp := buildTriageSummaryInternal(
 		enriched,
@@ -115,6 +116,7 @@ func TestTriageLayerB_ByRuleCap_15Rules(t *testing.T) {
 }
 
 func TestTriageLayerB_SyntheticVariance_12Rules(t *testing.T) {
+	t.Parallel()
 	severities := []scanner.Severity{
 		scanner.SeverityCritical,
 		scanner.SeverityHigh,

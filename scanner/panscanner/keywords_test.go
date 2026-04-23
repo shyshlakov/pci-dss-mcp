@@ -3,6 +3,7 @@ package panscanner
 import "testing"
 
 func TestNormalize(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  string
@@ -32,6 +33,7 @@ func TestNormalize(t *testing.T) {
 }
 
 func TestIsSensitiveKeyword(t *testing.T) {
+	t.Parallel()
 	// All 18 keywords from must match (various casings/separators).
 	positives := []string{
 		"pan", "PAN", "Pan",
@@ -86,6 +88,7 @@ func TestIsSensitiveKeyword(t *testing.T) {
 }
 
 func TestHasTestPrefix(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  bool

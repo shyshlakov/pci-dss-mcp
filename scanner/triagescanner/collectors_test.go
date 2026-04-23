@@ -10,6 +10,7 @@ import (
 )
 
 func TestCollectAuditContext(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create a router/main.go with audit middleware and route registration.
@@ -78,6 +79,7 @@ func handlePayment(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestCollectCSPContext_ResponseType(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create handler with JSON response.
@@ -114,6 +116,7 @@ func handlePayment(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestCollectCSPContext_HTMLResponse(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	handlerSrc := `package main
@@ -149,6 +152,7 @@ func handlePage(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestCollectCSPContext_MiddlewareEvidence(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create server file with CSP middleware.
@@ -207,6 +211,7 @@ func handlePage() {}
 }
 
 func TestCollectMFAContext_RouteRegistration(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create routes file with route registration.
@@ -250,6 +255,7 @@ func Setup() {
 }
 
 func TestCollectMFAContext_AuthMiddleware(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create handler file with middleware setup.
@@ -303,6 +309,7 @@ func Setup(r *gin.Engine) {
 }
 
 func TestFindEnclosingFunc(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	src := `package main
 
@@ -353,6 +360,7 @@ func bar() {
 }
 
 func TestCollectSecretsContext_ConstBlock(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	src := `package main
 
@@ -383,6 +391,7 @@ const (
 }
 
 func TestCollectSecretsContext_VarBlock(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	src := `package main
 
@@ -411,6 +420,7 @@ var (
 }
 
 func TestCollectSecretsContext_FuncScope(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	src := `package main
 
@@ -440,6 +450,7 @@ func initConfig() {
 }
 
 func TestCollectSecretsContext_RuntimeIndicator(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	src := `package main
 
@@ -481,6 +492,7 @@ func getConfig() string {
 }
 
 func TestCollectSecretsContext_NonGoFile(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	envFile := filepath.Join(dir, ".env")
 	if err := os.WriteFile(envFile, []byte("API_KEY=sk_live_abc123\n"), 0644); err != nil {
@@ -503,6 +515,7 @@ func TestCollectSecretsContext_NonGoFile(t *testing.T) {
 }
 
 func TestCollectContext_Dispatch(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create a handler.go that all dispatches can reference.

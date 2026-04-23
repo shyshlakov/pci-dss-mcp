@@ -73,6 +73,7 @@ func cryptoStructuredMap(t *testing.T, result *mcp.CallToolResult) map[string]an
 }
 
 func TestCryptoLayerB_Default(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForCrypto(t, fixtureRoot)
 	result := callCryptoDefault(t, scanRoot)
@@ -97,6 +98,7 @@ func TestCryptoLayerB_Default(t *testing.T) {
 }
 
 func TestCryptoLayerB_TopNPerSeverity_Is3(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForCrypto(t, fixtureRoot)
 	result := callCryptoDefault(t, scanRoot)
@@ -114,6 +116,7 @@ func TestCryptoLayerB_TopNPerSeverity_Is3(t *testing.T) {
 }
 
 func TestCryptoLayerB_EmptyBucket(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForCrypto(t, fixtureRoot)
 	result := callCryptoDefault(t, scanRoot)
@@ -133,6 +136,7 @@ func TestCryptoLayerB_EmptyBucket(t *testing.T) {
 }
 
 func TestCryptoLayerB_Deterministic(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForCrypto(t, fixtureRoot)
 	r1 := callCryptoDefault(t, scanRoot)
@@ -154,6 +158,7 @@ func TestCryptoLayerB_Deterministic(t *testing.T) {
 }
 
 func TestCryptoLayerB_ByRuleHistogramSorted(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForCrypto(t, fixtureRoot)
 	result := callCryptoDefault(t, scanRoot)
@@ -184,6 +189,7 @@ func TestCryptoLayerB_ByRuleHistogramSorted(t *testing.T) {
 }
 
 func TestCryptoLayerB_SizeBudget20KB(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForCrypto(t, fixtureRoot)
 	result := callCryptoDefault(t, scanRoot)
@@ -199,6 +205,7 @@ func TestCryptoLayerB_SizeBudget20KB(t *testing.T) {
 }
 
 func TestCryptoLayerB_CursorRejectsFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newCryptoSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_encryption",
@@ -216,6 +223,7 @@ func TestCryptoLayerB_CursorRejectsFilterCombo(t *testing.T) {
 }
 
 func TestCryptoLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newCryptoSessionForLayerB(t)
 	tt := []struct {
 		name string
@@ -253,6 +261,7 @@ func TestCryptoLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
 }
 
 func TestCryptoLayerB_FilterSet_StillFlat(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForCrypto(t, fixtureRoot)
 	session := newCryptoSessionForLayerB(t)
@@ -273,6 +282,7 @@ func TestCryptoLayerB_FilterSet_StillFlat(t *testing.T) {
 }
 
 func TestCryptoLayerB_FilterSet_HasCursor(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForCrypto(t, fixtureRoot)
 	session := newCryptoSessionForLayerB(t)
@@ -301,6 +311,7 @@ func TestCryptoLayerB_FilterSet_HasCursor(t *testing.T) {
 }
 
 func TestCryptoToolDescription_SummaryFirstBias(t *testing.T) {
+	t.Parallel()
 	session := newCryptoSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -331,6 +342,7 @@ func TestCryptoToolDescription_SummaryFirstBias(t *testing.T) {
 }
 
 func TestCryptoLayerA_SizeBudget(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForCrypto(t, fixtureRoot)
 	session := newCryptoSessionForLayerB(t)
@@ -363,6 +375,7 @@ func TestCryptoLayerA_SizeBudget(t *testing.T) {
 }
 
 func TestCryptoLayerB_MaxResultSizeChars(t *testing.T) {
+	t.Parallel()
 	session := newCryptoSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -399,6 +412,7 @@ func TestCryptoLayerB_MaxResultSizeChars(t *testing.T) {
 }
 
 func TestCrypto_LimitMinusOneRejected(t *testing.T) {
+	t.Parallel()
 	session := newCryptoSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_encryption",
@@ -425,6 +439,7 @@ func TestCrypto_LimitMinusOneRejected(t *testing.T) {
 }
 
 func TestCryptoLayerA_IncludesHistogram(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForCrypto(t, fixtureRoot)
 	session := newCryptoSessionForLayerB(t)
@@ -463,6 +478,7 @@ func TestCryptoLayerA_IncludesHistogram(t *testing.T) {
 }
 
 func TestCryptoToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	t.Parallel()
 	session := newCryptoSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {

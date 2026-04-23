@@ -3,6 +3,7 @@ package panscanner
 import "testing"
 
 func TestLuhnValid(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -46,6 +47,7 @@ func TestLuhnValid(t *testing.T) {
 }
 
 func TestMatchesIINPrefix(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -98,6 +100,7 @@ func TestMatchesIINPrefix(t *testing.T) {
 }
 
 func TestIsLikelyPAN(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -122,6 +125,7 @@ func TestIsLikelyPAN(t *testing.T) {
 }
 
 func TestExtractDigits(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string

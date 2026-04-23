@@ -6,6 +6,7 @@ import (
 )
 
 func TestIsBankingContext(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		fields      []string

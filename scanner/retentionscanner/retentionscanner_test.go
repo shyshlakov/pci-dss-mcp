@@ -12,6 +12,7 @@ import (
 // --- Redis Tests (R1-R8) ---
 
 func TestDetectRedisWithoutTTL(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		src           string
@@ -189,6 +190,7 @@ func example() {
 // --- DB Tests (D1-D4) ---
 
 func TestDetectDBStorageOfSensitiveData(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		src          string
@@ -299,6 +301,7 @@ func example() {
 // --- Config Tests (C1-C4) ---
 
 func TestDetectConfigMissingTTL(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		filename     string
@@ -394,6 +397,7 @@ storage = "redis"
 }
 
 func TestDetectConfigMissingTTLDevPathDowngrade(t *testing.T) {
+	t.Parallel()
 	content := `card_processing:
   card_data:
     storage_key: "cards:active"
@@ -453,6 +457,7 @@ func TestDetectConfigMissingTTLDevPathDowngrade(t *testing.T) {
 // --- Zeroing Tests (Z1-Z4) ---
 
 func TestDetectZeroingTimingIssues(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		src          string
@@ -639,6 +644,7 @@ func ProcessCardCharge(w http.ResponseWriter, r *http.Request) {
 // --- Scanner Integration ---
 
 func TestRetentionScannerName(t *testing.T) {
+	t.Parallel()
 	s := New()
 	if s.Name() != "data_retention" {
 		t.Errorf("got name %q, want %q", s.Name(), "data_retention")
@@ -646,6 +652,7 @@ func TestRetentionScannerName(t *testing.T) {
 }
 
 func TestRetentionScannerRequirements(t *testing.T) {
+	t.Parallel()
 	s := New()
 	reqs := s.Requirements()
 	want := map[string]bool{"3.2.1": true, "3.3.1": true}
@@ -661,6 +668,7 @@ func TestRetentionScannerRequirements(t *testing.T) {
 }
 
 func TestRetentionScannerRequirementInFindings(t *testing.T) {
+	t.Parallel()
 	// Parse a source that should produce a finding and verify RequirementID.
 	src := `package test
 import "time"

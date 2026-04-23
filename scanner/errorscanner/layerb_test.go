@@ -73,6 +73,7 @@ func errorStructuredMap(t *testing.T, result *mcp.CallToolResult) map[string]any
 }
 
 func TestErrorLayerB_Default(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForError(t, fixtureRoot)
 	result := callErrorDefault(t, scanRoot)
@@ -97,6 +98,7 @@ func TestErrorLayerB_Default(t *testing.T) {
 }
 
 func TestErrorLayerB_TopNPerSeverity_Is3(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForError(t, fixtureRoot)
 	result := callErrorDefault(t, scanRoot)
@@ -111,6 +113,7 @@ func TestErrorLayerB_TopNPerSeverity_Is3(t *testing.T) {
 }
 
 func TestErrorLayerB_EmptyBucketsShipAsArray(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForError(t, fixtureRoot)
 	result := callErrorDefault(t, scanRoot)
@@ -128,6 +131,7 @@ func TestErrorLayerB_EmptyBucketsShipAsArray(t *testing.T) {
 }
 
 func TestErrorLayerB_Deterministic(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForError(t, fixtureRoot)
 	r1 := callErrorDefault(t, scanRoot)
@@ -149,6 +153,7 @@ func TestErrorLayerB_Deterministic(t *testing.T) {
 }
 
 func TestErrorLayerB_ByRuleHistogramSorted(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForError(t, fixtureRoot)
 	result := callErrorDefault(t, scanRoot)
@@ -179,6 +184,7 @@ func TestErrorLayerB_ByRuleHistogramSorted(t *testing.T) {
 }
 
 func TestErrorLayerB_SizeBudget20KB(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForError(t, fixtureRoot)
 	result := callErrorDefault(t, scanRoot)
@@ -194,6 +200,7 @@ func TestErrorLayerB_SizeBudget20KB(t *testing.T) {
 }
 
 func TestErrorLayerB_CursorRejectsFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newErrorSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_error_handling",
@@ -211,6 +218,7 @@ func TestErrorLayerB_CursorRejectsFilterCombo(t *testing.T) {
 }
 
 func TestErrorLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newErrorSessionForLayerB(t)
 	tt := []struct {
 		name string
@@ -248,6 +256,7 @@ func TestErrorLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
 }
 
 func TestErrorLayerB_FilterSet_StillFlat(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForError(t, fixtureRoot)
 	session := newErrorSessionForLayerB(t)
@@ -268,6 +277,7 @@ func TestErrorLayerB_FilterSet_StillFlat(t *testing.T) {
 }
 
 func TestErrorLayerA_SizeBudget(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForError(t, fixtureRoot)
 	session := newErrorSessionForLayerB(t)
@@ -300,6 +310,7 @@ func TestErrorLayerA_SizeBudget(t *testing.T) {
 }
 
 func TestErrorToolDescription_SummaryFirstBias(t *testing.T) {
+	t.Parallel()
 	session := newErrorSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -330,6 +341,7 @@ func TestErrorToolDescription_SummaryFirstBias(t *testing.T) {
 }
 
 func TestErrorLayerB_MaxResultSizeChars(t *testing.T) {
+	t.Parallel()
 	session := newErrorSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -366,6 +378,7 @@ func TestErrorLayerB_MaxResultSizeChars(t *testing.T) {
 }
 
 func TestError_LimitMinusOneRejected(t *testing.T) {
+	t.Parallel()
 	session := newErrorSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_error_handling",
@@ -392,6 +405,7 @@ func TestError_LimitMinusOneRejected(t *testing.T) {
 }
 
 func TestErrorLayerA_IncludesHistogram(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForError(t, fixtureRoot)
 	session := newErrorSessionForLayerB(t)
@@ -430,6 +444,7 @@ func TestErrorLayerA_IncludesHistogram(t *testing.T) {
 }
 
 func TestErrorToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	t.Parallel()
 	session := newErrorSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {

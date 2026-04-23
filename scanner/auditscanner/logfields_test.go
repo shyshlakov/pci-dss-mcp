@@ -53,6 +53,7 @@ func parseTestFixture(t *testing.T, filename, funcName string) (*ast.BlockStmt, 
 }
 
 func TestExtractFieldsFromBody_Logrus(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir()
 	fixture := filepath.Join(dir, "logfields_logrus.go")
 	body, aliases, localFuncs := parseTestFixture(t, fixture, "EnrichLogger")
@@ -83,6 +84,7 @@ func TestExtractFieldsFromBody_Logrus(t *testing.T) {
 }
 
 func TestExtractFieldsFromBody_Slog(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir()
 	fixture := filepath.Join(dir, "logfields_slog.go")
 
@@ -126,6 +128,7 @@ func TestExtractFieldsFromBody_Slog(t *testing.T) {
 }
 
 func TestExtractFieldsFromBody_Zap(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir()
 	fixture := filepath.Join(dir, "logfields_zap.go")
 	body, aliases, localFuncs := parseTestFixture(t, fixture, "ZapMiddleware")
@@ -148,6 +151,7 @@ func TestExtractFieldsFromBody_Zap(t *testing.T) {
 }
 
 func TestExtractFieldsFromBody_Zerolog(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir()
 	fixture := filepath.Join(dir, "logfields_zerolog.go")
 	body, aliases, localFuncs := parseTestFixture(t, fixture, "ZerologMiddleware")
@@ -170,6 +174,7 @@ func TestExtractFieldsFromBody_Zerolog(t *testing.T) {
 }
 
 func TestResolveConstantInPackage(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir()
 	constDir := filepath.Join(dir, "logfields_const")
 
@@ -197,6 +202,7 @@ func TestResolveConstantInPackage(t *testing.T) {
 }
 
 func TestExtractLogFields_LocalHelper(t *testing.T) {
+	t.Parallel()
 	dir := testdataDir()
 	fixture := filepath.Join(dir, "logfields_logrus.go")
 
@@ -235,6 +241,7 @@ func TestExtractLogFields_LocalHelper(t *testing.T) {
 }
 
 func TestExtractLogFields_GracefulDegradation(t *testing.T) {
+	t.Parallel()
 	fields := ExtractLogFields("/nonexistent/path/that/does/not/exist", "SomeFunc", nil)
 	if fields != nil {
 		t.Errorf("expected nil for non-existent directory, got %v", fields)
@@ -244,6 +251,7 @@ func TestExtractLogFields_GracefulDegradation(t *testing.T) {
 // ----------: PCI DSS Field Matching, Scoring, Severity ----------
 
 func TestNormalize(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  string
@@ -267,6 +275,7 @@ func TestNormalize(t *testing.T) {
 }
 
 func TestMatchPCIDSSFields_LogrusHTTPMiddleware(t *testing.T) {
+	t.Parallel()
 	// Fields: request_id, version, url, ip, user-agent, referer, elapsed, http.method, http.status
 	// + logrus import -> auto-timestamp
 	// Expected: 3/5 — timestamp(auto-logrus), event_type(url, http.method), outcome(http.status)
@@ -320,6 +329,7 @@ func TestMatchPCIDSSFields_LogrusHTTPMiddleware(t *testing.T) {
 }
 
 func TestMatchPCIDSSFields_AllMatched(t *testing.T) {
+	t.Parallel()
 	fields := []string{"user_id", "timestamp", "action", "status", "resource"}
 	imports := map[string]string{} // no auto-timestamp needed
 
@@ -337,6 +347,7 @@ func TestMatchPCIDSSFields_AllMatched(t *testing.T) {
 }
 
 func TestMatchPCIDSSFields_OverlapRule(t *testing.T) {
+	t.Parallel()
 	// "path" matches BOTH event_type AND affected_resource.
 	// "url" matches event_type only. "path" is in both category alias lists.
 	fields := []string{"url", "path"}
@@ -360,6 +371,7 @@ func TestMatchPCIDSSFields_OverlapRule(t *testing.T) {
 }
 
 func TestMatchPCIDSSFields_NoMatch_Slog(t *testing.T) {
+	t.Parallel()
 	// slog does NOT auto-inject timestamp.
 	fields := []string{"foo", "bar", "baz"}
 	imports := map[string]string{"slog": "log/slog"}
@@ -378,6 +390,7 @@ func TestMatchPCIDSSFields_NoMatch_Slog(t *testing.T) {
 }
 
 func TestMatchPCIDSSFields_SlogNotAutoTimestamp(t *testing.T) {
+	t.Parallel()
 	// locked: slog does NOT auto-inject timestamp.
 	fields := []string{"user_id", "action"}
 	imports := map[string]string{"slog": "log/slog"}
@@ -397,6 +410,7 @@ func TestMatchPCIDSSFields_SlogNotAutoTimestamp(t *testing.T) {
 }
 
 func TestMatchPCIDSSFields_ZapAutoTimestamp(t *testing.T) {
+	t.Parallel()
 	fields := []string{"user_id"}
 	imports := map[string]string{"zap": "go.uber.org/zap"}
 
@@ -411,6 +425,7 @@ func TestMatchPCIDSSFields_ZapAutoTimestamp(t *testing.T) {
 }
 
 func TestMatchPCIDSSFields_ZerologAutoTimestamp(t *testing.T) {
+	t.Parallel()
 	fields := []string{"user_id"}
 	imports := map[string]string{"zerolog": "github.com/rs/zerolog"}
 
@@ -425,6 +440,7 @@ func TestMatchPCIDSSFields_ZerologAutoTimestamp(t *testing.T) {
 }
 
 func TestScoreSeverity(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		matched int
 		want    string
@@ -447,6 +463,7 @@ func TestScoreSeverity(t *testing.T) {
 }
 
 func TestFormatFieldCoverage(t *testing.T) {
+	t.Parallel()
 	result := &FieldCoverageResult{
 		Score: 3,
 		Total: 5,
@@ -482,6 +499,7 @@ func TestFormatFieldCoverage(t *testing.T) {
 }
 
 func TestFormatFieldCoverage_FullCoverage(t *testing.T) {
+	t.Parallel()
 	result := &FieldCoverageResult{
 		Score: 5,
 		Total: 5,

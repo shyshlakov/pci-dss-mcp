@@ -12,6 +12,7 @@ import (
 )
 
 func TestQueryBatch(t *testing.T) {
+	t.Parallel()
 	t.Run("sends POST to /v1/querybatch with correct JSON body", func(t *testing.T) {
 		var receivedBody QueryBatchRequest
 		var receivedMethod string
@@ -149,6 +150,7 @@ func TestQueryBatch(t *testing.T) {
 }
 
 func TestFetchVuln(t *testing.T) {
+	t.Parallel()
 	t.Run("sends GET to /v1/vulns/{id} and returns full Vulnerability", func(t *testing.T) {
 		var receivedMethod string
 		var receivedPath string

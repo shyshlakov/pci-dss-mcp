@@ -29,6 +29,7 @@ func extractText(t *testing.T, result *mcp.CallToolResult) string {
 }
 
 func TestFormatResultZeroFindings(t *testing.T) {
+	t.Parallel()
 	result := FormatResult(&ScanResult{
 		Findings: nil,
 		Metadata: ScanMetadata{
@@ -55,6 +56,7 @@ func TestFormatResultZeroFindings(t *testing.T) {
 }
 
 func TestFormatResultOneCriticalFinding(t *testing.T) {
+	t.Parallel()
 	result := FormatResult(&ScanResult{
 		Findings: []Finding{
 			{
@@ -100,6 +102,7 @@ func TestFormatResultOneCriticalFinding(t *testing.T) {
 }
 
 func TestFormatResultMixedSeverities(t *testing.T) {
+	t.Parallel()
 	result := FormatResult(&ScanResult{
 		Findings: []Finding{
 			{RuleID: "PAN-001", Severity: SeverityCritical, RequirementID: "3.4.1", FilePath: "a.go", Line: 1, Description: "critical finding", Suggestion: "fix it"},
@@ -118,6 +121,7 @@ func TestFormatResultMixedSeverities(t *testing.T) {
 }
 
 func TestFormatResultJSONSection(t *testing.T) {
+	t.Parallel()
 	findings := []Finding{
 		{
 			RuleID:        "PAN-001",
@@ -157,6 +161,7 @@ func TestFormatResultJSONSection(t *testing.T) {
 }
 
 func TestFormatResultNoEmojis(t *testing.T) {
+	t.Parallel()
 	// Test with findings
 	result := FormatResult(&ScanResult{
 		Findings: []Finding{
@@ -187,6 +192,7 @@ func assertNoEmojis(t *testing.T, text string, context string) {
 }
 
 func TestSeverityConstants(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		sev  Severity
 		want string
@@ -205,6 +211,7 @@ func TestSeverityConstants(t *testing.T) {
 }
 
 func TestFormatResultInfoSeverity(t *testing.T) {
+	t.Parallel()
 	result := FormatResult(&ScanResult{
 		Findings: []Finding{
 			{RuleID: "PAN-010", Severity: SeverityInfo, RequirementID: "3.4.1", FilePath: "test_helper.go", Line: 5, Description: "test variable with PAN keyword", Suggestion: "informational only"},
@@ -220,6 +227,7 @@ func TestFormatResultInfoSeverity(t *testing.T) {
 }
 
 func TestFormatResultMixedWithInfo(t *testing.T) {
+	t.Parallel()
 	result := FormatResult(&ScanResult{
 		Findings: []Finding{
 			{RuleID: "PAN-001", Severity: SeverityCritical, RequirementID: "3.4.1", FilePath: "a.go", Line: 1, Description: "critical", Suggestion: "fix"},
@@ -237,6 +245,7 @@ func TestFormatResultMixedWithInfo(t *testing.T) {
 }
 
 func TestFormatResultFindingBlockSeparators(t *testing.T) {
+	t.Parallel()
 	result := FormatResult(&ScanResult{
 		Findings: []Finding{
 			{RuleID: "A-001", Severity: SeverityCritical, RequirementID: "3.4.1", FilePath: "a.go", Line: 1, Description: "first", Suggestion: "fix1"},
@@ -254,6 +263,7 @@ func TestFormatResultFindingBlockSeparators(t *testing.T) {
 }
 
 func TestFormatResultIsTextContent(t *testing.T) {
+	t.Parallel()
 	result := FormatResult(&ScanResult{
 		Findings: []Finding{
 			{RuleID: "A-001", Severity: SeverityCritical, RequirementID: "3.4.1", FilePath: "a.go", Line: 1, Description: "test", Suggestion: "fix"},

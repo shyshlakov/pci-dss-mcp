@@ -11,6 +11,7 @@ import (
 // against positive.sql and negative.sql fixtures plus inline cases. It covers
 // six behavior cases for SQL schema parsing.
 func TestParseSQLFile(t *testing.T) {
+	t.Parallel()
 	type expected struct {
 		name      string
 		sqlType   string
@@ -105,6 +106,7 @@ func TestParseSQLFile(t *testing.T) {
 
 // TestParseSQLFile_FixturePositive parses the positive fixture end-to-end.
 func TestParseSQLFile_FixturePositive(t *testing.T) {
+	t.Parallel()
 	data, err := os.ReadFile(filepath.Join("testdata", "migrations", "positive.sql"))
 	if err != nil {
 		t.Fatalf("read positive fixture: %v", err)
@@ -141,6 +143,7 @@ func TestParseSQLFile_FixturePositive(t *testing.T) {
 // TestParseSQLFile_FixtureNegative confirms the negative fixture yields no
 // SENSITIVE columns (non-sensitive columns may still be extracted — that's fine).
 func TestParseSQLFile_FixtureNegative(t *testing.T) {
+	t.Parallel()
 	data, err := os.ReadFile(filepath.Join("testdata", "migrations", "negative.sql"))
 	if err != nil {
 		t.Fatalf("read negative fixture: %v", err)
@@ -156,6 +159,7 @@ func TestParseSQLFile_FixtureNegative(t *testing.T) {
 // TestParseSQLFile_TableName verifies that Column.TableName is populated
 // from CREATE TABLE and ALTER TABLE statements.
 func TestParseSQLFile_TableName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		src      string
@@ -234,6 +238,7 @@ ALTER TABLE "users" ADD COLUMN account varchar(100);`,
 // verifies that columns from the "cards" table have TableName="cards" and columns
 // from the "users" table have TableName="users".
 func TestParseSQLFile_FixtureContextAware(t *testing.T) {
+	t.Parallel()
 	data, err := os.ReadFile(filepath.Join("testdata", "migrations", "context_aware.sql"))
 	if err != nil {
 		t.Fatalf("read context_aware fixture: %v", err)
@@ -280,6 +285,7 @@ func TestParseSQLFile_FixtureContextAware(t *testing.T) {
 
 // TestIsPlaintextStringType covers the regex matrix for plaintext SQL string types.
 func TestIsPlaintextStringType(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		typ  string
 		want bool

@@ -63,6 +63,7 @@ func extractToolText(t *testing.T, result *mcp.CallToolResult) string {
 }
 
 func TestToolRegistered(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	result, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
@@ -86,6 +87,7 @@ func TestToolRegistered(t *testing.T) {
 }
 
 func TestToolValidPath(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	// Copy fixture to a temp dir (walker excludes "testdata" directories).
@@ -133,6 +135,7 @@ func TestToolValidPath(t *testing.T) {
 }
 
 func TestToolInvalidPath(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -150,6 +153,7 @@ func TestToolInvalidPath(t *testing.T) {
 }
 
 func TestToolExcludePatterns(t *testing.T) {
+	t.Parallel()
 	session := setupTestServer(t)
 
 	// Create a temp dir with a violation file.

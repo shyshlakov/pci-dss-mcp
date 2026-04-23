@@ -38,6 +38,7 @@ func newCrossToolSession(t *testing.T) *mcp.ClientSession {
 }
 
 func TestLayerB_CrossTool_SizeBudget(t *testing.T) {
+	t.Parallel()
 	fixture := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	absFixture, err := filepath.Abs(fixture)
 	if err != nil {

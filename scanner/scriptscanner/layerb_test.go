@@ -73,6 +73,7 @@ func scriptStructuredMap(t *testing.T, result *mcp.CallToolResult) map[string]an
 }
 
 func TestScriptLayerB_Default(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForScript(t, fixtureRoot)
 	result := callScriptDefault(t, scanRoot)
@@ -93,6 +94,7 @@ func TestScriptLayerB_Default(t *testing.T) {
 }
 
 func TestScriptLayerB_TopNPerSeverity_Is3(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForScript(t, fixtureRoot)
 	result := callScriptDefault(t, scanRoot)
@@ -107,6 +109,7 @@ func TestScriptLayerB_TopNPerSeverity_Is3(t *testing.T) {
 }
 
 func TestScriptLayerB_EmptyBucketsShipAsArray(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForScript(t, fixtureRoot)
 	result := callScriptDefault(t, scanRoot)
@@ -124,6 +127,7 @@ func TestScriptLayerB_EmptyBucketsShipAsArray(t *testing.T) {
 }
 
 func TestScriptLayerB_Deterministic(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForScript(t, fixtureRoot)
 	r1 := callScriptDefault(t, scanRoot)
@@ -145,6 +149,7 @@ func TestScriptLayerB_Deterministic(t *testing.T) {
 }
 
 func TestScriptLayerB_ByRuleHistogramSorted(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForScript(t, fixtureRoot)
 	result := callScriptDefault(t, scanRoot)
@@ -178,6 +183,7 @@ func TestScriptLayerB_ByRuleHistogramSorted(t *testing.T) {
 }
 
 func TestScriptLayerB_SizeBudget20KB(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForScript(t, fixtureRoot)
 	result := callScriptDefault(t, scanRoot)
@@ -193,6 +199,7 @@ func TestScriptLayerB_SizeBudget20KB(t *testing.T) {
 }
 
 func TestScriptLayerB_CursorRejectsFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newScriptSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_payment_page_scripts",
@@ -211,6 +218,7 @@ func TestScriptLayerB_CursorRejectsFilterCombo(t *testing.T) {
 }
 
 func TestScriptLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newScriptSessionForLayerB(t)
 	tt := []struct {
 		name string
@@ -250,6 +258,7 @@ func TestScriptLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
 }
 
 func TestScriptLayerB_FilterSet_StillFlat(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForScript(t, fixtureRoot)
 	session := newScriptSessionForLayerB(t)
@@ -270,6 +279,7 @@ func TestScriptLayerB_FilterSet_StillFlat(t *testing.T) {
 }
 
 func TestScriptLayerA_SizeBudget(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForScript(t, fixtureRoot)
 	session := newScriptSessionForLayerB(t)
@@ -302,6 +312,7 @@ func TestScriptLayerA_SizeBudget(t *testing.T) {
 }
 
 func TestScriptToolDescription_SummaryFirstBias(t *testing.T) {
+	t.Parallel()
 	session := newScriptSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -332,6 +343,7 @@ func TestScriptToolDescription_SummaryFirstBias(t *testing.T) {
 }
 
 func TestScriptLayerB_MaxResultSizeChars(t *testing.T) {
+	t.Parallel()
 	session := newScriptSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -368,6 +380,7 @@ func TestScriptLayerB_MaxResultSizeChars(t *testing.T) {
 }
 
 func TestScript_LimitMinusOneRejected(t *testing.T) {
+	t.Parallel()
 	session := newScriptSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_payment_page_scripts",
@@ -394,6 +407,7 @@ func TestScript_LimitMinusOneRejected(t *testing.T) {
 }
 
 func TestScript_EmptyPathRejected(t *testing.T) {
+	t.Parallel()
 	session := newScriptSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_payment_page_scripts",
@@ -419,6 +433,7 @@ func TestScript_EmptyPathRejected(t *testing.T) {
 }
 
 func TestScript_EmptyPathRejectedBeforeLimit(t *testing.T) {
+	t.Parallel()
 	session := newScriptSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_payment_page_scripts",
@@ -445,6 +460,7 @@ func TestScript_EmptyPathRejectedBeforeLimit(t *testing.T) {
 }
 
 func TestScriptLayerA_IncludesHistogram(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForScript(t, fixtureRoot)
 	session := newScriptSessionForLayerB(t)
@@ -483,6 +499,7 @@ func TestScriptLayerA_IncludesHistogram(t *testing.T) {
 }
 
 func TestScriptToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	t.Parallel()
 	session := newScriptSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {

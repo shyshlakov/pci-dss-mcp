@@ -66,6 +66,7 @@ func extractIntegrationText(t *testing.T, result *mcp.CallToolResult) string {
 // strength violations: calls check_auth_strength via MCP client, validates
 // that findings contain expected rule IDs and file references.
 func TestIntegration_AuthStrengthFindings(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	// Copy fixture to a temp dir (walker excludes "testdata" directories).
@@ -113,6 +114,7 @@ func TestIntegration_AuthStrengthFindings(t *testing.T) {
 // TestIntegration_InvalidPath verifies the MCP round-trip returns IsError=true
 // for a nonexistent path.
 func TestIntegration_InvalidPath(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -132,6 +134,7 @@ func TestIntegration_InvalidPath(t *testing.T) {
 // TestIntegration_NonPaymentHandlerSkipped verifies that the scanner skips
 // non-payment handler functions for MFA detection (no false positives).
 func TestIntegration_NonPaymentHandlerSkipped(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	// Create a Go file with only non-payment handlers.

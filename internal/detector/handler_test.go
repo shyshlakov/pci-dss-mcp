@@ -19,6 +19,7 @@ func parseSource(t *testing.T, src string) *ast.File {
 }
 
 func TestDetectFramework(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		src  string
@@ -88,6 +89,7 @@ func TestDetectFramework(t *testing.T) {
 }
 
 func TestIsHTTPHandler(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		src  string
@@ -163,6 +165,7 @@ func handler(w http.ResponseWriter, r *http.Request) {}`,
 }
 
 func TestTypeExprString(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		src  string

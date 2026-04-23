@@ -9,6 +9,7 @@ import (
 )
 
 func TestSQLExclusion(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -55,6 +56,7 @@ func TestSQLExclusion(t *testing.T) {
 }
 
 func TestCheckAssignment_SQLQuery(t *testing.T) {
+	t.Parallel()
 	// Verify that a variable assignment with an SQL query value produces zero
 	// findings, even though the string has moderate entropy and length >= 16.
 	fset := token.NewFileSet()
@@ -89,6 +91,7 @@ func TestCheckAssignment_SQLQuery(t *testing.T) {
 // TestIsCharacterSet verifies: detection of character-set /
 // alphabet strings such as "ABC...XYZabc...xyz0123456789".
 func TestIsCharacterSet(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -165,6 +168,7 @@ func parseAndScan(t *testing.T, src string) []string {
 
 // `alphanum` character-set constant must NOT fire CRYPTO-HARDCODED-KEY.
 func TestCheckAssignment_AlphanumVarNotFlagged(t *testing.T) {
+	t.Parallel()
 	src := `package generator
 
 var alphanum = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
@@ -179,6 +183,7 @@ var alphanum = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 // endpoint path constants with multi-segment slash-separated values must NOT
 // fire CRYPTO-HARDCODED-KEY on any tier.
 func TestCheckAssignment_APIPathNotFlagged_Mastercard(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		src  string
@@ -220,6 +225,7 @@ var apiV1Path = "/api/v1.0/resources/list"
 // real high-entropy random keys must still be flagged after the
 // character-set and URL-path exclusions are added.
 func TestCheckAssignment_TrueSecretStillFlagged(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		src  string
@@ -261,6 +267,7 @@ var apiToken = "abcdefghABCDEFGH12345678"
 // guard: a value that starts with /api/ but contains characters
 // outside the URL-safe set (e.g., '=' or '+') must still be flagged.
 func TestCheckAssignment_APIPathWithDisallowedCharsStillFlagged(t *testing.T) {
+	t.Parallel()
 	src := `package foo
 
 var apiKey = "/api/x=base64padding+abcdefghij"

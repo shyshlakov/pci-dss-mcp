@@ -30,6 +30,7 @@ import (
 // Strategy: copy all_violations.* fixtures to a temp directory (because DefaultExcludeDirs
 // skips "testdata"), then run each scanner with ScanWithExclusions(nil) against the temp dir.
 func TestAllViolationsFixture(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	// Copy all fixtures to a temp dir to bypass "testdata" exclusion.
@@ -99,6 +100,7 @@ func TestAllViolationsFixture(t *testing.T) {
 // TestAllViolationsFixture_PANTypeHasMediumSeverity verifies: PAN-TYPE findings
 // have MEDIUM severity (defense-in-depth, not direct violation).
 func TestAllViolationsFixture_PANTypeHasMediumSeverity(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tmpDir := copyAllViolationsFixtures(t)
 
@@ -129,6 +131,7 @@ func TestAllViolationsFixture_PANTypeHasMediumSeverity(t *testing.T) {
 // TestAllViolationsFixture_PANKeywordStructFieldOnly verifies: PAN-KEYWORD
 // findings come only from struct fields, not function parameters or local variables.
 func TestAllViolationsFixture_PANKeywordStructFieldOnly(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tmpDir := copyAllViolationsFixtures(t)
 
@@ -153,6 +156,7 @@ func TestAllViolationsFixture_PANKeywordStructFieldOnly(t *testing.T) {
 // TestAllViolationsFixture_JSONCParsing verifies R11-01: secretscanner correctly
 // parses all_violations.json containing JSONC comments without error.
 func TestAllViolationsFixture_JSONCParsing(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tmpDir := copyAllViolationsFixtures(t)
 
@@ -179,6 +183,7 @@ func TestAllViolationsFixture_JSONCParsing(t *testing.T) {
 // TestAllViolationsFixture_CSPMissingHTMLHigh verifies: CSP-MISSING on
 // HTML-serving handlers (template.Execute) has HIGH severity.
 func TestAllViolationsFixture_CSPMissingHTMLHigh(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tmpDir := copyAllViolationsFixtures(t)
 
@@ -217,6 +222,7 @@ func TestAllViolationsFixture_CSPMissingHTMLHigh(t *testing.T) {
 // TestAllViolationsFixture_AllRuleCategories runs a comprehensive check that
 // findings span all expected rule ID categories across all 9 scanners.
 func TestAllViolationsFixture_AllRuleCategories(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tmpDir := copyAllViolationsFixtures(t)
 

@@ -73,6 +73,7 @@ func auditStructuredMap(t *testing.T, result *mcp.CallToolResult) map[string]any
 }
 
 func TestAuditLayerB_Default(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAudit(t, fixtureRoot)
 	result := callAuditDefault(t, scanRoot)
@@ -97,6 +98,7 @@ func TestAuditLayerB_Default(t *testing.T) {
 }
 
 func TestAuditLayerB_TopNPerSeverity_Is3(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAudit(t, fixtureRoot)
 	result := callAuditDefault(t, scanRoot)
@@ -111,6 +113,7 @@ func TestAuditLayerB_TopNPerSeverity_Is3(t *testing.T) {
 }
 
 func TestAuditLayerB_EmptyBucketsShipAsArray(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAudit(t, fixtureRoot)
 	result := callAuditDefault(t, scanRoot)
@@ -128,6 +131,7 @@ func TestAuditLayerB_EmptyBucketsShipAsArray(t *testing.T) {
 }
 
 func TestAuditLayerB_Deterministic(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAudit(t, fixtureRoot)
 	r1 := callAuditDefault(t, scanRoot)
@@ -149,6 +153,7 @@ func TestAuditLayerB_Deterministic(t *testing.T) {
 }
 
 func TestAuditLayerB_ByRuleHistogramSorted(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAudit(t, fixtureRoot)
 	result := callAuditDefault(t, scanRoot)
@@ -179,6 +184,7 @@ func TestAuditLayerB_ByRuleHistogramSorted(t *testing.T) {
 }
 
 func TestAuditLayerB_SizeBudget20KB(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAudit(t, fixtureRoot)
 	result := callAuditDefault(t, scanRoot)
@@ -194,6 +200,7 @@ func TestAuditLayerB_SizeBudget20KB(t *testing.T) {
 }
 
 func TestAuditLayerB_CursorRejectsFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newAuditSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "audit_log_coverage",
@@ -211,6 +218,7 @@ func TestAuditLayerB_CursorRejectsFilterCombo(t *testing.T) {
 }
 
 func TestAuditLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
+	t.Parallel()
 	session := newAuditSessionForLayerB(t)
 	tt := []struct {
 		name string
@@ -248,6 +256,7 @@ func TestAuditLayerB_CursorRejectsQualityFilterCombo(t *testing.T) {
 }
 
 func TestAuditLayerB_FilterSet_StillFlat(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAudit(t, fixtureRoot)
 	session := newAuditSessionForLayerB(t)
@@ -268,6 +277,7 @@ func TestAuditLayerB_FilterSet_StillFlat(t *testing.T) {
 }
 
 func TestAuditLayerA_SizeBudget(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAudit(t, fixtureRoot)
 	session := newAuditSessionForLayerB(t)
@@ -300,6 +310,7 @@ func TestAuditLayerA_SizeBudget(t *testing.T) {
 }
 
 func TestAuditToolDescription_SummaryFirstBias(t *testing.T) {
+	t.Parallel()
 	session := newAuditSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -330,6 +341,7 @@ func TestAuditToolDescription_SummaryFirstBias(t *testing.T) {
 }
 
 func TestAuditLayerB_MaxResultSizeChars(t *testing.T) {
+	t.Parallel()
 	session := newAuditSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {
@@ -366,6 +378,7 @@ func TestAuditLayerB_MaxResultSizeChars(t *testing.T) {
 }
 
 func TestAudit_LimitMinusOneRejected(t *testing.T) {
+	t.Parallel()
 	session := newAuditSessionForLayerB(t)
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "audit_log_coverage",
@@ -392,6 +405,7 @@ func TestAudit_LimitMinusOneRejected(t *testing.T) {
 }
 
 func TestAuditLayerA_IncludesHistogram(t *testing.T) {
+	t.Parallel()
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
 	scanRoot := copyFixtureTreeForAudit(t, fixtureRoot)
 	session := newAuditSessionForLayerB(t)
@@ -430,6 +444,7 @@ func TestAuditLayerA_IncludesHistogram(t *testing.T) {
 }
 
 func TestAuditToolDescription_LayerAHistogramNeedle(t *testing.T) {
+	t.Parallel()
 	session := newAuditSessionForLayerB(t)
 	tools, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
 	if err != nil {

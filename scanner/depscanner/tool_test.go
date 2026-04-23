@@ -47,6 +47,7 @@ func extractToolText(t *testing.T, result *mcp.CallToolResult) string {
 }
 
 func TestCheckDepsToolRegistered(t *testing.T) {
+	t.Parallel()
 	session := setupToolServer(t)
 
 	tools, err := session.ListTools(context.Background(), nil)
@@ -67,6 +68,7 @@ func TestCheckDepsToolRegistered(t *testing.T) {
 }
 
 func TestUpdateDBToolRegistered(t *testing.T) {
+	t.Parallel()
 	session := setupToolServer(t)
 
 	tools, err := session.ListTools(context.Background(), nil)
@@ -87,6 +89,7 @@ func TestUpdateDBToolRegistered(t *testing.T) {
 }
 
 func TestCheckDepsInvalidMode(t *testing.T) {
+	t.Parallel()
 	session := setupToolServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -110,6 +113,7 @@ func TestCheckDepsInvalidMode(t *testing.T) {
 }
 
 func TestCheckDepsDefaultMode(t *testing.T) {
+	t.Parallel()
 	session := setupToolServer(t)
 
 	// Call without mode — should default to "auto" and return an error

@@ -13,6 +13,7 @@ func mkFinding(rule string, sev scanner.Severity) scanner.Finding {
 }
 
 func TestBuildHistogram_SortsCountDescRuleIDAsc(t *testing.T) {
+	t.Parallel()
 	findings := []scanner.Finding{
 		mkFinding("RULE-B", scanner.SeverityHigh),
 		mkFinding("RULE-A", scanner.SeverityHigh),
@@ -40,6 +41,7 @@ func TestBuildHistogram_SortsCountDescRuleIDAsc(t *testing.T) {
 }
 
 func TestBuildHistogram_Top10CapWithOverflow(t *testing.T) {
+	t.Parallel()
 	findings := []scanner.Finding{}
 	rules := []string{
 		"R-01", "R-02", "R-03", "R-04", "R-05",
@@ -64,6 +66,7 @@ func TestBuildHistogram_Top10CapWithOverflow(t *testing.T) {
 }
 
 func TestBuildHistogram_ExactlyTenRules_NoMoreRules(t *testing.T) {
+	t.Parallel()
 	findings := []scanner.Finding{}
 	for i := 1; i <= 10; i++ {
 		findings = append(findings, mkFinding("R-"+string(rune('A'+i-1)), scanner.SeverityHigh))
@@ -78,6 +81,7 @@ func TestBuildHistogram_ExactlyTenRules_NoMoreRules(t *testing.T) {
 }
 
 func TestBuildHistogram_BySeverityCounts(t *testing.T) {
+	t.Parallel()
 	findings := []scanner.Finding{
 		mkFinding("R-1", scanner.SeverityCritical),
 		mkFinding("R-2", scanner.SeverityCritical),
@@ -110,6 +114,7 @@ func TestBuildHistogram_BySeverityCounts(t *testing.T) {
 }
 
 func TestBuildHistogram_EmptySlice_NoPanic(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name string
 		in   []scanner.Finding
@@ -136,6 +141,7 @@ func TestBuildHistogram_EmptySlice_NoPanic(t *testing.T) {
 }
 
 func TestBuildHistogram_Deterministic(t *testing.T) {
+	t.Parallel()
 	findings := []scanner.Finding{
 		mkFinding("PAN-KEYWORD", scanner.SeverityHigh),
 		mkFinding("PAN-KEYWORD", scanner.SeverityHigh),

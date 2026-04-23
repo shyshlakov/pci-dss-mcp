@@ -66,6 +66,7 @@ func extractIntegrationText(t *testing.T, result *mcp.CallToolResult) string {
 // handling violations: calls check_error_handling via MCP client, validates
 // that findings contain expected rule IDs and file references.
 func TestIntegration_ErrorLeakFindings(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	// Copy fixture to a temp dir (walker excludes "testdata" directories).
@@ -115,6 +116,7 @@ func TestIntegration_ErrorLeakFindings(t *testing.T) {
 // TestIntegration_InvalidPath verifies the MCP round-trip returns IsError=true
 // for a nonexistent path.
 func TestIntegration_InvalidPath(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -134,6 +136,7 @@ func TestIntegration_InvalidPath(t *testing.T) {
 // TestIntegration_NonPaymentHandlerSkipped verifies that the scanner skips
 // non-payment handler functions (no false positives on generic handlers).
 func TestIntegration_NonPaymentHandlerSkipped(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	// Create a Go file with only non-payment handlers that use err.Error().

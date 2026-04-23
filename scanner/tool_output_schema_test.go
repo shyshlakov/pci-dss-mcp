@@ -31,6 +31,7 @@ import (
 // every tool in the same order as main.go, and walks the tool list via
 // tools/list to assert the schema is present.
 func TestAllMCPToolsHaveOutputSchema(t *testing.T) {
+	t.Parallel()
 	db, err := pcidb.New()
 	if err != nil {
 		t.Fatalf("pcidb.New: %v", err)
@@ -97,6 +98,7 @@ func TestAllMCPToolsHaveOutputSchema(t *testing.T) {
 // this, AI clients cannot tell which variant they received without parsing
 // the response_shape discriminator by hand.
 func TestOutputSchema_GenerateReport_HasOneOfUnion(t *testing.T) {
+	t.Parallel()
 	db, err := pcidb.New()
 	if err != nil {
 		t.Fatalf("pcidb.New: %v", err)
@@ -183,6 +185,7 @@ func TestOutputSchema_GenerateReport_HasOneOfUnion(t *testing.T) {
 }
 
 func TestAllLayerA_OutputSchemaContainsHistogram(t *testing.T) {
+	t.Parallel()
 	db, err := pcidb.New()
 	if err != nil {
 		t.Fatalf("pcidb.New: %v", err)

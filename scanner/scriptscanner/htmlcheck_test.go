@@ -70,6 +70,7 @@ func cleanFixturePath(t *testing.T) string {
 // TestSRIMissing verifies SRI-MISSING-PAYMENT findings for external scripts
 // without integrity attribute in a payment template (CRITICAL).
 func TestSRIMissing(t *testing.T) {
+	t.Parallel()
 	dir := copyFixture(t, violationsFixturePath(t))
 	findings := scanHTML(t, dir)
 
@@ -92,6 +93,7 @@ func TestSRIMissing(t *testing.T) {
 // TestInlineNoNonce verifies NONCE-MISSING-PAYMENT finding for inline script
 // without nonce in a payment template (CRITICAL).
 func TestInlineNoNonce(t *testing.T) {
+	t.Parallel()
 	dir := copyFixture(t, violationsFixturePath(t))
 	findings := scanHTML(t, dir)
 
@@ -113,6 +115,7 @@ func TestInlineNoNonce(t *testing.T) {
 // TestSRIPresent verifies that a script with integrity attribute does NOT
 // produce SRI-MISSING findings.
 func TestSRIPresent(t *testing.T) {
+	t.Parallel()
 	dir := copyFixture(t, violationsFixturePath(t))
 	findings := scanHTML(t, dir)
 
@@ -129,6 +132,7 @@ func TestSRIPresent(t *testing.T) {
 // TestNoncePresent verifies that an inline script with nonce attribute does
 // NOT produce NONCE-MISSING findings.
 func TestNoncePresent(t *testing.T) {
+	t.Parallel()
 	html := `<!DOCTYPE html>
 <html><body>
 <script nonce="abc123">console.log("safe");</script>
@@ -147,6 +151,7 @@ func TestNoncePresent(t *testing.T) {
 // TestMetaCSPUnsafe verifies META-CSP-UNSAFE finding for meta tag with
 // unsafe-inline.
 func TestMetaCSPUnsafe(t *testing.T) {
+	t.Parallel()
 	dir := copyFixture(t, violationsFixturePath(t))
 	findings := scanHTML(t, dir)
 
@@ -165,6 +170,7 @@ func TestMetaCSPUnsafe(t *testing.T) {
 // TestFIMRequired verifies FIM-REQUIRED finding is emitted for payment
 // templates.
 func TestFIMRequired(t *testing.T) {
+	t.Parallel()
 	dir := copyFixture(t, violationsFixturePath(t))
 	findings := scanHTML(t, dir)
 
@@ -183,6 +189,7 @@ func TestFIMRequired(t *testing.T) {
 // TestCleanHTML verifies that a clean HTML file with proper SRI and nonces
 // produces zero HIGH/CRITICAL findings. Only FIM-REQUIRED MEDIUM is expected.
 func TestCleanHTML(t *testing.T) {
+	t.Parallel()
 	dir := copyFixture(t, cleanFixturePath(t))
 	findings := scanHTML(t, dir)
 
@@ -202,6 +209,7 @@ func TestCleanHTML(t *testing.T) {
 // TestGoTemplateSyntax verifies that HTML files containing Go template {{ }}
 // syntax do not cause parse errors.
 func TestGoTemplateSyntax(t *testing.T) {
+	t.Parallel()
 	html := `<!DOCTYPE html>
 <html><head><title>Template Test</title></head>
 <body>
@@ -231,6 +239,7 @@ func TestGoTemplateSyntax(t *testing.T) {
 // TestNonPaymentTemplate verifies that external scripts without SRI in a
 // non-payment template get HIGH (not CRITICAL) severity.
 func TestNonPaymentTemplate(t *testing.T) {
+	t.Parallel()
 	html := `<!DOCTYPE html>
 <html><head><title>About Page</title></head>
 <body>
@@ -277,6 +286,7 @@ func TestNonPaymentTemplate(t *testing.T) {
 // TestMetaCSPOnly verifies META-CSP-ONLY finding for a meta CSP without
 // unsafe patterns.
 func TestMetaCSPOnly(t *testing.T) {
+	t.Parallel()
 	html := `<!DOCTYPE html>
 <html><head>
 <meta http-equiv="Content-Security-Policy" content="script-src 'self'">

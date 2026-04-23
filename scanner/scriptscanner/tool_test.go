@@ -39,6 +39,7 @@ func setupToolTestServer(t *testing.T) *mcp.ClientSession {
 // TestToolRegistration verifies the check_payment_page_scripts tool is registered
 // with the correct name and appears in the tool list.
 func TestToolRegistration(t *testing.T) {
+	t.Parallel()
 	session := setupToolTestServer(t)
 
 	result, err := session.ListTools(context.Background(), nil)
@@ -69,6 +70,7 @@ func TestToolRegistration(t *testing.T) {
 // TestToolInputValidation verifies that calling the tool with an empty path
 // returns an error response.
 func TestToolInputValidation(t *testing.T) {
+	t.Parallel()
 	session := setupToolTestServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{

@@ -119,6 +119,7 @@ func copyFixtures(t *testing.T) string {
 }
 
 func TestTriageToolIntegration_WithViolations(t *testing.T) {
+	t.Parallel()
 	session := setupTriageServer(t)
 	tmpDir := copyFixtures(t)
 
@@ -187,6 +188,7 @@ func TestTriageToolIntegration_WithViolations(t *testing.T) {
 }
 
 func TestTriageToolIntegration_CleanProject(t *testing.T) {
+	t.Parallel()
 	session := setupTriageServer(t)
 	tmpDir := t.TempDir()
 
@@ -228,6 +230,7 @@ func TestTriageToolIntegration_CleanProject(t *testing.T) {
 }
 
 func TestTriageToolIntegration_DefaultPath(t *testing.T) {
+	t.Parallel()
 	session := setupTriageServer(t)
 
 	// Call with empty path -- should default to "." and not error.
@@ -250,6 +253,7 @@ func TestTriageToolIntegration_DefaultPath(t *testing.T) {
 }
 
 func TestTriageToolIntegration_InvalidDepMode(t *testing.T) {
+	t.Parallel()
 	session := setupTriageServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{

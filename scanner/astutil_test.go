@@ -10,6 +10,7 @@ import (
 )
 
 func TestParseGoFileValid(t *testing.T) {
+	t.Parallel()
 	// Use walker_test.go as a known valid Go file in the same directory.
 	f, fset, err := ParseGoFile("walker_test.go")
 	if err != nil {
@@ -35,6 +36,7 @@ func TestParseGoFileInvalid(t *testing.T) {
 }
 
 func TestParseGoFileNonexistent(t *testing.T) {
+	t.Parallel()
 	_, _, err := ParseGoFile("/nonexistent/file.go")
 	if err == nil {
 		t.Fatal("expected error for nonexistent file, got nil")
@@ -42,6 +44,7 @@ func TestParseGoFileNonexistent(t *testing.T) {
 }
 
 func TestInspectCallsFindsFmtPrintln(t *testing.T) {
+	t.Parallel()
 	src := `package test
 import "fmt"
 func main() {
@@ -61,6 +64,7 @@ func main() {
 }
 
 func TestInspectCallsFindsMultiplePatterns(t *testing.T) {
+	t.Parallel()
 	src := `package test
 import (
 	"fmt"
@@ -80,6 +84,7 @@ func main() {
 }
 
 func TestInspectCallsNoMatch(t *testing.T) {
+	t.Parallel()
 	src := `package test
 func main() {
 	println("hello")
@@ -94,6 +99,7 @@ func main() {
 }
 
 func TestInspectStringLiteralsFindsPattern(t *testing.T) {
+	t.Parallel()
 	src := `package test
 var pan = "4111111111111111"
 var name = "John Doe"
@@ -111,6 +117,7 @@ var name = "John Doe"
 }
 
 func TestInspectStringLiteralsNoMatch(t *testing.T) {
+	t.Parallel()
 	src := `package test
 var name = "John Doe"
 `
@@ -124,6 +131,7 @@ var name = "John Doe"
 }
 
 func TestInspectStructFieldsFindsCardNumber(t *testing.T) {
+	t.Parallel()
 	src := `package test
 type Payment struct {
 	cardNumber string
@@ -155,6 +163,7 @@ type Payment struct {
 }
 
 func TestInspectStructFieldsNoMatch(t *testing.T) {
+	t.Parallel()
 	src := `package test
 type Config struct {
 	Host string

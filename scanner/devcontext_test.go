@@ -3,6 +3,7 @@ package scanner
 import "testing"
 
 func TestIsProdPath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		filePath string
@@ -36,6 +37,7 @@ func TestIsProdPath(t *testing.T) {
 }
 
 func TestIsDevPath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		filePath string
@@ -78,6 +80,7 @@ func TestIsDevPath(t *testing.T) {
 }
 
 func TestIsPlaceholderValue(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		value string
@@ -111,6 +114,7 @@ func TestIsPlaceholderValue(t *testing.T) {
 }
 
 func TestClassifyDevContext(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name              string
 		filePath          string
@@ -408,6 +412,7 @@ func TestClassifyDevContext(t *testing.T) {
 // TestDedicatedDevDirectoryList verifies,: paths under dedicated-dev
 // directories (dev/, local/, development/, sandbox/, test/) set DedicatedDev=true.
 func TestDedicatedDevDirectoryList(t *testing.T) {
+	t.Parallel()
 	cases := []string{
 		"dev/x.env",
 		"local/x.env",
@@ -427,6 +432,7 @@ func TestDedicatedDevDirectoryList(t *testing.T) {
 
 // TestDedicatedDevNegatives verifies paths that must NOT set DedicatedDev.
 func TestDedicatedDevNegatives(t *testing.T) {
+	t.Parallel()
 	cases := []string{
 		"internal/testdata/fixture.env",
 		"internal/foo_test.go", // _test.go suffix, not a "test" directory segment
@@ -444,6 +450,7 @@ func TestDedicatedDevNegatives(t *testing.T) {
 // or samples/ directories carry ExamplesPath=true and downgrade credential
 // findings to INFO via DedicatedDev. Production paths must NOT match.
 func TestClassifyDevContextExamplesPath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name             string
 		filePath         string

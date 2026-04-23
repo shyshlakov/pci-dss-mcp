@@ -10,6 +10,7 @@ import (
 )
 
 func TestAnalyzeKeyValue_KnownPrefixes(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		kv       KeyValue
@@ -77,6 +78,7 @@ func TestAnalyzeKeyValue_KnownPrefixes(t *testing.T) {
 }
 
 func TestAnalyzeKeyValue_CredentialKeys(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		kv       KeyValue
@@ -120,6 +122,7 @@ func TestAnalyzeKeyValue_CredentialKeys(t *testing.T) {
 }
 
 func TestAnalyzeKeyValue_HighEntropy(t *testing.T) {
+	t.Parallel()
 	// A random-looking value in a credential key context: Shannon > 4.5, len >= 16.
 	// Uses mixed case + digits to achieve high entropy (~4.7 bits/char).
 	kv := KeyValue{
@@ -145,6 +148,7 @@ func TestAnalyzeKeyValue_HighEntropy(t *testing.T) {
 }
 
 func TestAnalyzeKeyValue_ConnectionStrings(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		value string
@@ -178,6 +182,7 @@ func TestAnalyzeKeyValue_ConnectionStrings(t *testing.T) {
 }
 
 func TestAnalyzeKeyValue_Exclusions(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		kv   KeyValue
@@ -219,6 +224,7 @@ func TestAnalyzeKeyValue_Exclusions(t *testing.T) {
 }
 
 func TestSecretsScanner_ScanWithExclusions_AllFormats(t *testing.T) {
+	t.Parallel()
 	// Copy fixtures to a temp dir because the walker excludes "testdata" directories.
 	srcDir := testdataDir(t)
 	tmpDir := t.TempDir()
@@ -264,6 +270,7 @@ func TestSecretsScanner_ScanWithExclusions_AllFormats(t *testing.T) {
 }
 
 func TestSecretsScanner_ScanWithExclusions_CleanFile(t *testing.T) {
+	t.Parallel()
 	// Create a temp dir with only the clean file to avoid testdata exclusion.
 	dir := t.TempDir()
 	// Copy clean file to temp dir.
@@ -293,6 +300,7 @@ func TestSecretsScanner_ScanWithExclusions_CleanFile(t *testing.T) {
 }
 
 func TestSecretsScanner_Name(t *testing.T) {
+	t.Parallel()
 	s := New()
 	if s.Name() != "secrets" {
 		t.Errorf("Name() = %q, want %q", s.Name(), "secrets")
@@ -300,6 +308,7 @@ func TestSecretsScanner_Name(t *testing.T) {
 }
 
 func TestSecretsScanner_Requirements(t *testing.T) {
+	t.Parallel()
 	s := New()
 	reqs := s.Requirements()
 	if len(reqs) == 0 || reqs[0] != "8.6.2" {

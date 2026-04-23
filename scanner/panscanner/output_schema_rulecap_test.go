@@ -6,6 +6,7 @@ import (
 )
 
 func TestBuildPANOutputSchemaUnion_IncludesMoreRules(t *testing.T) {
+	t.Parallel()
 	raw, err := buildPANOutputSchemaUnion()
 	if err != nil {
 		t.Fatalf("buildPANOutputSchemaUnion: %v", err)

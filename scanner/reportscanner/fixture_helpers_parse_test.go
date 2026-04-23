@@ -6,6 +6,7 @@ import (
 )
 
 func TestParseBodyTables(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name           string
 		lines          []string
@@ -137,6 +138,7 @@ func TestParseBodyTables(t *testing.T) {
 }
 
 func TestParseRelatedList(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name string
 		in   string
@@ -160,6 +162,7 @@ func TestParseRelatedList(t *testing.T) {
 }
 
 func TestEqualStringSetsIgnoreOrder(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name string
 		a, b []string

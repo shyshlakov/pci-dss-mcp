@@ -44,6 +44,7 @@ func findBySeverity(findings []scanner.Finding, sev scanner.Severity) []scanner.
 
 // Test1: Payment handler with slog.Info call -> 0 HIGH findings, 1 INFO note about PCI DSS 10.2.1 fields.
 func TestPaymentHandlerWithSlog(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import (
@@ -79,6 +80,7 @@ func HandlePayment(w http.ResponseWriter, r *http.Request) {
 
 // Test2: Payment handler with NO logging at all -> 1 CRITICAL finding (Tier 1 handler).
 func TestPaymentHandlerNoLogging(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -111,6 +113,7 @@ func HandlePayment(w http.ResponseWriter, r *http.Request) {
 
 // Test3: Payment handler with fmt.Println only -> 1 CRITICAL finding AUDIT-UNSTRUCTURED (Tier 1).
 func TestPaymentHandlerUnstructuredOnly(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import (
@@ -147,6 +150,7 @@ func HandlePayment(w http.ResponseWriter, r *http.Request) {
 
 // Test4: Non-payment handler with no logging -> 0 findings.
 func TestNonPaymentHandlerSkipped(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -169,6 +173,7 @@ func HandleHealth(w http.ResponseWriter, r *http.Request) {
 
 // Test5: Payment handler calling helper function in same file that has slog.Info -> 0 HIGH findings.
 func TestPaymentHandlerDelegatesToHelper(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import (
@@ -200,6 +205,7 @@ func processRefund() {
 
 // Test6: Payment handler with zap.L().Info() -> 0 HIGH findings.
 func TestPaymentHandlerWithZap(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import (
@@ -227,6 +233,7 @@ func HandlePayment(w http.ResponseWriter, r *http.Request) {
 
 // Test7: Payment handler with zerolog log.Info().Msg() -> 0 HIGH findings.
 func TestPaymentHandlerWithZerolog(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import (
@@ -254,6 +261,7 @@ func HandlePayment(w http.ResponseWriter, r *http.Request) {
 
 // Test8: Payment handler with renamed import `import mylog "log/slog"` using `mylog.Info()`.
 func TestPaymentHandlerWithRenamedImport(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import (
@@ -281,6 +289,7 @@ func HandlePayment(w http.ResponseWriter, r *http.Request) {
 
 // Test9: Non-HTTP function with payment name but no handler signature -> 0 findings.
 func TestNonHTTPPaymentFunction(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 func ProcessPayment(data []byte) error {
@@ -301,6 +310,7 @@ func ProcessPayment(data []byte) error {
 
 // Test10: gin.Context handler with payment name and no logging -> 1 CRITICAL finding (Tier 1).
 func TestGinPaymentHandlerNoLogging(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "github.com/gin-gonic/gin"
@@ -324,6 +334,7 @@ func HandlePayment(c *gin.Context) {
 
 // TestTierSeverity verifies that audit findings map tier to correct severity.
 func TestTierSeverity(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		handlerName string
@@ -366,6 +377,7 @@ func ` + tc.handlerName + `(w http.ResponseWriter, r *http.Request) {
 
 // TestTier3CoLocation verifies Tier 3 handler only fires when Tier 1 is in same file.
 func TestTier3CoLocation(t *testing.T) {
+	t.Parallel()
 	// Tier 3 handler WITHOUT Tier 1 in same file -> no finding.
 	t.Run("callback alone produces no finding", func(t *testing.T) {
 		src := `package test
@@ -429,6 +441,7 @@ func HandleCallback(w http.ResponseWriter, r *http.Request) {
 
 // TestMiddlewareDowngrade verifies that logging middleware in same file downgrades to INFO.
 func TestMiddlewareDowngrade(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -471,6 +484,7 @@ func HandlePayment(w http.ResponseWriter, r *http.Request) {
 // a same-file function named `requestLogger` (word-boundary "Logger") is
 // recognized as middleware-covered (case 1).
 func TestHasLoggingMiddleware_RequestLogger(t *testing.T) {
+	t.Parallel()
 	file, _, err := scanner.ParseGoFile("testdata/middleware_logger.go")
 	if err != nil {
 		t.Fatalf("ParseGoFile: %v", err)
@@ -484,6 +498,7 @@ func TestHasLoggingMiddleware_RequestLogger(t *testing.T) {
 // `audit.AuditLogger()` (SelectorExpr + CallExpr form) is
 // recognized (case 2).
 func TestHasLoggingMiddleware_SelectorCallForm(t *testing.T) {
+	t.Parallel()
 	file, _, err := scanner.ParseGoFile("testdata/middleware_logger.go")
 	if err != nil {
 		t.Fatalf("ParseGoFile: %v", err)
@@ -497,6 +512,7 @@ func TestHasLoggingMiddleware_SelectorCallForm(t *testing.T) {
 // follow-through recognizes handlers routed through an `Install` function
 // whose body contains logger-named wrappers (case 3).
 func TestHasLoggingMiddleware_AggregatorInstall(t *testing.T) {
+	t.Parallel()
 	file, _, err := scanner.ParseGoFile("testdata/middleware_logger.go")
 	if err != nil {
 		t.Fatalf("ParseGoFile: %v", err)
@@ -510,6 +526,7 @@ func TestHasLoggingMiddleware_AggregatorInstall(t *testing.T) {
 // guard: a file that genuinely has NO middleware coverage for a handler must
 // still report false (so AUDIT-NO-LOG fires for the true no-log case).
 func TestHasLoggingMiddleware_NoMiddleware_StillFiresAuditNoLog(t *testing.T) {
+	t.Parallel()
 	src := `package test
 
 import "net/http"
@@ -533,6 +550,7 @@ func NoMiddlewarePayHandler(w http.ResponseWriter, r *http.Request) {
 // cross-file middleware) gets AUDIT-LOG-OK, while HandleRefundManual still
 // gets AUDIT-NO-LOG because its group has no middleware.
 func TestCrossFileMiddlewareIntegration(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Write handler file with payment handlers (no inline logging).
@@ -634,6 +652,7 @@ func HandleRefundManual(c *gin.Context) {
 // testdata/middleware_logger.go fixture still produces correct results
 // (fast path still works after wiring cross-file fallback).
 func TestExistingMiddlewareFixtureRegression(t *testing.T) {
+	t.Parallel()
 	file, _, err := scanner.ParseGoFile("testdata/middleware_logger.go")
 	if err != nil {
 		t.Fatalf("ParseGoFile: %v", err)
@@ -646,6 +665,7 @@ func TestExistingMiddlewareFixtureRegression(t *testing.T) {
 
 // TestScannerInterface verifies AuditScanner implements scanner.Scanner.
 func TestScannerInterface(t *testing.T) {
+	t.Parallel()
 	s := New()
 
 	if name := s.Name(); name != "audit_log_coverage" {
@@ -670,6 +690,7 @@ func TestScannerInterface(t *testing.T) {
 // TestAuditLogFieldVerification_GracefulDegradation verifies that when middleware
 // import can't be resolved, the finding keeps the generic message.
 func TestAuditLogFieldVerification_GracefulDegradation(t *testing.T) {
+	t.Parallel()
 	// Create a simple project with a payment handler covered by middleware,
 	// but the middleware import is external (can't be followed).
 	dir := t.TempDir()
@@ -739,6 +760,7 @@ func HandleTokenize(w http.ResponseWriter, r *http.Request) {
 
 // TestResetLogFieldCache verifies that field cache is cleared properly.
 func TestResetLogFieldCache(t *testing.T) {
+	t.Parallel()
 	// Populate the cache with a dummy entry.
 	logFieldMu.Lock()
 	logFieldCache["test::func"] = &logFieldCacheEntry{
@@ -770,6 +792,7 @@ func TestResetLogFieldCache(t *testing.T) {
 // TestResetLogFieldCache_CalledByScanFull verifies that ScanFull calls
 // ResetLogFieldCache (indirectly verified by checking cache is empty after scan).
 func TestResetLogFieldCache_CalledByScanFull(t *testing.T) {
+	t.Parallel()
 	// Populate cache.
 	logFieldMu.Lock()
 	logFieldCache["stale::entry"] = &logFieldCacheEntry{

@@ -181,6 +181,7 @@ func severityRotation(i int) string {
 }
 
 func TestSelectAndExecute_Default(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	findings := mkFindings(30)
 	cache := newMemCache()
@@ -211,6 +212,7 @@ func TestSelectAndExecute_Default(t *testing.T) {
 }
 
 func TestSelectAndExecute_Cursor_Resume(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	cache := newMemCache()
 	findings := mkFindings(90)
@@ -243,6 +245,7 @@ func TestSelectAndExecute_Cursor_Resume(t *testing.T) {
 }
 
 func TestSelectAndExecute_Cursor_Malformed(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	res, err := SelectAndExecute[fakeFinding, fakeSummary, fakeFlat](
 		ctx,
@@ -262,6 +265,7 @@ func TestSelectAndExecute_Cursor_Malformed(t *testing.T) {
 }
 
 func TestSelectAndExecute_Cursor_ToolMismatch(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	cur, err := hybridcache.EncodeCursor(hybridcache.CursorPayload{SID: "sid-x", Off: 0, Tool: "other_tool"})
 	if err != nil {
@@ -285,6 +289,7 @@ func TestSelectAndExecute_Cursor_ToolMismatch(t *testing.T) {
 }
 
 func TestSelectAndExecute_Cursor_Expired(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	cur, err := hybridcache.EncodeCursor(hybridcache.CursorPayload{SID: "sid-gone", Off: 0, Tool: "triage_findings"})
 	if err != nil {
@@ -308,6 +313,7 @@ func TestSelectAndExecute_Cursor_Expired(t *testing.T) {
 }
 
 func TestSelectAndExecute_FilterSet_MinSeverity(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	findings := mkFindings(30)
 	cache := newMemCache()
@@ -334,6 +340,7 @@ func TestSelectAndExecute_FilterSet_MinSeverity(t *testing.T) {
 }
 
 func TestSelectAndExecute_ScanError(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, err := SelectAndExecute[fakeFinding, fakeSummary, fakeFlat](
 		ctx,
@@ -350,6 +357,7 @@ func TestSelectAndExecute_ScanError(t *testing.T) {
 }
 
 func TestSelectAndExecute_FilterError(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	findings := mkFindings(5)
 	_, err := SelectAndExecute[fakeFinding, fakeSummary, fakeFlat](
@@ -367,6 +375,7 @@ func TestSelectAndExecute_FilterError(t *testing.T) {
 }
 
 func TestSelectAndExecute_PerToolPageSize(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	findings := make([]fakeFinding, 40)
 	for i := range findings {
@@ -457,6 +466,7 @@ func TestSelectAndExecute_PerToolPageSize(t *testing.T) {
 }
 
 func TestSelectAndExecute_LimitExceedsPageSize(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tt := []struct {
 		name        string
@@ -514,6 +524,7 @@ func TestSelectAndExecute_LimitExceedsPageSize(t *testing.T) {
 }
 
 func TestSelectAndExecute_BuildSummaryNil(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	buildNilSummary := func(_ []fakeFinding, _ hybridcache.ScanMeta, _, _ string) *fakeSummary {
 		return nil
@@ -536,6 +547,7 @@ func TestSelectAndExecute_BuildSummaryNil(t *testing.T) {
 }
 
 func TestSelectAndExecute_FreshFilterHistogramFullScan(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	findings := mkFindings(30)
 	cache := newMemCache()
@@ -574,6 +586,7 @@ func TestSelectAndExecute_FreshFilterHistogramFullScan(t *testing.T) {
 }
 
 func TestSelectAndExecute_CursorResumeHistogramStable(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	findings := make([]fakeFinding, 100)
 	for i := range findings {

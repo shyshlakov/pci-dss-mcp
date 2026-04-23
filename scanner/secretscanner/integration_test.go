@@ -84,6 +84,7 @@ func copyFixtures(t *testing.T, files []string) string {
 // TestIntegration_AllFormats verifies the secrets scanner catches violations across
 // all four file formats (.env,.yaml,.json,.toml) in a single scan via MCP round-trip.
 func TestIntegration_AllFormats(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	tmpDir := copyFixtures(t, []string{"secrets.env", "secrets.yaml", "secrets.json", "secrets.toml"})
@@ -126,6 +127,7 @@ func TestIntegration_AllFormats(t *testing.T) {
 
 // TestIntegration_RuleIDPrefix verifies that every finding has a SEC- prefixed rule ID.
 func TestIntegration_RuleIDPrefix(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	// Use a single fixture with known violations.
@@ -159,6 +161,7 @@ func TestIntegration_RuleIDPrefix(t *testing.T) {
 // TestIntegration_InvalidPath verifies the MCP round-trip returns IsError=true
 // for a nonexistent path.
 func TestIntegration_InvalidPath(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -178,6 +181,7 @@ func TestIntegration_InvalidPath(t *testing.T) {
 // TestIntegration_CleanFile verifies that scanning a directory with only clean
 // config files returns "No violations found."
 func TestIntegration_CleanFile(t *testing.T) {
+	t.Parallel()
 	session := setupIntegrationServer(t)
 
 	tmpDir := copyFixtures(t, []string{"secrets_clean.env"})

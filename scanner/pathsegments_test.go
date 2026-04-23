@@ -3,6 +3,7 @@ package scanner
 import "testing"
 
 func TestHasTestDirSegment(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name string
 		root string

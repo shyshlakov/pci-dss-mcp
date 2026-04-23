@@ -18,6 +18,7 @@ func getFnBody(decl any) *ast.BlockStmt {
 }
 
 func TestBrandPathRE(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name  string
 		path  string
@@ -45,6 +46,7 @@ func TestBrandPathRE(t *testing.T) {
 }
 
 func TestFirstBodyParserPos(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name       string
 		body       string
@@ -75,6 +77,7 @@ func TestFirstBodyParserPos(t *testing.T) {
 }
 
 func TestSignatureVerifiedBeforeParser(t *testing.T) {
+	t.Parallel()
 	tt := []struct {
 		name string
 		body string
@@ -104,6 +107,7 @@ func TestSignatureVerifiedBeforeParser(t *testing.T) {
 }
 
 func TestVerifySigRecursionDepth2Fails(t *testing.T) {
+	t.Parallel()
 	src := `package p
 func h() {
 	body, _ := io.ReadAll(r.Body)
@@ -130,6 +134,7 @@ func verifyInner(body []byte) bool {
 }
 
 func TestVerifySigRecursionDepth1Passes(t *testing.T) {
+	t.Parallel()
 	src := `package p
 func h() {
 	body, _ := io.ReadAll(r.Body)
@@ -153,6 +158,7 @@ func verifyHelper(body []byte) bool {
 }
 
 func TestVerifySigCycleGuard(t *testing.T) {
+	t.Parallel()
 	src := `package p
 func h() {
 	body, _ := io.ReadAll(r.Body)
@@ -181,6 +187,7 @@ func verifyB(body []byte) bool { return verifyA(body) }
 }
 
 func TestWebhookSignatureScanIntegrationStripeAntiPattern(t *testing.T) {
+	t.Parallel()
 	src := `package webhook
 import (
 	"encoding/json"
@@ -221,6 +228,7 @@ func HandleStripeWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestWebhookSignatureScanIntegrationVerifiedConstructEvent(t *testing.T) {
+	t.Parallel()
 	src := `package webhook
 import (
 	"encoding/json"
@@ -264,6 +272,7 @@ func HandleVerifiedStripe(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestWebhookSignatureScanGenericPathHigh(t *testing.T) {
+	t.Parallel()
 	src := `package webhook
 import (
 	"encoding/json"

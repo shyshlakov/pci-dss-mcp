@@ -8,6 +8,7 @@ import (
 )
 
 func TestExtractImports(t *testing.T) {
+	t.Parallel()
 	src := `package foo
 
 import (
@@ -37,6 +38,7 @@ import (
 }
 
 func TestExtractImports_NilFile(t *testing.T) {
+	t.Parallel()
 	imports := extractImports(nil)
 	if imports != nil {
 		t.Errorf("expected nil for nil file, got: %v", imports)
@@ -44,6 +46,7 @@ func TestExtractImports_NilFile(t *testing.T) {
 }
 
 func TestExtractPackageDecls(t *testing.T) {
+	t.Parallel()
 	src := `package foo
 
 var GlobalVar int
@@ -74,6 +77,7 @@ type Config struct {}
 }
 
 func TestExtractPackageDecls_NilFile(t *testing.T) {
+	t.Parallel()
 	decls := extractPackageDecls(nil, nil)
 	if decls != nil {
 		t.Errorf("expected nil for nil file, got: %v", decls)
@@ -81,6 +85,7 @@ func TestExtractPackageDecls_NilFile(t *testing.T) {
 }
 
 func TestExtractImports_BlankImport(t *testing.T) {
+	t.Parallel()
 	// Blank imports (alias "_") should NOT include the alias.
 	src := `package foo
 
@@ -113,6 +118,7 @@ import (
 }
 
 func TestClassifyFileLocation(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		path string
 		want string
@@ -144,6 +150,7 @@ func TestClassifyFileLocation(t *testing.T) {
 
 // Verify nil ast.File doesn't panic.
 func TestExtractImports_NilASTFile(t *testing.T) {
+	t.Parallel()
 	var f *ast.File
 	got := extractImports(f)
 	if got != nil {

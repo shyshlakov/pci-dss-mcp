@@ -8,6 +8,7 @@ import (
 )
 
 func TestWalkFilesGoOnly(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "main.go"), "package main")
 	writeFile(t, filepath.Join(root, "config.json"), "{}")
@@ -31,6 +32,7 @@ func TestWalkFilesGoOnly(t *testing.T) {
 }
 
 func TestWalkFilesSkipsGitDir(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "main.go"), "package main")
 	writeFile(t, filepath.Join(root, ".git", "config"), "gitconfig")
@@ -51,6 +53,7 @@ func TestWalkFilesSkipsGitDir(t *testing.T) {
 }
 
 func TestWalkFilesSkipsVendorDir(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "main.go"), "package main")
 	writeFile(t, filepath.Join(root, "vendor", "dep", "dep.go"), "package dep")
@@ -67,6 +70,7 @@ func TestWalkFilesSkipsVendorDir(t *testing.T) {
 }
 
 func TestWalkFilesSkipsNodeModules(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "main.go"), "package main")
 	writeFile(t, filepath.Join(root, "node_modules", "pkg", "index.go"), "package pkg")
@@ -83,6 +87,7 @@ func TestWalkFilesSkipsNodeModules(t *testing.T) {
 }
 
 func TestWalkFilesMaxFileSize(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "small.go"), "package small")
 	// Create a file larger than 100 bytes.
@@ -106,6 +111,7 @@ func TestWalkFilesMaxFileSize(t *testing.T) {
 }
 
 func TestWalkFilesEmptyDir(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 
 	cfg := WalkConfig{Extensions: []string{".go"}}
@@ -120,6 +126,7 @@ func TestWalkFilesEmptyDir(t *testing.T) {
 }
 
 func TestWalkFilesNonexistentDir(t *testing.T) {
+	t.Parallel()
 	cfg := WalkConfig{Extensions: []string{".go"}}
 	_, err := collectWalk("/nonexistent/path/does/not/exist", cfg)
 	if err == nil {
@@ -128,6 +135,7 @@ func TestWalkFilesNonexistentDir(t *testing.T) {
 }
 
 func TestWalkFilesExtensionCaseInsensitive(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "main.GO"), "package main")
 	writeFile(t, filepath.Join(root, "lib.go"), "package lib")
@@ -144,6 +152,7 @@ func TestWalkFilesExtensionCaseInsensitive(t *testing.T) {
 }
 
 func TestWalkFilesCustomExcludeDirs(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "main.go"), "package main")
 	writeFile(t, filepath.Join(root, "build", "output.go"), "package build")
@@ -163,6 +172,7 @@ func TestWalkFilesCustomExcludeDirs(t *testing.T) {
 }
 
 func TestWalkFilesExcludeGlobsFilePattern(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "main.go"), "package main")
 	writeFile(t, filepath.Join(root, "types.pb.go"), "package main // generated")
@@ -188,6 +198,7 @@ func TestWalkFilesExcludeGlobsFilePattern(t *testing.T) {
 }
 
 func TestWalkFilesExcludeGlobsDirPattern(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "main.go"), "package main")
 	writeFile(t, filepath.Join(root, "generated", "types.go"), "package generated")
@@ -211,6 +222,7 @@ func TestWalkFilesExcludeGlobsDirPattern(t *testing.T) {
 }
 
 func TestWalkFilesExcludeGlobsCombined(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "main.go"), "package main")
 	writeFile(t, filepath.Join(root, "types.pb.go"), "package main // generated")
@@ -238,6 +250,7 @@ func TestWalkFilesExcludeGlobsCombined(t *testing.T) {
 }
 
 func TestWalkFilesExcludeGlobsEmpty(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "main.go"), "package main")
 	writeFile(t, filepath.Join(root, "types.pb.go"), "package main // generated")
@@ -257,6 +270,7 @@ func TestWalkFilesExcludeGlobsEmpty(t *testing.T) {
 }
 
 func TestWalkFilesExcludesTestFiles(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "main.go"), "package main")
 	writeFile(t, filepath.Join(root, "main_test.go"), "package main")
@@ -276,6 +290,7 @@ func TestWalkFilesExcludesTestFiles(t *testing.T) {
 }
 
 func TestWalkFilesIncludesTestFiles(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "main.go"), "package main")
 	writeFile(t, filepath.Join(root, "main_test.go"), "package main")
@@ -292,6 +307,7 @@ func TestWalkFilesIncludesTestFiles(t *testing.T) {
 }
 
 func TestWalkFilesTestExclusionOnlyGo(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "config_test.yaml"), "key: value")
 
@@ -311,6 +327,7 @@ func TestWalkFilesTestExclusionOnlyGo(t *testing.T) {
 }
 
 func TestWalkFilesSkipTestSegmentAtIncludeTestsFalse(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "internal", "test", "e2e", "mock.go"), "package e2e")
 	writeFile(t, filepath.Join(root, "internal", "integration", "stripe.go"), "package integration")
@@ -340,6 +357,7 @@ func TestWalkFilesSkipTestSegmentAtIncludeTestsFalse(t *testing.T) {
 }
 
 func TestWalkFilesIncludeTestSegmentAtIncludeTestsTrue(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "internal", "test", "e2e", "mock.go"), "package e2e")
 	writeFile(t, filepath.Join(root, "internal", "integration", "stripe.go"), "package integration")

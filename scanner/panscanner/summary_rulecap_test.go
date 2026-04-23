@@ -48,6 +48,7 @@ func marshalPANSummaryToMap(t *testing.T, resp *PANSummaryResponse) map[string]a
 }
 
 func TestPANLayerB_ByRuleCap_15Rules(t *testing.T) {
+	t.Parallel()
 	findings := synthPANFindingsVaryingCounts(t)
 	resp := buildPANSummaryInternal(findings, hybridcache.ScanMeta{}, "sid-test", "")
 	m := marshalPANSummaryToMap(t, resp)

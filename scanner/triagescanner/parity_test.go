@@ -36,6 +36,7 @@ import (
 // parity assertion now reads the structured payload directly via a typed
 // json.Unmarshal instead of the legacy "JSON:\n..." text suffix.
 func TestTriageReportParity(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	fixtureRoot := filepath.Join("..", "..", "testdata", "vulnerable-payment-service")
