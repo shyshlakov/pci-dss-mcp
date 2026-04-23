@@ -7,7 +7,7 @@ import (
 
 func TestServerInstructions_ContainsKeyGuidance(t *testing.T) {
 	tt := []struct {
-		name       string
+		name        string
 		mustContain string
 	}{
 		{"recommended entry point name", "triage_findings"},
