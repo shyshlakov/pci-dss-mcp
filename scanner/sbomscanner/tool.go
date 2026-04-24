@@ -127,16 +127,12 @@ func HandleGenerateSBOM(ctx context.Context, req *mcp.CallToolRequest, input Gen
 		}
 		return errorResult(fmt.Sprintf("sbom write failed: %v", werr)), nil, nil
 	}
-	info, statErr := os.Stat(resolvedPath)
-	if statErr != nil {
-		return errorResult(fmt.Sprintf("sbom stat failed: %v", statErr)), nil, nil
-	}
 	out := &GenSBOMOutput{
 		Mode:            "file",
 		BOMFormat:       "CycloneDX",
 		SpecVersion:     "1.5",
 		OutputPath:      resolvedPath,
-		SizeBytes:       info.Size(),
+		SizeBytes:       int64(len(serialized)),
 		ComponentCount:  len(sbom.Components),
 		UnknownLicenses: unknownCount,
 		Format:          format,
