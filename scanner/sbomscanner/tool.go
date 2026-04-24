@@ -6,10 +6,12 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -108,11 +110,21 @@ func HandleGenerateSBOM(ctx context.Context, req *mcp.CallToolRequest, input Gen
 		return wrapPayload(out)
 	}
 
-	resolvedPath, resolveErr := resolveOutputPath(absPath, input.OutputPath, format)
+	resolvedPath, usingDefault, resolveErr := resolveOutputPath(absPath, input.OutputPath, format)
 	if resolveErr != nil {
 		return errorResult(resolveErr.Error()), nil, nil
 	}
 	if werr := os.WriteFile(resolvedPath, []byte(serialized), 0o644); werr != nil {
+		tok := "OUTPUT_PATH_NOT_WRITABLE"
+		if usingDefault {
+			tok = "DEFAULT_PATH_NOT_WRITABLE"
+		}
+		if errors.Is(werr, syscall.EISDIR) {
+			return errorResult(fmt.Sprintf("OUTPUT_PATH_IS_DIRECTORY: %q is an existing directory; provide a file path", resolvedPath)), nil, nil
+		}
+		if errors.Is(werr, fs.ErrPermission) || errors.Is(werr, fs.ErrNotExist) {
+			return errorResult(fmt.Sprintf("%s: cannot write to %q: %v (pass output_path to override)", tok, resolvedPath, werr)), nil, nil
+		}
 		return errorResult(fmt.Sprintf("sbom write failed: %v", werr)), nil, nil
 	}
 	info, statErr := os.Stat(resolvedPath)
@@ -144,7 +156,7 @@ func wrapPayload(out *GenSBOMOutput) (*mcp.CallToolResult, any, error) {
 	}, out, nil
 }
 
-func resolveOutputPath(scanTarget, userProvided, format string) (string, error) {
+func resolveOutputPath(scanTarget, userProvided, format string) (string, bool, error) {
 	ext := ".json"
 	if format == "xml" {
 		ext = ".xml"
@@ -157,33 +169,16 @@ func resolveOutputPath(scanTarget, userProvided, format string) (string, error) 
 		usingDefault = true
 	} else {
 		if !filepath.IsAbs(userProvided) {
-			return "", fmt.Errorf("OUTPUT_PATH_NOT_ABSOLUTE: %q is not an absolute path", userProvided)
+			return "", false, fmt.Errorf("OUTPUT_PATH_NOT_ABSOLUTE: %q is not an absolute path", userProvided)
 		}
 		resolved = filepath.Clean(userProvided)
 	}
 
 	if info, err := os.Stat(resolved); err == nil && info.IsDir() {
-		return "", fmt.Errorf("OUTPUT_PATH_IS_DIRECTORY: %q is an existing directory; provide a file path", resolved)
+		return "", usingDefault, fmt.Errorf("OUTPUT_PATH_IS_DIRECTORY: %q is an existing directory; provide a file path", resolved)
 	}
 
-	parent := filepath.Dir(resolved)
-	probe, probeErr := os.CreateTemp(parent, ".sbomprobe-*")
-	if probeErr != nil {
-		tok := "OUTPUT_PATH_NOT_WRITABLE"
-		if usingDefault {
-			tok = "DEFAULT_PATH_NOT_WRITABLE"
-		}
-		return "", fmt.Errorf("%s: cannot write to %q: %v (pass output_path to override)", tok, parent, probeErr)
-	}
-	probeName := probe.Name()
-	if closeErr := probe.Close(); closeErr != nil {
-		slog.Warn("resolveOutputPath: close probe", "err", closeErr)
-	}
-	if rmErr := os.Remove(probeName); rmErr != nil {
-		slog.Warn("resolveOutputPath: remove probe", "err", rmErr)
-	}
-
-	return resolved, nil
+	return resolved, usingDefault, nil
 }
 
 func serializeSBOM(sbom *SBOM, format string) (string, int, error) {
