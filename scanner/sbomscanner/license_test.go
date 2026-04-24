@@ -24,9 +24,27 @@ func TestDetectLicense(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Skipf("Plan 02 wires detectLicense against fixture %s; un-skip when license.go lands", tc.fixture)
-			_ = filepath.Join("testdata", "license-fixtures", tc.fixture)
-			_ = tc
+			fixtureDir, err := filepath.Abs(filepath.Join("testdata", "license-fixtures", tc.fixture))
+			if err != nil {
+				t.Fatalf("abs: %v", err)
+			}
+			got := detectLicenseFromPath(fixtureDir)
+			if tc.wantSPDX == "" {
+				if got.SPDXID != "" {
+					t.Errorf("SPDXID: got %q want empty (low-coverage / cache-miss case)", got.SPDXID)
+				}
+				return
+			}
+			if tc.wantSPDXAlt != "" {
+				if got.SPDXID != tc.wantSPDX && got.SPDXID != tc.wantSPDXAlt {
+					t.Errorf("SPDXID: got %q want %q or %q", got.SPDXID, tc.wantSPDX, tc.wantSPDXAlt)
+				}
+			} else if got.SPDXID != tc.wantSPDX {
+				t.Errorf("SPDXID: got %q want %q", got.SPDXID, tc.wantSPDX)
+			}
+			if got.Confidence < tc.wantMin {
+				t.Errorf("Confidence: got %.2f want >= %.2f", got.Confidence, tc.wantMin)
+			}
 		})
 	}
 }
