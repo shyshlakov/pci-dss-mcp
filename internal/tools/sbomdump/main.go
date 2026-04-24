@@ -26,7 +26,7 @@ func main() {
 		log.Fatalf("encode: %v", err)
 	}
 	if bom.Components != nil {
-		fmt.Fprintf(os.Stderr, "components: %d" + "\n", len(*bom.Components))
+		fmt.Fprintf(os.Stderr, "components: %d\n", len(*bom.Components))
 	} else {
 		fmt.Fprintln(os.Stderr, "components: 0")
 	}
