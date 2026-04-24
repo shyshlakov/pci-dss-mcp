@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -125,6 +127,264 @@ func TestHandleGenerateSBOM_OversizeGuard(t *testing.T) {
 	if len(s) <= maxInlineBytes {
 		t.Fatalf("synthetic SBOM too small to trigger guard: %d bytes", len(s))
 	}
+}
+
+func TestHandleGenerateSBOM_FileOutput(t *testing.T) {
+	t.Parallel()
+	fixtureRoot, err := filepath.Abs(filepath.Join("..", "..", "testdata", "vulnerable-payment-service"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tt := []struct {
+		name       string
+		prep       func(t *testing.T) (workDir string, input GenSBOMInput, expectedExt string)
+		wantFormat string
+		wantPath   func(workDir string) string
+	}{
+		{
+			name: "default_json",
+			prep: func(tt *testing.T) (string, GenSBOMInput, string) {
+				work := copyFixtureToTemp(tt, fixtureRoot)
+				return work, GenSBOMInput{Path: work}, ".json"
+			},
+			wantFormat: "json",
+			wantPath: func(workDir string) string {
+				return filepath.Join(workDir, "sbom.json")
+			},
+		},
+		{
+			name: "default_xml",
+			prep: func(tt *testing.T) (string, GenSBOMInput, string) {
+				work := copyFixtureToTemp(tt, fixtureRoot)
+				return work, GenSBOMInput{Path: work, Format: "xml"}, ".xml"
+			},
+			wantFormat: "xml",
+			wantPath: func(workDir string) string {
+				return filepath.Join(workDir, "sbom.xml")
+			},
+		},
+		{
+			name: "explicit_output_path",
+			prep: func(tt *testing.T) (string, GenSBOMInput, string) {
+				work := copyFixtureToTemp(tt, fixtureRoot)
+				dest := filepath.Join(tt.TempDir(), "custom-sbom.json")
+				return work, GenSBOMInput{Path: work, OutputPath: dest}, ".json"
+			},
+			wantFormat: "json",
+			wantPath:   nil,
+		},
+		{
+			name: "overwrite_existing",
+			prep: func(tt *testing.T) (string, GenSBOMInput, string) {
+				work := copyFixtureToTemp(tt, fixtureRoot)
+				existing := filepath.Join(work, "sbom.json")
+				if err := os.WriteFile(existing, []byte("OLD"), 0o644); err != nil {
+					tt.Fatal(err)
+				}
+				return work, GenSBOMInput{Path: work}, ".json"
+			},
+			wantFormat: "json",
+			wantPath: func(workDir string) string {
+				return filepath.Join(workDir, "sbom.json")
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(ttt *testing.T) {
+			ttt.Parallel()
+			work, input, expectedExt := tc.prep(ttt)
+			res, raw, err := HandleGenerateSBOM(context.Background(), &mcp.CallToolRequest{}, input)
+			if err != nil {
+				ttt.Fatalf("handler: %v", err)
+			}
+			if res.IsError {
+				ttt.Fatalf("IsError: %s", extractText(res))
+			}
+			out, ok := raw.(*GenSBOMOutput)
+			if !ok {
+				ttt.Fatalf("raw type: %T", raw)
+			}
+			if out.Mode != "file" {
+				ttt.Errorf("Mode: got %q want file", out.Mode)
+			}
+			if out.SerializedBOM != "" {
+				ttt.Errorf("SerializedBOM: want empty in file mode, got %d bytes", len(out.SerializedBOM))
+			}
+			if out.OutputPath == "" {
+				ttt.Fatal("OutputPath empty")
+			}
+			if !strings.HasSuffix(out.OutputPath, expectedExt) {
+				ttt.Errorf("OutputPath suffix: got %q want suffix %q", out.OutputPath, expectedExt)
+			}
+			if tc.wantPath != nil {
+				want := tc.wantPath(work)
+				if out.OutputPath != want {
+					ttt.Errorf("OutputPath: got %q want %q", out.OutputPath, want)
+				}
+			}
+			if out.SizeBytes <= 0 {
+				ttt.Errorf("SizeBytes: got %d want >0", out.SizeBytes)
+			}
+			body, rerr := os.ReadFile(out.OutputPath)
+			if rerr != nil {
+				ttt.Fatalf("read written file: %v", rerr)
+			}
+			if int64(len(body)) != out.SizeBytes {
+				ttt.Errorf("disk size %d != reported SizeBytes %d", len(body), out.SizeBytes)
+			}
+			if tc.name == "overwrite_existing" && len(body) < 1000 {
+				ttt.Errorf("overwrite: expected >1000 bytes after regeneration, got %d", len(body))
+			}
+			if tc.wantFormat == "xml" {
+				if !strings.HasPrefix(strings.TrimSpace(string(body)), "<") {
+					ttt.Errorf("xml body does not start with <")
+				}
+			} else {
+				var probe map[string]any
+				if jerr := json.Unmarshal(body, &probe); jerr != nil {
+					ttt.Errorf("json body invalid: %v", jerr)
+				}
+			}
+		})
+	}
+}
+
+func TestHandleGenerateSBOM_InlineOptIn(t *testing.T) {
+	t.Parallel()
+	fixtureRoot, err := filepath.Abs(filepath.Join("..", "..", "testdata", "vulnerable-payment-service"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("inline_happy", func(tt *testing.T) {
+		tt.Parallel()
+		work := copyFixtureToTemp(tt, fixtureRoot)
+		res, raw, err := HandleGenerateSBOM(context.Background(), &mcp.CallToolRequest{}, GenSBOMInput{Path: work, Inline: true})
+		if err != nil {
+			tt.Fatalf("handler: %v", err)
+		}
+		if res.IsError {
+			tt.Fatalf("IsError: %s", extractText(res))
+		}
+		out, ok := raw.(*GenSBOMOutput)
+		if !ok {
+			tt.Fatalf("raw type: %T", raw)
+		}
+		if out.Mode != "inline" {
+			tt.Errorf("Mode: got %q want inline", out.Mode)
+		}
+		if out.SerializedBOM == "" {
+			tt.Fatal("SerializedBOM empty")
+		}
+		if out.OutputPath != "" {
+			tt.Errorf("OutputPath: want empty in inline mode, got %q", out.OutputPath)
+		}
+		if out.SizeBytes != 0 {
+			tt.Errorf("SizeBytes: want 0 in inline mode, got %d", out.SizeBytes)
+		}
+		var probe map[string]any
+		if jerr := json.Unmarshal([]byte(out.SerializedBOM), &probe); jerr != nil {
+			tt.Fatalf("SerializedBOM not json: %v", jerr)
+		}
+		if _, sErr := os.Stat(filepath.Join(work, "sbom.json")); !os.IsNotExist(sErr) {
+			tt.Errorf("expected no sbom.json in inline mode, stat err=%v", sErr)
+		}
+	})
+}
+
+func TestHandleGenerateSBOM_ErrorTokens(t *testing.T) {
+	t.Parallel()
+	fixtureRoot, err := filepath.Abs(filepath.Join("..", "..", "testdata", "vulnerable-payment-service"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tt := []struct {
+		name       string
+		prep       func(t *testing.T) GenSBOMInput
+		wantSubstr string
+	}{
+		{
+			name: "output_path_not_absolute",
+			prep: func(tt *testing.T) GenSBOMInput {
+				return GenSBOMInput{Path: fixtureRoot, OutputPath: "relative/sbom.json"}
+			},
+			wantSubstr: "OUTPUT_PATH_NOT_ABSOLUTE",
+		},
+		{
+			name: "output_path_is_directory",
+			prep: func(tt *testing.T) GenSBOMInput {
+				dir := tt.TempDir()
+				return GenSBOMInput{Path: fixtureRoot, OutputPath: dir}
+			},
+			wantSubstr: "OUTPUT_PATH_IS_DIRECTORY",
+		},
+		{
+			name: "output_path_not_writable",
+			prep: func(tt *testing.T) GenSBOMInput {
+				return GenSBOMInput{Path: fixtureRoot, OutputPath: "/nonexistent-parent-dir-abc-12345-xyz/sbom.json"}
+			},
+			wantSubstr: "OUTPUT_PATH_NOT_WRITABLE",
+		},
+		{
+			name: "default_path_not_writable",
+			prep: func(tt *testing.T) GenSBOMInput {
+				if os.Geteuid() == 0 {
+					tt.Skip("cannot simulate read-only directory as root")
+				}
+				if runtime.GOOS == "windows" {
+					tt.Skip("chmod 0o555 does not prevent writes on windows")
+				}
+				dir := copyFixtureToTemp(tt, fixtureRoot)
+				if err := os.Chmod(dir, 0o555); err != nil {
+					tt.Fatalf("chmod: %v", err)
+				}
+				tt.Cleanup(func() {
+					if cerr := os.Chmod(dir, 0o755); cerr != nil {
+						tt.Logf("restore chmod: %v", cerr)
+					}
+				})
+				return GenSBOMInput{Path: dir}
+			},
+			wantSubstr: "DEFAULT_PATH_NOT_WRITABLE",
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(ttt *testing.T) {
+			ttt.Parallel()
+			input := tc.prep(ttt)
+			res, _, err := HandleGenerateSBOM(context.Background(), &mcp.CallToolRequest{}, input)
+			if err != nil {
+				ttt.Fatalf("handler: %v", err)
+			}
+			if !res.IsError {
+				ttt.Fatalf("expected IsError=true")
+			}
+			text := extractText(res)
+			if !strings.Contains(text, tc.wantSubstr) {
+				ttt.Errorf("error text: got %q want substring %q", text, tc.wantSubstr)
+			}
+		})
+	}
+}
+
+func copyFixtureToTemp(t *testing.T, fixtureRoot string) string {
+	t.Helper()
+	dst := t.TempDir()
+	for _, name := range []string{"go.mod", "go.sum"} {
+		src := filepath.Join(fixtureRoot, name)
+		body, err := os.ReadFile(src)
+		if err != nil {
+			t.Fatalf("read %s: %v", src, err)
+		}
+		if err := os.WriteFile(filepath.Join(dst, name), body, 0o644); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+	return dst
 }
 
 func extractText(res *mcp.CallToolResult) string {
