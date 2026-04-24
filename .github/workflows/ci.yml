@@ -45,6 +45,10 @@ jobs:
       - name: Test fixture (golden regression)
         run: make test-fixture
 
+      - name: SBOM standards validation (CycloneDX 1.6)
+        if: matrix.os == 'ubuntu-latest'
+        run: make test-sbom-validate
+
   coverage:
     name: coverage
     runs-on: ubuntu-latest
