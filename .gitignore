@@ -15,3 +15,6 @@ pci-dss-mcp
 # Claude Code personal
 CLAUDE.md
 .claude/
+
+# SBOM dogfood output (make sbom)
+dist/

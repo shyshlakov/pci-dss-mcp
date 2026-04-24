@@ -1,5 +1,5 @@
 .PHONY: build test lint vet clean run build-fixture test-fixture scan-fixture \
-        tools fmt-check check ci validate-server-json docker-build-local docker-smoke fuzz
+        tools fmt-check check ci validate-server-json docker-build-local docker-smoke fuzz sbom
 
 BINARY := pci-dss-mcp
 MODULE := github.com/shyshlakov/pci-dss-mcp
@@ -115,3 +115,8 @@ fuzz:
 		go test -run=^$$ -fuzz=$$name -fuzztime=$(FUZZTIME) ./$$pkg || exit $$?; \
 	done
 	@echo "all fuzz targets completed"
+
+sbom:
+	@mkdir -p dist
+	go run ./internal/tools/sbomdump . > dist/sbom.json
+	@echo "wrote dist/sbom.json ($$(wc -c < dist/sbom.json) bytes, $$(jq '.components | length' dist/sbom.json 2>/dev/null || echo '?') components)"
