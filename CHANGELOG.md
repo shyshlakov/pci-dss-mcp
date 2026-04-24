@@ -5,6 +5,25 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## [0.6.0] - 2026-04-24
+
+### Added
+
+- CycloneDX v1.5 SBOM generation via the new MCP tool `generate_sbom(path, format)`. Satisfies PCI DSS 6.3.2 (software inventory), which became mandatory on 2025-03-31. Accepts `path` (required, absolute Go project dir with go.mod) and optional `format: "json"` (default) / `"xml"`. Output is a compact (not pretty-printed) CycloneDX document plus metadata (component count, unknown-license count, format, generated_at, project_path). Works offline: `GOPROXY=off` + primed `$GOMODCACHE` still produces a valid SBOM; cache-miss modules surface as `UNKNOWN-LICENSE` property entries instead of silently dropping.
+- New package `scanner/sbomscanner/` exposes three public Go entry points for programmatic use alongside the MCP tool: `GenerateSBOM(ctx, path) (*SBOM, error)` for the full inventory, `InventoryProbe(path) (InventoryResult, error)` for the cheap 6.3.2 readiness check, and `RegisterTools(server)` for MCP wiring. Internal discovery uses `golang.org/x/mod/modfile` for go.mod parsing plus direct `go.sum` h1: SHA-256 base64 decoding - the same pattern `scanner/depscanner/` uses, avoiding a second go.mod parse implementation.
+- `generate_compliance_report` now carries PCI DSS 6.3.2 status: PASS when the project's go.mod parses cleanly and declares at least one dependency, FAIL otherwise. The `requirement_status["6.3.2"].cross_reference` field lists the component count and the cache-miss count. Before this release 6.3.2 was NOT_CHECKED because no scanner claimed it; the sbomscanner-inventory hook closes that gap.
+- `FuzzGoModSBOM` is the fifth fuzz target in the project. Exercises the full sbomscanner parsing stack - arbitrary fuzzed go.mod + go.sum bytes feed `listModules`, `hashFromH1Sum`, and `GenerateSBOM` in one pass. Seed corpus (5 seeds: minimal, fixture-derived, indirect-heavy, v2 module path, malformed) lives under `testdata/fuzz/FuzzGoModSBOM/`. Wired into `.github/workflows/ci.yml` (30s smoke per PR) and `.github/workflows/fuzz-nightly.yml` (30m nightly), matching the four existing targets' action-SHA pinning and cache-key conventions. `make fuzz` now runs all five targets.
+
+### Unchanged
+
+- Scanner detection logic. Fixture severity counts on `testdata/vulnerable-payment-service` remain 49 CRITICAL / 89 HIGH / 27 MEDIUM / 0 LOW / 59 INFO byte-for-byte with v0.5.3. The new SBOM emission is a report-level addition that does not touch any existing scanner's findings.
+- The 14 pre-v0.6.0 MCP tools. Tool names, parameter schemas, and OutputSchema shapes are identical to v0.5.3. `generate_sbom` is the 15th, additive surface.
+- Install paths: `go install github.com/shyshlakov/pci-dss-mcp@v0.6.0` and `docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.6.0` both produce byte-identical scan output on the fixture.
+
+### Semver
+
+- MINOR v0.5.3 -> v0.6.0. New public MCP tool (`generate_sbom`) is an additive surface change; no existing tool's input/output schema changed; no scanner behavior changed. MCP clients pinned to `v0` see the new tool appear in `tools/list` on first reconnect; clients pinned to `v0.5` continue working without seeing it.
+
 ## [0.5.3] - 2026-04-23
 
 ### Added
