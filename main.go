@@ -16,6 +16,7 @@ import (
 	"github.com/shyshlakov/pci-dss-mcp/scanner/panscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/reportscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/retentionscanner"
+	"github.com/shyshlakov/pci-dss-mcp/scanner/sbomscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/scriptscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/secretscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/tlsscanner"
@@ -71,6 +72,7 @@ func main() {
 	errorscanner.RegisterTools(server)
 	panscanner.RegisterTools(server)
 	retentionscanner.RegisterTools(server)
+	sbomscanner.RegisterTools(server)
 	scriptscanner.RegisterTools(server)
 	secretscanner.RegisterTools(server)
 	tlsscanner.RegisterTools(server)
