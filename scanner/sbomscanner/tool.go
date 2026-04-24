@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -20,14 +21,19 @@ const toolName = "generate_sbom"
 const maxInlineBytes = 65536
 
 type GenSBOMInput struct {
-	Path   string `json:"path" jsonschema:"required,Absolute path to the Go project directory containing go.mod (and go.sum)"`
-	Format string `json:"format,omitempty" jsonschema:"Output format: json (default) or xml. XML is provided for CI tools that prefer CycloneDX XML"`
+	Path       string `json:"path" jsonschema:"required,Absolute path to the Go project directory containing go.mod (and go.sum)"`
+	Format     string `json:"format,omitempty" jsonschema:"Output format: json (default) or xml"`
+	OutputPath string `json:"output_path,omitempty" jsonschema:"Absolute path where the SBOM file should be written. Default: {path}/sbom.json or {path}/sbom.xml. Ignored when inline=true."`
+	Inline     bool   `json:"inline,omitempty" jsonschema:"If true, return serialized SBOM inline in the response (64 KB cap, SBOM_TOO_LARGE on overflow). Default: false, write to file and return metadata only."`
 }
 
 type GenSBOMOutput struct {
+	Mode            string `json:"mode"`
 	BOMFormat       string `json:"bom_format"`
 	SpecVersion     string `json:"spec_version"`
-	SerializedBOM   string `json:"serialized_bom"`
+	OutputPath      string `json:"output_path,omitempty"`
+	SizeBytes       int64  `json:"size_bytes,omitempty"`
+	SerializedBOM   string `json:"serialized_bom,omitempty"`
 	ComponentCount  int    `json:"component_count"`
 	UnknownLicenses int    `json:"unknown_licenses,omitempty"`
 	Format          string `json:"format"`
@@ -43,18 +49,18 @@ func RegisterTools(server *mcp.Server) {
 	tool := &mcp.Tool{
 		Name: toolName,
 		Description: "Generate a CycloneDX v1.5 SBOM for a Go project. " +
-			"Parses the project's go.mod + go.sum and resolves modules against the local Go module cache (GOMODCACHE). " +
-			"Works offline: no network required as long as the cache is primed. " +
-			"Cache-miss modules emit a component with the property UNKNOWN-LICENSE instead of silently dropping. " +
-			"Output is a compact (not pretty-printed) CycloneDX document. For typical projects (<= ~200 modules) the SBOM fits in a single MCP response (<= 64 KB). " +
+			"Default behavior: writes sbom.json (or sbom.xml when format=xml) next to the scanned go.mod and returns metadata only (output_path, size_bytes, component_count, unknown_licenses). " +
+			"Override the destination with output_path (must be absolute). " +
+			"Pass inline=true to return the serialized SBOM in the MCP response instead (capped at 64 KB; returns SBOM_TOO_LARGE above that). " +
+			"Parses go.mod + go.sum offline against the local GOMODCACHE; cache-miss modules surface as UNKNOWN-LICENSE. " +
 			"Satisfies PCI DSS 6.3.2 (software inventory, mandatory since March 2025).",
 		Meta:         mcp.Meta{"anthropic/maxResultSizeChars": 70000},
 		OutputSchema: schema,
 	}
-	mcp.AddTool(server, tool, handleGenerateSBOM)
+	mcp.AddTool(server, tool, HandleGenerateSBOM)
 }
 
-func handleGenerateSBOM(ctx context.Context, req *mcp.CallToolRequest, input GenSBOMInput) (*mcp.CallToolResult, any, error) {
+func HandleGenerateSBOM(ctx context.Context, req *mcp.CallToolRequest, input GenSBOMInput) (*mcp.CallToolResult, any, error) {
 	path := strings.TrimSpace(input.Path)
 	if path == "" {
 		return errorResult("invalid path: required"), nil, nil
@@ -81,29 +87,103 @@ func handleGenerateSBOM(ctx context.Context, req *mcp.CallToolRequest, input Gen
 	if serErr != nil {
 		return errorResult(fmt.Sprintf("sbom serialization failed: %v", serErr)), nil, nil
 	}
-	if len(serialized) > maxInlineBytes {
-		return errorResult(fmt.Sprintf("SBOM_TOO_LARGE: %d bytes exceeds %d byte inline limit; pagination not yet supported for generate_sbom. Workarounds: invoke cyclonedx-gomod CLI directly, or call sbomscanner.GenerateSBOM from a Go program and write the result to disk.", len(serialized), maxInlineBytes)), nil, nil
+
+	nowRFC3339 := time.Now().UTC().Format(time.RFC3339)
+
+	if input.Inline {
+		if len(serialized) > maxInlineBytes {
+			return errorResult(fmt.Sprintf("SBOM_TOO_LARGE: %d bytes exceeds %d byte inline limit; drop inline=true to write the SBOM to disk instead.", len(serialized), maxInlineBytes)), nil, nil
+		}
+		out := &GenSBOMOutput{
+			Mode:            "inline",
+			BOMFormat:       "CycloneDX",
+			SpecVersion:     "1.5",
+			SerializedBOM:   serialized,
+			ComponentCount:  len(sbom.Components),
+			UnknownLicenses: unknownCount,
+			Format:          format,
+			GeneratedAt:     nowRFC3339,
+			ProjectPath:     absPath,
+		}
+		return wrapPayload(out)
 	}
 
+	resolvedPath, resolveErr := resolveOutputPath(absPath, input.OutputPath, format)
+	if resolveErr != nil {
+		return errorResult(resolveErr.Error()), nil, nil
+	}
+	if werr := os.WriteFile(resolvedPath, []byte(serialized), 0o644); werr != nil {
+		return errorResult(fmt.Sprintf("sbom write failed: %v", werr)), nil, nil
+	}
+	info, statErr := os.Stat(resolvedPath)
+	if statErr != nil {
+		return errorResult(fmt.Sprintf("sbom stat failed: %v", statErr)), nil, nil
+	}
 	out := &GenSBOMOutput{
+		Mode:            "file",
 		BOMFormat:       "CycloneDX",
 		SpecVersion:     "1.5",
-		SerializedBOM:   serialized,
+		OutputPath:      resolvedPath,
+		SizeBytes:       info.Size(),
 		ComponentCount:  len(sbom.Components),
 		UnknownLicenses: unknownCount,
 		Format:          format,
-		GeneratedAt:     time.Now().UTC().Format(time.RFC3339),
+		GeneratedAt:     nowRFC3339,
 		ProjectPath:     absPath,
 	}
+	return wrapPayload(out)
+}
 
+func wrapPayload(out *GenSBOMOutput) (*mcp.CallToolResult, any, error) {
 	payload, err := json.Marshal(out)
 	if err != nil {
 		return errorResult(fmt.Sprintf("marshal output: %v", err)), nil, nil
 	}
-
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: string(payload)}},
 	}, out, nil
+}
+
+func resolveOutputPath(scanTarget, userProvided, format string) (string, error) {
+	ext := ".json"
+	if format == "xml" {
+		ext = ".xml"
+	}
+
+	var resolved string
+	usingDefault := false
+	if strings.TrimSpace(userProvided) == "" {
+		resolved = filepath.Join(scanTarget, "sbom"+ext)
+		usingDefault = true
+	} else {
+		if !filepath.IsAbs(userProvided) {
+			return "", fmt.Errorf("OUTPUT_PATH_NOT_ABSOLUTE: %q is not an absolute path", userProvided)
+		}
+		resolved = filepath.Clean(userProvided)
+	}
+
+	if info, err := os.Stat(resolved); err == nil && info.IsDir() {
+		return "", fmt.Errorf("OUTPUT_PATH_IS_DIRECTORY: %q is an existing directory; provide a file path", resolved)
+	}
+
+	parent := filepath.Dir(resolved)
+	probe, probeErr := os.CreateTemp(parent, ".sbomprobe-*")
+	if probeErr != nil {
+		tok := "OUTPUT_PATH_NOT_WRITABLE"
+		if usingDefault {
+			tok = "DEFAULT_PATH_NOT_WRITABLE"
+		}
+		return "", fmt.Errorf("%s: cannot write to %q: %v (pass output_path to override)", tok, parent, probeErr)
+	}
+	probeName := probe.Name()
+	if closeErr := probe.Close(); closeErr != nil {
+		slog.Warn("resolveOutputPath: close probe", "err", closeErr)
+	}
+	if rmErr := os.Remove(probeName); rmErr != nil {
+		slog.Warn("resolveOutputPath: remove probe", "err", rmErr)
+	}
+
+	return resolved, nil
 }
 
 func serializeSBOM(sbom *SBOM, format string) (string, int, error) {

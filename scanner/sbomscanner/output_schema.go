@@ -1,16 +1,43 @@
 package sbomscanner
 
-import (
-	"encoding/json"
-	"reflect"
-
-	"github.com/google/jsonschema-go/jsonschema"
-)
+import "encoding/json"
 
 func buildSBOMOutputSchema() (json.RawMessage, error) {
-	s, err := jsonschema.ForType(reflect.TypeOf(GenSBOMOutput{}), nil)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(s)
+	raw := []byte(`{
+  "type": "object",
+  "required": ["mode", "bom_format", "spec_version", "component_count", "format", "generated_at", "project_path"],
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "mode": { "const": "file" },
+        "output_path": { "type": "string", "description": "Absolute path where the SBOM file was written" },
+        "size_bytes":  { "type": "integer", "minimum": 0, "description": "On-disk size of the written SBOM" }
+      },
+      "required": ["mode", "output_path", "size_bytes"]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "mode": { "const": "inline" },
+        "serialized_bom": { "type": "string", "description": "Compact CycloneDX document (<= 64 KB)" }
+      },
+      "required": ["mode", "serialized_bom"]
+    }
+  ],
+  "properties": {
+    "mode":             { "type": "string", "enum": ["file", "inline"] },
+    "bom_format":       { "type": "string", "const": "CycloneDX" },
+    "spec_version":     { "type": "string", "const": "1.5" },
+    "component_count":  { "type": "integer", "minimum": 0 },
+    "unknown_licenses": { "type": "integer", "minimum": 0 },
+    "format":           { "type": "string", "enum": ["json", "xml"] },
+    "generated_at":     { "type": "string", "description": "RFC3339 UTC" },
+    "project_path":     { "type": "string", "description": "Absolute scanned path" },
+    "output_path":      { "type": "string" },
+    "size_bytes":       { "type": "integer", "minimum": 0 },
+    "serialized_bom":   { "type": "string" }
+  }
+}`)
+	return json.RawMessage(raw), nil
 }

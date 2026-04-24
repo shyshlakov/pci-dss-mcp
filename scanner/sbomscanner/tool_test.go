@@ -23,15 +23,15 @@ func TestHandleGenerateSBOM_HappyPaths(t *testing.T) {
 		input      GenSBOMInput
 		wantFormat string
 	}{
-		{name: "json_default", input: GenSBOMInput{Path: fixtureRoot}, wantFormat: "json"},
-		{name: "json_explicit", input: GenSBOMInput{Path: fixtureRoot, Format: "json"}, wantFormat: "json"},
-		{name: "json_uppercase", input: GenSBOMInput{Path: fixtureRoot, Format: "JSON"}, wantFormat: "json"},
-		{name: "xml", input: GenSBOMInput{Path: fixtureRoot, Format: "xml"}, wantFormat: "xml"},
+		{name: "json_default", input: GenSBOMInput{Path: fixtureRoot, Inline: true}, wantFormat: "json"},
+		{name: "json_explicit", input: GenSBOMInput{Path: fixtureRoot, Format: "json", Inline: true}, wantFormat: "json"},
+		{name: "json_uppercase", input: GenSBOMInput{Path: fixtureRoot, Format: "JSON", Inline: true}, wantFormat: "json"},
+		{name: "xml", input: GenSBOMInput{Path: fixtureRoot, Format: "xml", Inline: true}, wantFormat: "xml"},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			res, raw, err := handleGenerateSBOM(context.Background(), &mcp.CallToolRequest{}, tc.input)
+			res, raw, err := HandleGenerateSBOM(context.Background(), &mcp.CallToolRequest{}, tc.input)
 			if err != nil {
 				t.Fatalf("handler returned Go error: %v", err)
 			}
@@ -92,7 +92,7 @@ func TestHandleGenerateSBOM_Errors(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			res, _, err := handleGenerateSBOM(context.Background(), &mcp.CallToolRequest{}, tc.input)
+			res, _, err := HandleGenerateSBOM(context.Background(), &mcp.CallToolRequest{}, tc.input)
 			if err != nil {
 				t.Fatalf("handler returned Go error: %v", err)
 			}
