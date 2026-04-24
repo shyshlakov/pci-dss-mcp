@@ -271,3 +271,21 @@ func errorResult(msg string) *mcp.CallToolResult {
 		Content: []mcp.Content{&mcp.TextContent{Text: msg}},
 	}
 }
+
+func GenerateSBOMRawJSON(ctx context.Context, projectDir string, opts SBOMOptions) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	absPath, err := filepath.Abs(projectDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolve path: %w", err)
+	}
+	sbom, err := GenerateSBOMWithOptions(ctx, absPath, opts)
+	if err != nil {
+		return nil, err
+	}
+	if sbom.bom != nil {
+		return json.Marshal(sbom.bom)
+	}
+	return json.Marshal(ToCycloneDX(sbom))
+}

@@ -1,33 +1,44 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"os"
-
-	cdx "github.com/CycloneDX/cyclonedx-go"
 
 	"github.com/shyshlakov/pci-dss-mcp/scanner/sbomscanner"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatal("usage: sbomdump <project-dir>")
+	fixedSerial := flag.String("fixed-serial", "", "Override generated serialNumber (urn:uuid: or bare 36-char form)")
+	noTimestamp := flag.Bool("no-timestamp", false, "Omit metadata.timestamp for reproducible builds")
+	pretty := flag.Bool("pretty", false, "Indent JSON output (default: compact, matches MCP tool output)")
+	flag.Parse()
+	if flag.NArg() < 1 {
+		log.Fatal("usage: sbomdump [-fixed-serial=URN] [-no-timestamp] [-pretty] <project-dir>")
 	}
-	sbom, err := sbomscanner.GenerateSBOM(context.Background(), os.Args[1])
+	opts := sbomscanner.SBOMOptions{FixedSerial: *fixedSerial, NoTimestamp: *noTimestamp}
+	raw, err := sbomscanner.GenerateSBOMRawJSON(context.Background(), flag.Arg(0), opts)
 	if err != nil {
-		log.Fatalf("GenerateSBOM: %v", err)
+		log.Fatalf("GenerateSBOMRawJSON: %v", err)
 	}
-	bom := sbomscanner.ToCycloneDX(sbom)
-	enc := cdx.NewBOMEncoder(os.Stdout, cdx.BOMFileFormatJSON)
-	enc.SetPretty(true)
-	if err := enc.Encode(bom); err != nil {
-		log.Fatalf("encode: %v", err)
+	if *pretty {
+		var buf bytes.Buffer
+		if jerr := json.Indent(&buf, raw, "", "  "); jerr != nil {
+			log.Fatalf("indent: %v", jerr)
+		}
+		raw = buf.Bytes()
 	}
-	if bom.Components != nil {
-		fmt.Fprintf(os.Stderr, "components: %d\n", len(*bom.Components))
-	} else {
-		fmt.Fprintln(os.Stderr, "components: 0")
+	if _, werr := os.Stdout.Write(raw); werr != nil {
+		log.Fatalf("write: %v", werr)
+	}
+	var probe map[string]any
+	if perr := json.Unmarshal(raw, &probe); perr == nil {
+		if comps, ok := probe["components"].([]any); ok {
+			fmt.Fprintf(os.Stderr, "components: %d\n", len(comps))
+		}
 	}
 }

@@ -130,8 +130,8 @@ func TestVulnerablePaymentServiceFixture(t *testing.T) {
 		if sbom.BOMFormat != "CycloneDX" {
 			tt.Errorf("BOMFormat: got %q want \"CycloneDX\"", sbom.BOMFormat)
 		}
-		if sbom.SpecVersion != "1.5" {
-			tt.Errorf("SpecVersion: got %q want \"1.5\"", sbom.SpecVersion)
+		if sbom.SpecVersion != "1.6" {
+			tt.Errorf("SpecVersion: got %q want \"1.6\"", sbom.SpecVersion)
 		}
 		if got := len(sbom.Components); got < 40 {
 			tt.Errorf("component count: got %d want >=40", got)
@@ -208,8 +208,8 @@ func TestVulnerablePaymentServiceFixture(t *testing.T) {
 			if probe["bomFormat"] != "CycloneDX" {
 				ttt.Errorf("bomFormat: got %v want CycloneDX", probe["bomFormat"])
 			}
-			if probe["specVersion"] != "1.5" {
-				ttt.Errorf("specVersion: got %v want 1.5", probe["specVersion"])
+			if probe["specVersion"] != "1.6" {
+				ttt.Errorf("specVersion: got %v want 1.6", probe["specVersion"])
 			}
 			comps, _ := probe["components"].([]any)
 			if len(comps) < 40 {
