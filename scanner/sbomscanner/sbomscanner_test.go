@@ -73,7 +73,6 @@ func TestGenerateSBOM_InvalidPath(t *testing.T) {
 }
 
 func TestGenerateSBOM_UnknownLicense(t *testing.T) {
-	t.Parallel()
 	t.Setenv("GOMODCACHE", t.TempDir())
 	fixtureRoot, err := filepath.Abs(filepath.Join("..", "..", "testdata", "vulnerable-payment-service"))
 	if err != nil {

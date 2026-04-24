@@ -127,7 +127,6 @@ func TestBuildPURL(t *testing.T) {
 }
 
 func TestReadLicense_CacheMiss(t *testing.T) {
-	t.Parallel()
 	t.Setenv("GOMODCACHE", t.TempDir())
 	got := readLicense("github.com/does-not-exist/pkg", "v0.0.1")
 	if got != "UNKNOWN-LICENSE" {

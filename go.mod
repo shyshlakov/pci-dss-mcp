@@ -6,6 +6,8 @@ toolchain go1.25.9
 
 require (
 	github.com/BurntSushi/toml v1.6.0
+	github.com/CycloneDX/cyclonedx-go v0.9.3
+	github.com/google/jsonschema-go v0.4.2
 	github.com/modelcontextprotocol/go-sdk v1.5.0
 	github.com/pandatix/go-cvss v0.6.2
 	golang.org/x/mod v0.35.0
@@ -15,7 +17,6 @@ require (
 )
 
 require (
-	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
