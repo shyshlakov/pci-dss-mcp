@@ -16,6 +16,10 @@ expected_active: 178
 expected_total_findings: 226
 expected_sbom_components: 40
 expected_sbom_format: cyclonedx-json
+expected_sbom_spec_version: "1.6"
+expected_sbom_serial_format: urn-uuid-v4
+expected_sbom_metadata_component: present
+expected_sbom_tools_self_hash: optional
 pci_6_3_2_status: PASS
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
