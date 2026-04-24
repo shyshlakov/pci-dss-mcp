@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -14,6 +16,8 @@ import (
 	"github.com/shyshlakov/pci-dss-mcp/scanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/sbomscanner"
 )
+
+var urnUUIDv4Re = regexp.MustCompile(`^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 func TestVulnerablePaymentServiceFixture(t *testing.T) {
 	t.Parallel()
@@ -158,6 +162,56 @@ func TestVulnerablePaymentServiceFixture(t *testing.T) {
 			}
 		}
 
+		rawJSON, rawErr := sbomscanner.GenerateSBOMRawJSON(ctx, scanRoot, sbomscanner.SBOMOptions{})
+		if rawErr != nil {
+			tt.Fatalf("GenerateSBOMRawJSON: %v", rawErr)
+		}
+		var probe map[string]any
+		if jerr := json.Unmarshal(rawJSON, &probe); jerr != nil {
+			tt.Fatalf("re-parse rawJSON: %v", jerr)
+		}
+		if probe["specVersion"] != "1.6" {
+			tt.Errorf("rawJSON specVersion: got %v want 1.6", probe["specVersion"])
+		}
+		serial, _ := probe["serialNumber"].(string)
+		if !urnUUIDv4Re.MatchString(serial) {
+			tt.Errorf("serialNumber: got %q want urn:uuid v4 form", serial)
+		}
+		md, _ := probe["metadata"].(map[string]any)
+		if md == nil {
+			tt.Fatal("metadata block missing")
+		}
+		ts, _ := md["timestamp"].(string)
+		if ts == "" {
+			tt.Error("metadata.timestamp empty")
+		} else if _, err := time.Parse(time.RFC3339, ts); err != nil {
+			tt.Errorf("metadata.timestamp not RFC3339: %v", err)
+		}
+		mc, _ := md["component"].(map[string]any)
+		if mc == nil {
+			tt.Fatal("metadata.component missing")
+		}
+		if mc["bom-ref"] != mc["purl"] {
+			tt.Errorf("metadata.component bom-ref (%v) != purl (%v)", mc["bom-ref"], mc["purl"])
+		}
+		mainPURL, _ := mc["purl"].(string)
+		tools, _ := md["tools"].(map[string]any)
+		toolComps, _ := tools["components"].([]any)
+		if len(toolComps) == 0 {
+			tt.Fatal("metadata.tools.components empty")
+		}
+		firstTool, _ := toolComps[0].(map[string]any)
+		if firstTool["name"] != "pci-dss-mcp" {
+			tt.Errorf("first tool name: got %v want pci-dss-mcp", firstTool["name"])
+		}
+		rawComponents, _ := probe["components"].([]any)
+		for _, raw := range rawComponents {
+			c, _ := raw.(map[string]any)
+			if cp, _ := c["purl"].(string); cp != "" && cp == mainPURL {
+				tt.Errorf("main module purl %q must not appear in bom.Components", cp)
+			}
+		}
+
 		rs, ok := report.RequirementStatus["6.3.2"]
 		if !ok {
 			tt.Fatal("report.RequirementStatus missing key \"6.3.2\"")
@@ -214,6 +268,22 @@ func TestVulnerablePaymentServiceFixture(t *testing.T) {
 			comps, _ := probe["components"].([]any)
 			if len(comps) < 40 {
 				ttt.Errorf("components count: got %d want >=40", len(comps))
+			}
+			diskSerial, _ := probe["serialNumber"].(string)
+			if !urnUUIDv4Re.MatchString(diskSerial) {
+				ttt.Errorf("disk serialNumber: got %q want urn:uuid v4 form", diskSerial)
+			}
+			diskMD, _ := probe["metadata"].(map[string]any)
+			if diskMD == nil {
+				ttt.Fatal("disk metadata block missing")
+			}
+			if dmc, _ := diskMD["component"].(map[string]any); dmc == nil || dmc["bom-ref"] != dmc["purl"] {
+				ttt.Errorf("disk metadata.component bom-ref/purl mismatch or missing")
+			}
+			if dts, _ := diskMD["timestamp"].(string); dts == "" {
+				ttt.Error("disk metadata.timestamp empty")
+			} else if _, terr := time.Parse(time.RFC3339, dts); terr != nil {
+				ttt.Errorf("disk metadata.timestamp not RFC3339: %v", terr)
 			}
 		})
 
