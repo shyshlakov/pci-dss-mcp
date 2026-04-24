@@ -5,6 +5,48 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## [0.6.1] - 2026-04-24
+
+### Changed
+
+- `generate_sbom` now writes the CycloneDX document to disk by default and returns lightweight metadata instead of embedding the full SBOM inline. This matches the delivery model used by Syft, Trivy, Snyk, and cdxgen, and lifts the 64 KB cap that blocked v0.6.0 scans of large real-world Go projects (>1000 modules / several hundred KB).
+- New optional parameters on `generate_sbom`: `output_path` (absolute destination; default `{path}/sbom.json` or `.xml`) and `inline` (opt-in boolean; default false).
+- Default response shape (file mode) carries `mode="file"`, `output_path`, `size_bytes`, `component_count`, `unknown_licenses`, `format`, `generated_at`, `project_path`, `bom_format`, `spec_version`. No `serialized_bom` field in file mode.
+- New explicit error tokens: `OUTPUT_PATH_NOT_ABSOLUTE`, `OUTPUT_PATH_IS_DIRECTORY`, `OUTPUT_PATH_NOT_WRITABLE`, `DEFAULT_PATH_NOT_WRITABLE`. Clients and LLMs can pattern-match the token to surface a precise error.
+
+### Unchanged
+
+- `inline=true` preserves v0.6.0 behavior byte-for-byte: `serialized_bom` populated, 64 KB cap, `SBOM_TOO_LARGE` error on oversize.
+- Scanner detection logic. Fixture severity counts on `testdata/vulnerable-payment-service` remain 49 CRITICAL / 89 HIGH / 27 MEDIUM / 0 LOW / 59 INFO byte-for-byte with v0.6.0.
+- All other 14 MCP tools. Parameter schemas and OutputSchema shapes are identical to v0.6.0; only `generate_sbom` gained additive parameters.
+- Docker image label and MCP Registry identifier.
+
+### Migration
+
+Clients that called `generate_sbom(path, format)` in v0.6.0 and read the `serialized_bom` field from the response will see an empty `serialized_bom` in v0.6.1 (file mode is the new default). Two options:
+
+1. Preferred: switch to file mode. Read the SBOM from `output_path`. The response carries `size_bytes` so clients can sanity-check before `os.ReadFile`. This is the path downstream tools (Grype, Trivy) already use.
+2. Opt-out: pass `inline=true` explicitly. The v0.6.0 response shape is preserved exactly, including the 64 KB cap and `SBOM_TOO_LARGE` error path. Use this only when the MCP client has no filesystem access.
+
+Example. v0.6.0 call that relied on the inline default:
+
+```
+generate_sbom(path="/abs/project")   // returned serialized_bom in response
+```
+
+Equivalent v0.6.1 calls:
+
+```
+generate_sbom(path="/abs/project")                  // writes /abs/project/sbom.json; returns metadata only
+generate_sbom(path="/abs/project", inline=true)     // preserves v0.6.0 response shape
+```
+
+No schema break: every parameter added is optional, no existing parameter renamed or removed.
+
+### Semver
+
+- PATCH v0.6.0 -> v0.6.1. Additive parameters only; no MCP tool schema removal or rename. The default-behavior change is documented above under Migration. Clients that already passed `inline=true` explicitly need no code change.
+
 ## [0.6.0] - 2026-04-24
 
 ### Added
