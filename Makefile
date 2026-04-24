@@ -101,7 +101,8 @@ FUZZ_TARGETS := \
 	scanner/panscanner:FuzzLuhn \
 	scanner:FuzzWalker \
 	scanner/reportscanner:FuzzCursorDecode \
-	scanner/scriptscanner:FuzzScriptScannerHTML
+	scanner/scriptscanner:FuzzScriptScannerHTML \
+	scanner/sbomscanner:FuzzGoModSBOM
 
 FUZZTIME ?= 10s
 
