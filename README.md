@@ -67,7 +67,7 @@ The binary lands at `$(go env GOPATH)/bin/pci-dss-mcp` and reads your source fil
 Pull the signed multi-arch image (linux/amd64 + linux/arm64):
 
 ```bash
-docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.6.0
+docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.6.1
 ```
 
 The image carries a `go` runtime internally for taint analysis, so `include_taint: true` (the default) works without a host Go toolchain. Useful for CI pipelines, QSA auditors who do not develop Go locally, or any environment where you would rather not install a toolchain to run a scanner.
@@ -83,7 +83,7 @@ Listed in the official MCP Registry as `io.github.shyshlakov/pci-dss-mcp`. Query
 Every release image is signed with Sigstore keyless OIDC. To verify before use:
 
 ```bash
-DIGEST=$(docker buildx imagetools inspect ghcr.io/shyshlakov/pci-dss-mcp:v0.6.0 --format '{{json .Manifest}}' | jq -r '.digest')
+DIGEST=$(docker buildx imagetools inspect ghcr.io/shyshlakov/pci-dss-mcp:v0.6.1 --format '{{json .Manifest}}' | jq -r '.digest')
 cosign verify ghcr.io/shyshlakov/pci-dss-mcp@$DIGEST \
   --certificate-identity-regexp '^https://github.com/shyshlakov/pci-dss-mcp/\.github/workflows/release-docker\.yml@refs/tags/v.+$' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
@@ -105,7 +105,7 @@ Edit `claude_desktop_config.json` (`~/Library/Application Support/Claude/` on ma
         "-i",
         "--rm",
         "--mount", "type=bind,src=/Users/you/go/src,dst=/Users/you/go/src,readonly",
-        "ghcr.io/shyshlakov/pci-dss-mcp:v0.6.0"
+        "ghcr.io/shyshlakov/pci-dss-mcp:v0.6.1"
       ]
     }
   }
@@ -130,7 +130,7 @@ Register via the `claude mcp add` CLI:
 claude mcp add --scope user pci-dss-mcp -- \
   docker run -i --rm \
   --mount "type=bind,src=$HOME/go/src,dst=$HOME/go/src,readonly" \
-  ghcr.io/shyshlakov/pci-dss-mcp:v0.6.0
+  ghcr.io/shyshlakov/pci-dss-mcp:v0.6.1
 ```
 
 This binds your entire `$GOPATH/src` tree at the same absolute path inside the container, so "scan this project" works on any repo under `$HOME/go/src` without path translation. Adjust `$HOME/go/src` if your Go workspace lives elsewhere.
@@ -154,7 +154,7 @@ Cursor supports [`${workspaceFolder}` substitution](https://cursor.com/docs/cont
         "-i",
         "--rm",
         "--mount", "type=bind,src=${workspaceFolder},dst=${workspaceFolder},readonly",
-        "ghcr.io/shyshlakov/pci-dss-mcp:v0.6.0"
+        "ghcr.io/shyshlakov/pci-dss-mcp:v0.6.1"
       ]
     }
   }
@@ -232,6 +232,36 @@ pci-dss-mcp exposes **15 MCP tools**: 11 scanners, 1 orchestrator, 1 triage engi
 | `explain_requirement` | Look up any PCI DSS v4.0.1 requirement |
 
 All tools declare typed `OutputSchema`. See [docs/tools.md](docs/tools.md) for parameters and example output.
+
+## SBOM workflow
+
+`generate_sbom` writes a CycloneDX v1.5 file by default so you can feed one SBOM into multiple downstream scanners (Grype, Trivy) without round-tripping bytes through MCP.
+
+Default behavior writes `{path}/sbom.json` (or `sbom.xml` when `format=xml`) and returns metadata only: `output_path`, `size_bytes`, `component_count`, `unknown_licenses`, `format`, `generated_at`, `project_path`, `bom_format`, `spec_version`, and `mode="file"`. No `serialized_bom` field is embedded in file mode, so the MCP response stays under ~400 bytes regardless of SBOM size.
+
+Override the destination with an absolute `output_path`:
+
+```
+generate_sbom(path="/abs/to/project", output_path="/abs/to/out/sbom.json")
+```
+
+Opt in to inline mode (SBOM bytes embedded in the MCP response, capped at 64 KB) when a client cannot read files from disk:
+
+```
+generate_sbom(path="/abs/to/project", inline=true)
+```
+
+Inline mode refuses oversized payloads with `SBOM_TOO_LARGE`; typical large real-world Go projects (>1000 modules) will need file output.
+
+Once the file is on disk, feed it into the downstream scanner of your choice. Both Grype and Trivy accept CycloneDX SBOMs directly:
+
+```sh
+# generate_sbom writes sbom.json next to go.mod
+grype sbom:./sbom.json
+trivy sbom ./sbom.json
+```
+
+The same file satisfies PCI DSS 6.3.2 software-inventory evidence.
 
 ## Suppressing Findings
 
