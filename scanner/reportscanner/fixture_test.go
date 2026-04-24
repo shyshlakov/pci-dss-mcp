@@ -10,6 +10,7 @@ import (
 
 	"github.com/shyshlakov/pci-dss-mcp/pcidb"
 	"github.com/shyshlakov/pci-dss-mcp/scanner"
+	"github.com/shyshlakov/pci-dss-mcp/scanner/sbomscanner"
 )
 
 func TestVulnerablePaymentServiceFixture(t *testing.T) {
@@ -112,6 +113,46 @@ func TestVulnerablePaymentServiceFixture(t *testing.T) {
 			if len(want.RelatedRequirements) > 0 && !equalStringSetsIgnoreOrder(got.RelatedRequirements, want.RelatedRequirements) {
 				tt.Errorf("related mismatch: rule=%s file=%s line=%d: want %v got %v",
 					want.RuleID, want.FilePath, want.Line, want.RelatedRequirements, got.RelatedRequirements)
+			}
+		}
+	})
+
+	t.Run("sbom_generation", func(tt *testing.T) {
+		sbom, err := sbomscanner.GenerateSBOM(ctx, scanRoot)
+		if err != nil {
+			tt.Fatalf("GenerateSBOM failed: %v", err)
+		}
+		if sbom == nil {
+			tt.Fatal("GenerateSBOM returned nil SBOM")
+		}
+		if sbom.BOMFormat != "CycloneDX" {
+			tt.Errorf("BOMFormat: got %q want \"CycloneDX\"", sbom.BOMFormat)
+		}
+		if sbom.SpecVersion != "1.5" {
+			tt.Errorf("SpecVersion: got %q want \"1.5\"", sbom.SpecVersion)
+		}
+		if got := len(sbom.Components); got < 40 {
+			tt.Errorf("component count: got %d want >=40", got)
+		}
+		for i, c := range sbom.Components {
+			if c.Name == "" {
+				tt.Errorf("component[%d] missing Name", i)
+			}
+			if c.Version == "" {
+				tt.Errorf("component[%d] (%s) missing Version", i, c.Name)
+			}
+			if c.PURL == "" {
+				tt.Errorf("component[%d] (%s) missing PURL", i, c.Name)
+			}
+			hasSHA256 := false
+			for _, h := range c.Hashes {
+				if h.Algorithm == "SHA-256" && h.Content != "" {
+					hasSHA256 = true
+					break
+				}
+			}
+			if !hasSHA256 {
+				tt.Errorf("component[%d] (%s) missing SHA-256 hash", i, c.Name)
 			}
 		}
 	})
