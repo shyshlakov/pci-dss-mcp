@@ -3,14 +3,20 @@ package sbomscanner
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"path/filepath"
+	"sync"
+	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 )
 
 type SBOM struct {
 	BOMFormat   string
 	SpecVersion string
 	Components  []Component
+	bom         *cdx.BOM
 }
 
 type Component struct {
@@ -30,7 +36,18 @@ type License struct {
 	ID string
 }
 
+type SBOMOptions struct {
+	FixedSerial string
+	NoTimestamp bool
+}
+
+var mainModuleWarnOnce sync.Once
+
 func GenerateSBOM(ctx context.Context, projectDir string) (*SBOM, error) {
+	return GenerateSBOMWithOptions(ctx, projectDir, SBOMOptions{})
+}
+
+func GenerateSBOMWithOptions(ctx context.Context, projectDir string, opts SBOMOptions) (*SBOM, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -38,19 +55,45 @@ func GenerateSBOM(ctx context.Context, projectDir string) (*SBOM, error) {
 	if err != nil {
 		return nil, fmt.Errorf("sbom discovery: %w", err)
 	}
+
 	bom := cdx.NewBOM()
-	bom.SpecVersion = cdx.SpecVersion1_5
-	bom.Metadata = &cdx.Metadata{
-		Tools: &cdx.ToolsChoice{
-			Components: &[]cdx.Component{
-				{
-					Type:      cdx.ComponentTypeApplication,
-					Name:      "pci-dss-mcp",
-					Publisher: "shyshlakov",
-				},
-			},
+	bom.SpecVersion = cdx.SpecVersion1_6
+
+	if opts.FixedSerial != "" {
+		u, perr := uuid.Parse(opts.FixedSerial)
+		if perr != nil {
+			return nil, fmt.Errorf("INVALID_FIXED_SERIAL: %w", perr)
+		}
+		bom.SerialNumber = u.URN()
+	} else {
+		bom.SerialNumber = uuid.New().URN()
+	}
+
+	mainPath, mainErr := readMainModulePath(projectDir)
+	if mainErr != nil {
+		mainModuleWarnOnce.Do(func() {
+			slog.Warn("sbom main module path: falling back to dir base", "err", mainErr)
+		})
+		mainPath = filepath.Base(projectDir)
+	}
+	mainVersion := ""
+	mainPURL := buildPURL(mainPath, mainVersion)
+
+	metadata := &cdx.Metadata{
+		Tools: &cdx.ToolsChoice{Components: &[]cdx.Component{buildToolComponent()}},
+		Component: &cdx.Component{
+			BOMRef:     mainPURL,
+			Type:       cdx.ComponentTypeApplication,
+			Name:       mainPath,
+			Version:    mainVersion,
+			PackageURL: mainPURL,
 		},
 	}
+	if !opts.NoTimestamp {
+		metadata.Timestamp = time.Now().UTC().Format(time.RFC3339)
+	}
+	bom.Metadata = metadata
+
 	components := make([]cdx.Component, 0, len(mods))
 	for _, m := range mods {
 		c := cdx.Component{
@@ -64,20 +107,16 @@ func GenerateSBOM(ctx context.Context, projectDir string) (*SBOM, error) {
 				c.Hashes = &[]cdx.Hash{{Algorithm: cdx.HashAlgoSHA256, Value: hexHash}}
 			}
 		}
-		lic := readLicense(m.Path, m.Version)
-		if lic == "UNKNOWN-LICENSE" {
-			c.Properties = &[]cdx.Property{{Name: "UNKNOWN-LICENSE", Value: "cache-miss or unreadable"}}
-		} else {
-			c.Licenses = &cdx.Licenses{{License: &cdx.License{ID: lic}}}
-		}
+		attachLicense(&c, detectLicense(m.Path, m.Version))
 		components = append(components, c)
 	}
 	bom.Components = &components
+
 	return convertBOM(bom), nil
 }
 
 func convertBOM(bom *cdx.BOM) *SBOM {
-	out := &SBOM{BOMFormat: "CycloneDX", SpecVersion: "1.5"}
+	out := &SBOM{BOMFormat: "CycloneDX", SpecVersion: "1.6", bom: bom}
 	if bom.Components == nil {
 		return out
 	}
@@ -92,13 +131,6 @@ func convertBOM(bom *cdx.BOM) *SBOM {
 			for _, lc := range *c.Licenses {
 				if lc.License != nil {
 					comp.Licenses = append(comp.Licenses, License{ID: lc.License.ID})
-				}
-			}
-		}
-		if c.Properties != nil {
-			for _, p := range *c.Properties {
-				if p.Name == "UNKNOWN-LICENSE" {
-					comp.Licenses = append(comp.Licenses, License{ID: "UNKNOWN-LICENSE"})
 				}
 			}
 		}

@@ -39,7 +39,7 @@ func InventoryProbe(projectDir string) (InventoryResult, error) {
 	res.ComponentCount = len(mods)
 
 	for _, m := range mods {
-		if readLicense(m.Path, m.Version) == "UNKNOWN-LICENSE" {
+		if detectLicense(m.Path, m.Version).SPDXID == "" {
 			res.UnknownLicenseCount++
 		}
 	}

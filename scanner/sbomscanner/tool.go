@@ -178,7 +178,10 @@ func resolveOutputPath(scanTarget, userProvided, format string) (string, bool, e
 }
 
 func serializeSBOM(sbom *SBOM, format string) (string, int, error) {
-	bom := ToCycloneDX(sbom)
+	bom := sbom.bom
+	if bom == nil {
+		bom = ToCycloneDX(sbom)
+	}
 	unknown := countUnknownLicenses(sbom)
 	var buf []byte
 	var err error

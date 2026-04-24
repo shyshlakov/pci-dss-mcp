@@ -135,24 +135,6 @@ func buildPURL(modulePath, version string) string {
 	return fmt.Sprintf("pkg:golang/%s@%s", modulePath, version)
 }
 
-func readLicense(modulePath, version string) string {
-	gomodcache := os.Getenv("GOMODCACHE")
-	if gomodcache == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "UNKNOWN-LICENSE"
-		}
-		gomodcache = filepath.Join(home, "go", "pkg", "mod")
-	}
-	dir := filepath.Join(gomodcache, escapeModulePath(modulePath)+"@"+version)
-	for _, name := range []string{"LICENSE", "LICENSE.md", "LICENSE.txt", "COPYING", "COPYING.md"} {
-		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
-			return "DETECTED"
-		}
-	}
-	return "UNKNOWN-LICENSE"
-}
-
 func escapeModulePath(p string) string {
 	var b strings.Builder
 	for _, r := range p {
