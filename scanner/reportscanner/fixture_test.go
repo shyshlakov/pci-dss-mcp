@@ -2,6 +2,8 @@ package reportscanner
 
 import (
 	"context"
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -166,6 +168,81 @@ func TestVulnerablePaymentServiceFixture(t *testing.T) {
 		if !strings.Contains(rs.CrossReference, "components") {
 			tt.Errorf("6.3.2 CrossReference: got %q want substring \"components\"", rs.CrossReference)
 		}
+
+		tt.Run("default_file_output", func(ttt *testing.T) {
+			res, raw, err := sbomscanner.HandleGenerateSBOM(ctx, &mcp.CallToolRequest{}, sbomscanner.GenSBOMInput{Path: scanRoot})
+			if err != nil {
+				ttt.Fatalf("handler: %v", err)
+			}
+			if res.IsError {
+				ttt.Fatalf("handler returned IsError: %s", firstText(res))
+			}
+			out, ok := raw.(*sbomscanner.GenSBOMOutput)
+			if !ok {
+				ttt.Fatalf("raw type: got %T want *sbomscanner.GenSBOMOutput", raw)
+			}
+			wantPath := filepath.Join(scanRoot, "sbom.json")
+			if out.OutputPath != wantPath {
+				ttt.Errorf("OutputPath: got %q want %q", out.OutputPath, wantPath)
+			}
+			if out.SerializedBOM != "" {
+				ttt.Errorf("SerializedBOM: expected empty in file-output mode, got %d bytes", len(out.SerializedBOM))
+			}
+			if out.ComponentCount < 40 {
+				ttt.Errorf("ComponentCount: got %d want >=40", out.ComponentCount)
+			}
+			if out.SizeBytes <= 0 {
+				ttt.Errorf("SizeBytes: got %d want >0", out.SizeBytes)
+			}
+			body, rerr := os.ReadFile(wantPath)
+			if rerr != nil {
+				ttt.Fatalf("read sbom file: %v", rerr)
+			}
+			if len(body) == 0 {
+				ttt.Fatalf("sbom file is empty")
+			}
+			var probe map[string]any
+			if jerr := json.Unmarshal(body, &probe); jerr != nil {
+				ttt.Fatalf("sbom file not valid json: %v", jerr)
+			}
+			if probe["bomFormat"] != "CycloneDX" {
+				ttt.Errorf("bomFormat: got %v want CycloneDX", probe["bomFormat"])
+			}
+			if probe["specVersion"] != "1.5" {
+				ttt.Errorf("specVersion: got %v want 1.5", probe["specVersion"])
+			}
+			comps, _ := probe["components"].([]any)
+			if len(comps) < 40 {
+				ttt.Errorf("components count: got %d want >=40", len(comps))
+			}
+		})
+
+		tt.Run("inline_opt_in", func(ttt *testing.T) {
+			res, raw, err := sbomscanner.HandleGenerateSBOM(ctx, &mcp.CallToolRequest{}, sbomscanner.GenSBOMInput{Path: scanRoot, Inline: true})
+			if err != nil {
+				ttt.Fatalf("handler: %v", err)
+			}
+			if res.IsError {
+				ttt.Fatalf("handler returned IsError: %s", firstText(res))
+			}
+			out, ok := raw.(*sbomscanner.GenSBOMOutput)
+			if !ok {
+				ttt.Fatalf("raw type: got %T want *sbomscanner.GenSBOMOutput", raw)
+			}
+			if out.SerializedBOM == "" {
+				ttt.Errorf("SerializedBOM: expected non-empty in inline mode")
+			}
+			if out.ComponentCount < 40 {
+				ttt.Errorf("ComponentCount: got %d want >=40", out.ComponentCount)
+			}
+			if out.OutputPath != "" {
+				ttt.Errorf("OutputPath: expected empty in inline mode, got %q", out.OutputPath)
+			}
+			var probe map[string]any
+			if jerr := json.Unmarshal([]byte(out.SerializedBOM), &probe); jerr != nil {
+				ttt.Fatalf("inline SerializedBOM not valid json: %v", jerr)
+			}
+		})
 	})
 }
 
@@ -369,4 +446,14 @@ func TestReportToolDescription_LayerAHistogramNeedle(t *testing.T) {
 			t.Errorf("generate_compliance_report description missing substring %q", n)
 		}
 	}
+}
+
+func firstText(res *mcp.CallToolResult) string {
+	if res == nil || len(res.Content) == 0 {
+		return ""
+	}
+	if t, ok := res.Content[0].(*mcp.TextContent); ok {
+		return t.Text
+	}
+	return ""
 }
