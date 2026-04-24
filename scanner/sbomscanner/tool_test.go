@@ -51,8 +51,8 @@ func TestHandleGenerateSBOM_HappyPaths(t *testing.T) {
 			if out.BOMFormat != "CycloneDX" {
 				t.Errorf("BOMFormat: got %q want CycloneDX", out.BOMFormat)
 			}
-			if out.SpecVersion != "1.5" {
-				t.Errorf("SpecVersion: got %q want 1.5", out.SpecVersion)
+			if out.SpecVersion != "1.6" {
+				t.Errorf("SpecVersion: got %q want 1.6", out.SpecVersion)
 			}
 			if out.ComponentCount < 40 {
 				t.Errorf("ComponentCount: got %d want >=40", out.ComponentCount)
@@ -111,7 +111,7 @@ func TestHandleGenerateSBOM_Errors(t *testing.T) {
 
 func TestHandleGenerateSBOM_OversizeGuard(t *testing.T) {
 	t.Parallel()
-	big := &SBOM{BOMFormat: "CycloneDX", SpecVersion: "1.5"}
+	big := &SBOM{BOMFormat: "CycloneDX", SpecVersion: "1.6"}
 	for i := 0; i < 10000; i++ {
 		big.Components = append(big.Components, Component{
 			Name:    fmt.Sprintf("example.com/synthetic/mod-%d", i),
@@ -350,6 +350,13 @@ func TestHandleGenerateSBOM_ErrorTokens(t *testing.T) {
 			},
 			wantSubstr: "DEFAULT_PATH_NOT_WRITABLE",
 		},
+		{
+			name: "invalid_fixed_serial",
+			prep: func(tt *testing.T) GenSBOMInput {
+				return GenSBOMInput{Path: fixtureRoot, FixedSerial: "not-a-uuid"}
+			},
+			wantSubstr: "INVALID_FIXED_SERIAL",
+		},
 	}
 
 	for _, tc := range tt {
@@ -396,4 +403,90 @@ func extractText(res *mcp.CallToolResult) string {
 		return ""
 	}
 	return tc.Text
+}
+
+func TestHandleGenerateSBOM_FixedSerial_Reproducibility(t *testing.T) {
+	t.Parallel()
+	fixtureRoot, err := filepath.Abs(filepath.Join("..", "..", "testdata", "vulnerable-payment-service"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const fixedUUID = "550e8400-e29b-41d4-a716-446655440000"
+	const wantSerial = "urn:uuid:550e8400-e29b-41d4-a716-446655440000"
+
+	run := func(tt *testing.T) string {
+		res, raw, err := HandleGenerateSBOM(context.Background(), &mcp.CallToolRequest{}, GenSBOMInput{
+			Path:        fixtureRoot,
+			Inline:      true,
+			FixedSerial: fixedUUID,
+			NoTimestamp: true,
+		})
+		if err != nil {
+			tt.Fatalf("handler: %v", err)
+		}
+		if res.IsError {
+			tt.Fatalf("IsError: %s", extractText(res))
+		}
+		out, ok := raw.(*GenSBOMOutput)
+		if !ok {
+			tt.Fatalf("raw type: %T", raw)
+		}
+		var probe map[string]any
+		if jerr := json.Unmarshal([]byte(out.SerializedBOM), &probe); jerr != nil {
+			tt.Fatalf("re-parse: %v", jerr)
+		}
+		serial, _ := probe["serialNumber"].(string)
+		if serial != wantSerial {
+			tt.Errorf("serialNumber: got %q want %q", serial, wantSerial)
+		}
+		if md, ok := probe["metadata"].(map[string]any); ok {
+			if ts, present := md["timestamp"]; present && ts != "" {
+				tt.Errorf("metadata.timestamp: want absent/empty under no_timestamp=true, got %v", ts)
+			}
+		}
+		return out.SerializedBOM
+	}
+
+	a := run(t)
+	b := run(t)
+	var pa, pb map[string]any
+	if err := json.Unmarshal([]byte(a), &pa); err != nil {
+		t.Fatalf("parse a: %v", err)
+	}
+	if err := json.Unmarshal([]byte(b), &pb); err != nil {
+		t.Fatalf("parse b: %v", err)
+	}
+	if pa["serialNumber"] != pb["serialNumber"] {
+		t.Errorf("two runs with same fixed_serial diverge on serialNumber: %v vs %v", pa["serialNumber"], pb["serialNumber"])
+	}
+}
+
+func TestHandleGenerateSBOM_FixedSerial_URN(t *testing.T) {
+	t.Parallel()
+	fixtureRoot, err := filepath.Abs(filepath.Join("..", "..", "testdata", "vulnerable-payment-service"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, raw, err := HandleGenerateSBOM(context.Background(), &mcp.CallToolRequest{}, GenSBOMInput{
+		Path:        fixtureRoot,
+		Inline:      true,
+		FixedSerial: "urn:uuid:550e8400-e29b-41d4-a716-446655440000",
+	})
+	if err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("IsError: %s", extractText(res))
+	}
+	out, ok := raw.(*GenSBOMOutput)
+	if !ok {
+		t.Fatalf("raw type: %T", raw)
+	}
+	var probe map[string]any
+	if jerr := json.Unmarshal([]byte(out.SerializedBOM), &probe); jerr != nil {
+		t.Fatalf("re-parse: %v", jerr)
+	}
+	if got, _ := probe["serialNumber"].(string); got != "urn:uuid:550e8400-e29b-41d4-a716-446655440000" {
+		t.Errorf("serialNumber: got %q want urn:uuid:550e8400-...", got)
+	}
 }

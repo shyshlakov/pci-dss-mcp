@@ -23,8 +23,8 @@ func TestGenerateSBOM_Fixture(t *testing.T) {
 	if sbom.BOMFormat != "CycloneDX" {
 		t.Errorf("BOMFormat: got %q want CycloneDX", sbom.BOMFormat)
 	}
-	if sbom.SpecVersion != "1.5" {
-		t.Errorf("SpecVersion: got %q want 1.5", sbom.SpecVersion)
+	if sbom.SpecVersion != "1.6" {
+		t.Errorf("SpecVersion: got %q want 1.6", sbom.SpecVersion)
 	}
 	if got := len(sbom.Components); got < 40 {
 		t.Errorf("component count: got %d want >=40", got)
@@ -87,15 +87,12 @@ func TestGenerateSBOM_UnknownLicense(t *testing.T) {
 	}
 	unknown := 0
 	for _, c := range sbom.Components {
-		for _, l := range c.Licenses {
-			if l.ID == "UNKNOWN-LICENSE" {
-				unknown++
-				break
-			}
+		if len(c.Licenses) == 0 {
+			unknown++
 		}
 	}
 	if unknown == 0 {
-		t.Error("expected at least one component with License{ID:\"UNKNOWN-LICENSE\"} when GOMODCACHE is empty")
+		t.Error("expected at least one component without License entries when GOMODCACHE is empty (D-S4: cache-miss emits pci-dss-mcp:license-status=unknown property, no License object)")
 	}
 }
 

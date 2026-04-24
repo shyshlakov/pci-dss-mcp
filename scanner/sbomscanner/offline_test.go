@@ -56,18 +56,13 @@ func TestGenerateSBOM_Offline(t *testing.T) {
 			if tc.wantUnknownLicense {
 				seen := false
 				for _, c := range sbom.Components {
-					for _, l := range c.Licenses {
-						if l.ID == "UNKNOWN-LICENSE" {
-							seen = true
-							break
-						}
-					}
-					if seen {
+					if len(c.Licenses) == 0 {
+						seen = true
 						break
 					}
 				}
 				if !seen {
-					t.Error("expected at least one component with License{ID:\"UNKNOWN-LICENSE\"}")
+					t.Error("expected at least one component without License entries when GOMODCACHE is empty (D-S4)")
 				}
 			}
 		})
