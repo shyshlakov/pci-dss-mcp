@@ -39,6 +39,7 @@ type License struct {
 type SBOMOptions struct {
 	FixedSerial string
 	NoTimestamp bool
+	Gomodcache  string
 }
 
 var mainModuleWarnOnce sync.Once
@@ -94,6 +95,10 @@ func GenerateSBOMWithOptions(ctx context.Context, projectDir string, opts SBOMOp
 	}
 	bom.Metadata = metadata
 
+	gomodcache := opts.Gomodcache
+	if gomodcache == "" {
+		gomodcache = resolveGomodcache()
+	}
 	components := make([]cdx.Component, 0, len(mods))
 	for _, m := range mods {
 		c := cdx.Component{
@@ -107,7 +112,7 @@ func GenerateSBOMWithOptions(ctx context.Context, projectDir string, opts SBOMOp
 				c.Hashes = &[]cdx.Hash{{Algorithm: cdx.HashAlgoSHA256, Value: hexHash}}
 			}
 		}
-		attachLicense(&c, detectLicense(m.Path, m.Version))
+		attachLicense(&c, detectLicenseIn(gomodcache, m.Path, m.Version))
 		components = append(components, c)
 	}
 	bom.Components = &components

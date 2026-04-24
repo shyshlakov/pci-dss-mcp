@@ -76,14 +76,14 @@ func TestGenerateSBOM_InvalidPath(t *testing.T) {
 }
 
 func TestGenerateSBOM_UnknownLicense(t *testing.T) {
-	t.Setenv("GOMODCACHE", t.TempDir())
+	t.Parallel()
 	fixtureRoot, err := filepath.Abs(filepath.Join("..", "..", "testdata", "vulnerable-payment-service"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	sbom, err := GenerateSBOM(context.Background(), fixtureRoot)
+	sbom, err := GenerateSBOMWithOptions(context.Background(), fixtureRoot, SBOMOptions{Gomodcache: t.TempDir()})
 	if err != nil {
-		t.Fatalf("GenerateSBOM: %v", err)
+		t.Fatalf("GenerateSBOMWithOptions: %v", err)
 	}
 	if sbom == nil {
 		t.Fatal("nil SBOM")
@@ -95,11 +95,18 @@ func TestGenerateSBOM_UnknownLicense(t *testing.T) {
 		}
 	}
 	if unknown == 0 {
-		t.Error("expected at least one component without License entries when GOMODCACHE is empty (D-S4: cache-miss emits pci-dss-mcp:license-status=unknown property, no License object)")
+		t.Error("expected at least one component without License entries when GOMODCACHE points at an empty dir (D-S4: cache-miss emits pci-dss-mcp:license-status=unknown property, no License object)")
+	}
+	unknownCount := countUnknownLicenses(sbom)
+	if unknownCount == 0 {
+		t.Error("countUnknownLicenses: got 0 want > 0 when cache is empty")
 	}
 }
 
 func TestHandleGenerateSBOM_UnknownLicensesCount(t *testing.T) {
+	// t.Setenv forbids t.Parallel on this test, and the sbomscanner package
+	// relies on GOMODCACHE at process scope; adding t.Parallel here would
+	// silently break sibling parallel tests that expect the real cache.
 	t.Setenv("GOMODCACHE", t.TempDir())
 	fixtureRoot, err := filepath.Abs(filepath.Join("..", "..", "testdata", "vulnerable-payment-service"))
 	if err != nil {

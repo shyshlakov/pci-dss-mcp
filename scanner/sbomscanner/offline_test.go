@@ -14,6 +14,7 @@ func TestGenerateSBOM_Offline(t *testing.T) {
 	tt := []struct {
 		name               string
 		setupEnv           func(t *testing.T)
+		gomodcache         func(t *testing.T) string
 		wantErr            bool
 		wantMinLen         int
 		wantUnknownLicense bool
@@ -32,8 +33,8 @@ func TestGenerateSBOM_Offline(t *testing.T) {
 			setupEnv: func(t *testing.T) {
 				t.Setenv("GOPROXY", "off")
 				t.Setenv("GOSUMDB", "off")
-				t.Setenv("GOMODCACHE", t.TempDir())
 			},
+			gomodcache:         func(t *testing.T) string { return t.TempDir() },
 			wantErr:            false,
 			wantMinLen:         40,
 			wantUnknownLicense: true,
@@ -43,7 +44,11 @@ func TestGenerateSBOM_Offline(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.setupEnv(t)
-			sbom, err := GenerateSBOM(context.Background(), fixtureRoot)
+			opts := SBOMOptions{}
+			if tc.gomodcache != nil {
+				opts.Gomodcache = tc.gomodcache(t)
+			}
+			sbom, err := GenerateSBOMWithOptions(context.Background(), fixtureRoot, opts)
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("err mismatch: got %v wantErr=%v", err, tc.wantErr)
 			}

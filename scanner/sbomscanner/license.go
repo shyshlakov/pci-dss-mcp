@@ -38,7 +38,11 @@ func getLicenseScanner() (*licensecheck.Scanner, error) {
 }
 
 func detectLicense(modulePath, version string) LicenseDetection {
-	path, ok := findLicenseFile(modulePath, version)
+	return detectLicenseIn(resolveGomodcache(), modulePath, version)
+}
+
+func detectLicenseIn(gomodcache, modulePath, version string) LicenseDetection {
+	path, ok := findLicenseFileIn(gomodcache, modulePath, version)
 	if !ok {
 		return LicenseDetection{}
 	}
@@ -95,13 +99,12 @@ func pickBestMatch(matches []licensecheck.Match) licensecheck.Match {
 }
 
 func findLicenseFile(modulePath, version string) (string, bool) {
-	gomodcache := os.Getenv("GOMODCACHE")
+	return findLicenseFileIn(resolveGomodcache(), modulePath, version)
+}
+
+func findLicenseFileIn(gomodcache, modulePath, version string) (string, bool) {
 	if gomodcache == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", false
-		}
-		gomodcache = filepath.Join(home, "go", "pkg", "mod")
+		return "", false
 	}
 	dir := filepath.Join(gomodcache, escapeModulePath(modulePath)+"@"+version)
 	for _, name := range licenseFilenames {
@@ -111,6 +114,17 @@ func findLicenseFile(modulePath, version string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func resolveGomodcache() string {
+	if v := os.Getenv("GOMODCACHE"); v != "" {
+		return v
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, "go", "pkg", "mod")
 }
 
 func attachLicense(c *cdx.Component, det LicenseDetection) {

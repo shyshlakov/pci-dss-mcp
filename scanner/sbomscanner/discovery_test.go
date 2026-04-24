@@ -127,8 +127,8 @@ func TestBuildPURL(t *testing.T) {
 }
 
 func TestDetectLicense_CacheMiss(t *testing.T) {
-	t.Setenv("GOMODCACHE", t.TempDir())
-	got := detectLicense("github.com/does-not-exist/pkg", "v0.0.1")
+	t.Parallel()
+	got := detectLicenseIn(t.TempDir(), "github.com/does-not-exist/pkg", "v0.0.1")
 	if got.SPDXID != "" {
 		t.Errorf("cache-miss SPDXID: got %q want empty", got.SPDXID)
 	}
