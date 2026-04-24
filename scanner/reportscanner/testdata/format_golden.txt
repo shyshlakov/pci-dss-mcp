@@ -1173,8 +1173,8 @@ Duration: <DUR> | Files: 870 | Lines: 14551
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Requirements Summary
-Checked: 18 requirements | NOT_CHECKED: 232 requirements (manual QSA verification required)
-PASS: 2 | FAIL: 16 | WARNING: 0 | SUPPRESSED: 0
+Checked: 19 requirements | NOT_CHECKED: 231 requirements (manual QSA verification required)
+PASS: 3 | FAIL: 16 | WARNING: 0 | SUPPRESSED: 0
 
 NOT_CHECKED requirements (manual QSA verification required):
   1.1.1: Network Security Policies and Procedures
@@ -1254,7 +1254,6 @@ NOT_CHECKED requirements (manual QSA verification required):
   6.2.3: Software Review Before Release
   6.2.3.1: Manual Code Review Process
   6.3.1: Known Vulnerability Identification
-  6.3.2: Software Inventory Maintained
   6.4.1: Public-Facing Web Application Protection
   6.4.2: Automated Web Application Attack Detection
   6.5.1: Change Control for System Components
@@ -1418,6 +1417,7 @@ Cross-Referenced Requirements:
   FAIL 2.2.7 -- Covered by same finding (see 4.2.1)
   FAIL 3.3.1.2 -- Covered by same finding (see 3.3.1)
   FAIL 4.2.1.1 -- Covered by same finding (see 4.2.1)
+  PASS 6.3.2 -- SBOM inventory: 58 components, 21 unknown-license
   FAIL 8.6.1 -- Covered by same finding (see 8.4.2)
 
 NOTE: NOT_CHECKED != non-compliant. Static analysis cannot verify these controls.

@@ -155,6 +155,17 @@ func TestVulnerablePaymentServiceFixture(t *testing.T) {
 				tt.Errorf("component[%d] (%s) missing SHA-256 hash", i, c.Name)
 			}
 		}
+
+		rs, ok := report.RequirementStatus["6.3.2"]
+		if !ok {
+			tt.Fatal("report.RequirementStatus missing key \"6.3.2\"")
+		}
+		if rs.Status != "PASS" {
+			tt.Errorf("6.3.2 status: got %q want \"PASS\"", rs.Status)
+		}
+		if !strings.Contains(rs.CrossReference, "components") {
+			tt.Errorf("6.3.2 CrossReference: got %q want substring \"components\"", rs.CrossReference)
+		}
 	})
 }
 
