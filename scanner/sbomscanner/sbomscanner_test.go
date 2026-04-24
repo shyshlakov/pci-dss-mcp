@@ -2,9 +2,12 @@ package sbomscanner
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestGenerateSBOM_Fixture(t *testing.T) {
@@ -93,6 +96,49 @@ func TestGenerateSBOM_UnknownLicense(t *testing.T) {
 	}
 	if unknown == 0 {
 		t.Error("expected at least one component without License entries when GOMODCACHE is empty (D-S4: cache-miss emits pci-dss-mcp:license-status=unknown property, no License object)")
+	}
+}
+
+func TestHandleGenerateSBOM_UnknownLicensesCount(t *testing.T) {
+	t.Setenv("GOMODCACHE", t.TempDir())
+	fixtureRoot, err := filepath.Abs(filepath.Join("..", "..", "testdata", "vulnerable-payment-service"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	work := t.TempDir()
+	res, raw, err := HandleGenerateSBOM(context.Background(), &mcp.CallToolRequest{}, GenSBOMInput{
+		Path:       fixtureRoot,
+		OutputPath: filepath.Join(work, "sbom.json"),
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateSBOM: %v", err)
+	}
+	if res == nil || res.IsError {
+		t.Fatalf("unexpected error result: %+v", res)
+	}
+	out, ok := raw.(*GenSBOMOutput)
+	if !ok || out == nil {
+		payload := ""
+		if res != nil && len(res.Content) > 0 {
+			if tc, tok := res.Content[0].(*mcp.TextContent); tok {
+				payload = tc.Text
+			}
+		}
+		var parsed GenSBOMOutput
+		if payload != "" {
+			if jerr := json.Unmarshal([]byte(payload), &parsed); jerr == nil {
+				out = &parsed
+			}
+		}
+		if out == nil {
+			t.Fatalf("expected *GenSBOMOutput, got %T (payload=%q)", raw, payload)
+		}
+	}
+	if out.UnknownLicenses <= 0 {
+		t.Errorf("UnknownLicenses: got %d want > 0 when GOMODCACHE is empty", out.UnknownLicenses)
+	}
+	if out.ComponentCount <= 0 {
+		t.Errorf("ComponentCount: got %d want > 0", out.ComponentCount)
 	}
 }
 

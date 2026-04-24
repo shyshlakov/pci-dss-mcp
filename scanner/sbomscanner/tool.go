@@ -253,10 +253,19 @@ func ToCycloneDX(sbom *SBOM) *cdx.BOM {
 }
 
 func countUnknownLicenses(sbom *SBOM) int {
+	if sbom == nil || sbom.bom == nil || sbom.bom.Components == nil {
+		return 0
+	}
 	n := 0
-	for _, c := range sbom.Components {
-		for _, l := range c.Licenses {
-			if l.ID == "UNKNOWN-LICENSE" {
+	for _, c := range *sbom.bom.Components {
+		if c.Licenses != nil && len(*c.Licenses) > 0 {
+			continue
+		}
+		if c.Properties == nil {
+			continue
+		}
+		for _, p := range *c.Properties {
+			if p.Name == "pci-dss-mcp:license-status" && p.Value == "unknown" {
 				n++
 				break
 			}
