@@ -5,6 +5,41 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## [0.6.2] - 2026-04-24
+
+### Added
+
+- SBOM provenance metadata: every CycloneDX SBOM now carries `serialNumber` (urn:uuid v4), `metadata.timestamp` (RFC3339 UTC), `metadata.component` (the scanned project as the BOM subject with bom-ref + purl + name), and an enriched `metadata.tools.components[0]` block (name, version derived from `runtime/debug.ReadBuildInfo`, publisher, ExternalReferences for VCS + website, and a SHA-256 self-hash of the running pci-dss-mcp binary when not built from `go run`).
+- SPDX license detection via `github.com/google/licensecheck` v0.3.1 with a coverage threshold of 75 (matches `coverageThreshold = 75` in pkg.go.dev's production source). Detected licenses now emit valid SPDX identifiers (e.g., `MIT`, `Apache-2.0`, `BSD-3-Clause`) on `License.id` instead of the literal placeholder strings shipped in v0.6.1.
+- Reproducibility opt-in parameters on `generate_sbom`: `fixed_serial` (override the generated serialNumber; accepts bare UUID v4 or urn:uuid: form) and `no_timestamp` (omit `metadata.timestamp` for byte-reproducible SBOMs across runs). Use these to bind one SBOM identity to one release/build for VEX linking and audit pipelines.
+- `INVALID_FIXED_SERIAL` explicit error token (joins the existing `OUTPUT_PATH_*` family from v0.6.1).
+- License evidence trail per CycloneDX 1.6 `components[].evidence.licenses[]`: each detected license carries native `acknowledgement: "declared"` plus pci-dss-mcp-namespaced properties for confidence and source-file location.
+- CI standards-validation gate: new `make test-sbom-validate` target generates a fresh SBOM via the dogfood `sbomdump` CLI and validates it against the bom-1.6 schema using `cyclonedx-cli`. Wired into `.github/workflows/ci.yml` on ubuntu-latest.
+- sbomdump CLI flags: `-fixed-serial`, `-no-timestamp`, `-pretty`. Default output is now compact JSON to match the MCP tool's serializeSBOM path.
+- Synthetic license fixtures under `scanner/sbomscanner/testdata/license-fixtures/` covering MIT, Apache-2.0, BSD-3-Clause, dual MIT+Apache, no-license, garbage, and partial-coverage cases. Decouples license-detection unit tests from local `$GOMODCACHE` state.
+
+### Changed
+
+- **CycloneDX spec version: 1.5 -> 1.6.** All generated SBOMs now declare `specVersion: "1.6"`. Drove by the need for the native `License.acknowledgement` field which is not present in CycloneDX 1.5 (1.5 License objects are `additionalProperties: false`, so emitting `acknowledgement` against the 1.5 schema fails strict `cyclonedx-cli validate`). Downstream tools verified to support 1.6: cyclonedx-cli >= 0.27, syft 1.x, grype >= 0.74, trivy >= 0.50 (all released in 2024).
+- `generate_sbom` `OutputSchema` `spec_version` constant updated from `"1.5"` to `"1.6"`. Tool description text updated from "CycloneDX v1.5" to "CycloneDX v1.6".
+- `GenSBOMOutput.SpecVersion` field is now the literal string `"1.6"` in both file-output and inline-mode response shapes.
+- License placeholder strings `"DETECTED"` and `"UNKNOWN-LICENSE"` removed from the License.id field. Cache-miss / undetectable licenses now emit no License object at all and surface `pci-dss-mcp:license-status="unknown"` as a component property; the `unknown_licenses` counter in the response shape is unchanged.
+
+### Fixed
+
+- SPDX correctness: `License.id` no longer carries non-SPDX placeholder strings. Strict downstream validators (e.g., `cyclonedx-cli validate --fail-on-errors` against bom-1.6 schema) now accept our SBOMs.
+- Off-by-100 risk in license-coverage threshold: documented and pinned at `Coverage.Percent >= 75.0` (the licensecheck API returns the percent in 0..100, not 0..1).
+
+### Migration
+
+Clients that schema-validated their consumption of `generate_sbom` against the v0.6.1 OutputSchema constant `"spec_version": "1.5"` will need to update their consumer-side schema to `"1.6"`. Downstream SBOM consumers (Grype, Trivy, Snyk, dependency-track, VEX tooling) auto-detect the spec version from the SBOM's own `specVersion` field, no consumer change needed there. Clients that read `License.id == "UNKNOWN-LICENSE"` to detect license gaps must switch to checking `unknown_licenses` in the response (already populated since v0.6.1) or to checking for the `pci-dss-mcp:license-status` property on components without a `licenses[]` array.
+
+### Unchanged
+
+- Scanner detection logic. Fixture severity counts on `testdata/vulnerable-payment-service` remain 49 CRITICAL / 89 HIGH / 27 MEDIUM / 0 LOW / 59 INFO byte-for-byte with v0.6.1.
+- The `generate_sbom` parameter contract: existing parameters `path`, `format`, `output_path`, `inline` behave identically to v0.6.1. The two new parameters `fixed_serial` and `no_timestamp` are optional and default to the existing behavior (random urn:uuid v4 + current UTC timestamp).
+- All other 14 MCP tools.
+
 ## [0.6.1] - 2026-04-24
 
 ### Changed
