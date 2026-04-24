@@ -15,6 +15,7 @@ import (
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -23,10 +24,12 @@ const toolName = "generate_sbom"
 const maxInlineBytes = 65536
 
 type GenSBOMInput struct {
-	Path       string `json:"path" jsonschema:"required,Absolute path to the Go project directory containing go.mod (and go.sum)"`
-	Format     string `json:"format,omitempty" jsonschema:"Output format: json (default) or xml"`
-	OutputPath string `json:"output_path,omitempty" jsonschema:"Absolute path where the SBOM file should be written. Default: {path}/sbom.json or {path}/sbom.xml. Ignored when inline=true."`
-	Inline     bool   `json:"inline,omitempty" jsonschema:"If true, return serialized SBOM inline in the response (64 KB cap, SBOM_TOO_LARGE on overflow). Default: false, write to file and return metadata only."`
+	Path        string `json:"path" jsonschema:"required,Absolute path to the Go project directory containing go.mod (and go.sum)"`
+	Format      string `json:"format,omitempty" jsonschema:"Output format: json (default) or xml"`
+	OutputPath  string `json:"output_path,omitempty" jsonschema:"Absolute path where the SBOM file should be written. Default: {path}/sbom.json or {path}/sbom.xml. Ignored when inline=true."`
+	Inline      bool   `json:"inline,omitempty" jsonschema:"If true, return serialized SBOM inline in the response (64 KB cap, SBOM_TOO_LARGE on overflow). Default: false, write to file and return metadata only."`
+	FixedSerial string `json:"fixed_serial,omitempty" jsonschema:"Override generated serialNumber. Accepts bare UUID v4 or urn:uuid: form. Use for VEX linking and audit pipeline reproducibility."`
+	NoTimestamp bool   `json:"no_timestamp,omitempty" jsonschema:"If true, omit metadata.timestamp for reproducible builds."`
 }
 
 type GenSBOMOutput struct {
@@ -50,7 +53,7 @@ func RegisterTools(server *mcp.Server) {
 	}
 	tool := &mcp.Tool{
 		Name: toolName,
-		Description: "Generate a CycloneDX v1.5 SBOM for a Go project. " +
+		Description: "Generate a CycloneDX v1.6 SBOM for a Go project. " +
 			"Default behavior: writes sbom.json (or sbom.xml when format=xml) next to the scanned go.mod and returns metadata only (output_path, size_bytes, component_count, unknown_licenses). " +
 			"Override the destination with output_path (must be absolute). " +
 			"Pass inline=true to return the serialized SBOM in the MCP response instead (capped at 64 KB; returns SBOM_TOO_LARGE above that). " +
@@ -80,7 +83,15 @@ func HandleGenerateSBOM(ctx context.Context, req *mcp.CallToolRequest, input Gen
 		return errorResult(`invalid format: must be "json" or "xml"`), nil, nil
 	}
 
-	sbom, genErr := GenerateSBOM(ctx, absPath)
+	opts := SBOMOptions{NoTimestamp: input.NoTimestamp}
+	if strings.TrimSpace(input.FixedSerial) != "" {
+		if _, perr := uuid.Parse(input.FixedSerial); perr != nil {
+			return errorResult(fmt.Sprintf("INVALID_FIXED_SERIAL: %q is not a valid UUID v4 (accepted: bare 36-char form or urn:uuid: form): %v", input.FixedSerial, perr)), nil, nil
+		}
+		opts.FixedSerial = input.FixedSerial
+	}
+
+	sbom, genErr := GenerateSBOMWithOptions(ctx, absPath, opts)
 	if genErr != nil {
 		return errorResult(fmt.Sprintf("sbom generation failed: %v", genErr)), nil, nil
 	}
@@ -99,7 +110,7 @@ func HandleGenerateSBOM(ctx context.Context, req *mcp.CallToolRequest, input Gen
 		out := &GenSBOMOutput{
 			Mode:            "inline",
 			BOMFormat:       "CycloneDX",
-			SpecVersion:     "1.5",
+			SpecVersion:     "1.6",
 			SerializedBOM:   serialized,
 			ComponentCount:  len(sbom.Components),
 			UnknownLicenses: unknownCount,
@@ -130,7 +141,7 @@ func HandleGenerateSBOM(ctx context.Context, req *mcp.CallToolRequest, input Gen
 	out := &GenSBOMOutput{
 		Mode:            "file",
 		BOMFormat:       "CycloneDX",
-		SpecVersion:     "1.5",
+		SpecVersion:     "1.6",
 		OutputPath:      resolvedPath,
 		SizeBytes:       int64(len(serialized)),
 		ComponentCount:  len(sbom.Components),
@@ -201,7 +212,7 @@ func serializeSBOM(sbom *SBOM, format string) (string, int, error) {
 
 func ToCycloneDX(sbom *SBOM) *cdx.BOM {
 	bom := cdx.NewBOM()
-	bom.SpecVersion = cdx.SpecVersion1_5
+	bom.SpecVersion = cdx.SpecVersion1_6
 	comps := make([]cdx.Component, 0, len(sbom.Components))
 	for _, c := range sbom.Components {
 		out := cdx.Component{

@@ -28,7 +28,7 @@ func buildSBOMOutputSchema() (json.RawMessage, error) {
   "properties": {
     "mode":             { "type": "string", "enum": ["file", "inline"] },
     "bom_format":       { "type": "string", "const": "CycloneDX" },
-    "spec_version":     { "type": "string", "const": "1.5" },
+    "spec_version":     { "type": "string", "const": "1.6" },
     "component_count":  { "type": "integer", "minimum": 0 },
     "unknown_licenses": { "type": "integer", "minimum": 0 },
     "format":           { "type": "string", "enum": ["json", "xml"] },
@@ -36,7 +36,9 @@ func buildSBOMOutputSchema() (json.RawMessage, error) {
     "project_path":     { "type": "string", "description": "Absolute scanned path" },
     "output_path":      { "type": "string" },
     "size_bytes":       { "type": "integer", "minimum": 0 },
-    "serialized_bom":   { "type": "string" }
+    "serialized_bom":   { "type": "string" },
+    "fixed_serial":     { "type": "string", "description": "Override generated serialNumber (urn:uuid: or bare 36-char form)" },
+    "no_timestamp":     { "type": "boolean", "description": "Omit metadata.timestamp for reproducible builds" }
   }
 }`)
 	return json.RawMessage(raw), nil
