@@ -227,7 +227,7 @@ pci-dss-mcp exposes **15 MCP tools**: 11 scanners, 1 orchestrator, 1 triage engi
 | `check_data_retention` | CVV/PAN storage without TTL, missing memory zeroing |
 | `check_payment_page_scripts` | CSP, SRI, nonce checks on Go handlers and HTML |
 | `check_dependencies` | Go dependency vulnerabilities via OSV.dev (offline-capable) |
-| `generate_sbom` | Generate CycloneDX v1.5 SBOM from go.mod + go.sum for PCI DSS 6.3.2 software inventory (offline-capable) |
+| `generate_sbom` | Generate CycloneDX v1.6 SBOM from go.mod + go.sum for PCI DSS 6.3.2 software inventory (offline-capable) |
 | `update_vulnerability_db` | Refresh the local OSV vulnerability cache for offline scans |
 | `explain_requirement` | Look up any PCI DSS v4.0.1 requirement |
 
@@ -235,7 +235,7 @@ All tools declare typed `OutputSchema`. See [docs/tools.md](docs/tools.md) for p
 
 ## SBOM workflow
 
-`generate_sbom` writes a CycloneDX v1.5 file by default so you can feed one SBOM into multiple downstream scanners (Grype, Trivy) without round-tripping bytes through MCP.
+`generate_sbom` writes a CycloneDX v1.6 file by default so you can feed one SBOM into multiple downstream scanners (Grype, Trivy) without round-tripping bytes through MCP.
 
 Default behavior writes `{path}/sbom.json` (or `sbom.xml` when `format=xml`) and returns metadata only: `output_path`, `size_bytes`, `component_count`, `unknown_licenses`, `format`, `generated_at`, `project_path`, `bom_format`, `spec_version`, and `mode="file"`. No `serialized_bom` field is embedded in file mode, so the MCP response stays under ~400 bytes regardless of SBOM size.
 
@@ -262,6 +262,16 @@ trivy sbom ./sbom.json
 ```
 
 The same file satisfies PCI DSS 6.3.2 software-inventory evidence.
+
+### Standards conformance
+
+The SBOM produced by `generate_sbom` is built and validated against the following standards. Each assertion is gated by CI:
+
+- **CycloneDX 1.6 JSON.** Format authority: `https://cyclonedx.org/docs/1.6/json/`. Schema-validated in CI via `cyclonedx-cli validate --input-version v1_6 --fail-on-errors`.
+- **SPDX License List v3.x.** License identifiers detected via the `github.com/google/licensecheck` v0.3.1 corpus, using the same `coverageThreshold = 75` value pkg.go.dev uses in production. Below-threshold or undetectable licenses surface as a `pci-dss-mcp:license-status="unknown"` property on the component, never as a fake SPDX identifier.
+- **NTIA Minimum Elements for SBOM (2021).** Covers 6 of 7 baseline data fields per component: Component Name, Version, Other Unique Identifiers (purl + SHA-256 hash), Author of SBOM Data (`metadata.tools.components[0]`), Timestamp (`metadata.timestamp`). The seventh element (Dependency Relationship) is intentionally deferred until Go-toolchain dependency-graph data becomes available; documented as a known gap in the roadmap.
+- **PCI DSS v4.0.1 §6.3.2.** Software-inventory requirement, fully required since 2025-03-31. The SBOM lists every direct and transitive Go dependency with version, hash, and detected SPDX license. The compliance report (`generate_compliance_report`) maps the SBOM artifact to PCI DSS 6.3.2 PASS/FAIL.
+- **Tool provenance.** Every SBOM identifies the producing tool (`pci-dss-mcp`) by name, version (derived from `runtime/debug.ReadBuildInfo`), source-repo URL, and SHA-256 self-hash. Auditors can verify the SBOM was produced by the exact binary they have on hand.
 
 ## Suppressing Findings
 
@@ -365,7 +375,7 @@ Smoke test locally with `make fuzz FUZZTIME=30s` before pushing. New crash seeds
 
 Planned features in rough priority order:
 
-- **SBOM generation (CycloneDX v1.5)** — PCI DSS 6.3.2 software inventory, works offline
+- **SBOM generation (CycloneDX v1.6)** — PCI DSS 6.3.2 software inventory, works offline
 - **Reachability-aware dependency scanning** — `govulncheck` integration, unreachable CVEs downgrade to INFO
 - **SARIF v2.1.0 output** — industry-standard format for CI pipelines and VS Code
 - **Semgrep adapter** — map Semgrep's 5000+ rules to PCI DSS requirements
