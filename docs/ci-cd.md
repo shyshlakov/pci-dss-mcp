@@ -5,11 +5,11 @@ pci-dss-mcp is an MCP server using stdio transport. For CI/CD pipelines, pipe JS
 ## Basic Usage
 
 ```bash
-go install github.com/shyshlakov/pci-dss-mcp@v1.0.0
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"ci","version":"1.0.0"}}}' | pci-dss-mcp
+go install github.com/shyshlakov/pci-dss-mcp@v0.6.2
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1.0.0"}}}' | pci-dss-mcp
 ```
 
-**Pin the version.** Always use `@v1.0.0` (or a specific version), not `@latest`, to prevent supply chain substitution in CI.
+**Pin the version.** Always use `@v0.6.2` (or a specific version), not `@latest`, to prevent supply chain substitution in CI.
 
 ## Compliance Status
 
@@ -46,12 +46,12 @@ jobs:
           go-version: '1.25'
 
       - name: Install pci-dss-mcp
-        run: go install github.com/shyshlakov/pci-dss-mcp@v1.0.0
+        run: go install github.com/shyshlakov/pci-dss-mcp@v0.6.2
 
       - name: Run PCI DSS scan
         run: |
           # Initialize MCP session and call generate_compliance_report
-          INIT='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"ci","version":"1.0.0"}}}'
+          INIT='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1.0.0"}}}'
           CALL='{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"generate_compliance_report","arguments":{"path":"."}}}'
           echo -e "${INIT}\n${CALL}" | pci-dss-mcp 2>/dev/null | tee report.txt
           if grep -q '"Compliance status: FAIL"' report.txt; then
