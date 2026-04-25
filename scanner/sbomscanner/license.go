@@ -145,11 +145,11 @@ func attachLicense(c *cdx.Component, det LicenseDetection) {
 		evProps = append(evProps, cdx.Property{Name: "pci-dss-mcp:license-source", Value: filepath.Base(det.SourcePath)})
 	}
 	c.Licenses = &cdx.Licenses{
-		{License: &cdx.License{ID: det.SPDXID, Acknowledgement: cdx.LicenseAcknowledgementDeclared}},
+		{License: &cdx.License{ID: det.SPDXID, Acknowledgement: cdx.LicenseAcknowledgementConcluded}},
 	}
 	c.Evidence = &cdx.Evidence{
 		Licenses: &cdx.Licenses{
-			{License: &cdx.License{ID: det.SPDXID, Acknowledgement: cdx.LicenseAcknowledgementDeclared, Properties: &evProps}},
+			{License: &cdx.License{ID: det.SPDXID, Acknowledgement: cdx.LicenseAcknowledgementConcluded, Properties: &evProps}},
 		},
 	}
 }

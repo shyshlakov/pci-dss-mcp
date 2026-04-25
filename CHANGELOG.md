@@ -8,6 +8,7 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 ### Fixed
 
 - Human-readable 6.3.2 cross-reference no longer includes an unknown-license count that depended on the local GOMODCACHE state. The line now reads `SBOM inventory: N components` only. Component count is deterministic from `go.mod`; the prior `N unknown-license` suffix varied across developer machines and CI runners, which caused spurious golden-snapshot diffs.
+- SBOM license acknowledgement corrected per CycloneDX 1.6 semantics: auto-detected licenses from scanning `LICENSE` files now report `acknowledgement: "concluded"` (verified by analysis) instead of `"declared"` (what authors stated). The previous value implied an upstream author declaration that pci-dss-mcp never observes.
 
 ## [0.6.2] - 2026-04-24
 
