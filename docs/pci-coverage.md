@@ -1,6 +1,6 @@
 # PCI DSS v4.0.1 Coverage Map
 
-pci-dss-mcp checks **14 of ~250** PCI DSS v4.0.1 requirements across 10 scanners (~5.6%). This covers Requirements 3, 4, 6, 8, 10, and 11.
+pci-dss-mcp checks **15 of ~250** PCI DSS v4.0.1 requirements across 11 user-facing scanners + 1 internal sqlscanner (~6.0%). This covers Requirements 3, 4, 6, 8, 10, and 11.
 
 ## Covered Requirements
 
@@ -12,6 +12,7 @@ pci-dss-mcp checks **14 of ~250** PCI DSS v4.0.1 requirements across 10 scanners
 | 3.5.1 | PAN Rendered Unreadable in Storage | scan_pan_data, (report-only) sqlscanner | PAN variables in logs and responses; PAN columns in SQL schemas without encryption; string-typed PAN fields (can't be zeroed); missing memory zeroing |
 | 4.2.1 | Strong Cryptography During Transmission | check_encryption, check_tls_config | Plain HTTP URLs, InsecureSkipVerify, weak TLS versions, weak ciphers |
 | 6.2.4 | Secure Software Development | check_encryption, check_error_handling | Hardcoded keys, weak hashes, error details leaked to responses |
+| 6.3.2 | Inventory of Bespoke and Custom Software | sbomscanner (via reportscanner.sbom_inventory.go) | CycloneDX 1.6 SBOM emission. See [generate_sbom.md](generate_sbom.md). |
 | 6.3.3 | Security Patches Applied | check_dependencies | Known CVEs in go.mod dependencies via OSV.dev |
 | 6.4.3 | Payment Page Script Management | check_payment_page_scripts | Missing CSP headers, unsafe-inline/eval, missing SRI/nonce |
 | 8.3.1 | Unique IDs for All Users | check_auth_strength | Weak password policy, MFA absence, byte-vs-char length checks (related to AUTH-HARDCODED-PWD) |
