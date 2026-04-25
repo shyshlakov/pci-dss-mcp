@@ -1,0 +1,3 @@
+go test fuzz v1
+[]byte("module example.com/m\n\ngo 1.21\n\nrequire (\n\tgithub.com/direct/dep v1.0.0\n)\n\nrequire github.com/indirect/dep v0.9.0 // indirect\n")
+[]byte("github.com/direct/dep v1.0.0 h1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab=\ngithub.com/direct/dep v1.0.0/go.mod h1:0000000000000000000000000000000000000000000000000000000000000000=\ngithub.com/indirect/dep v0.9.0 h1:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff=\ngithub.com/indirect/dep v0.9.0/go.mod h1:0000000000000000000000000000000000000000000000000000000000000000=\n")

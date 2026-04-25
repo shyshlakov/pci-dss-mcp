@@ -16,6 +16,7 @@ import (
 	"github.com/shyshlakov/pci-dss-mcp/scanner/panscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/reportscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/retentionscanner"
+	"github.com/shyshlakov/pci-dss-mcp/scanner/sbomscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/scriptscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/secretscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/tlsscanner"
@@ -58,7 +59,7 @@ func main() {
 
 	// Create MCP server.
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "pci-dss-mcp", Version: "v0.5.3"},
+		&mcp.Implementation{Name: "pci-dss-mcp", Version: "v0.6.2"},
 		&mcp.ServerOptions{Instructions: serverInstructions},
 	)
 
@@ -71,6 +72,7 @@ func main() {
 	errorscanner.RegisterTools(server)
 	panscanner.RegisterTools(server)
 	retentionscanner.RegisterTools(server)
+	sbomscanner.RegisterTools(server)
 	scriptscanner.RegisterTools(server)
 	secretscanner.RegisterTools(server)
 	tlsscanner.RegisterTools(server)

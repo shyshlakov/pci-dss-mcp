@@ -3,6 +3,7 @@
 
 # Binary
 pci-dss-mcp
+/sbomdump
 # IDE
 .idea/
 .vscode/
@@ -15,3 +16,6 @@ pci-dss-mcp
 # Claude Code personal
 CLAUDE.md
 .claude/
+
+# SBOM dogfood output (make sbom)
+dist/

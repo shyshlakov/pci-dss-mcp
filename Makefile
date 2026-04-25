@@ -1,5 +1,5 @@
 .PHONY: build test lint vet clean run build-fixture test-fixture scan-fixture \
-        tools fmt-check check ci validate-server-json docker-build-local docker-smoke fuzz
+        tools fmt-check check ci validate-server-json docker-build-local docker-smoke fuzz sbom test-sbom-validate
 
 BINARY := pci-dss-mcp
 MODULE := github.com/shyshlakov/pci-dss-mcp
@@ -65,7 +65,7 @@ fmt-check:
 # workflows do: gofmt, vet, golangci-lint, tests with -race, golden fixture
 # regression, build, and govulncheck. Any failure aborts the target so
 # contributors never push code that will turn a badge red.
-check: tools fmt-check vet lint test test-fixture build
+check: tools fmt-check vet lint test test-fixture build test-sbom-validate
 	$(GOBIN)/govulncheck ./...
 	@echo ""
 	@echo "All checks passed. Safe to push."
@@ -101,7 +101,8 @@ FUZZ_TARGETS := \
 	scanner/panscanner:FuzzLuhn \
 	scanner:FuzzWalker \
 	scanner/reportscanner:FuzzCursorDecode \
-	scanner/scriptscanner:FuzzScriptScannerHTML
+	scanner/scriptscanner:FuzzScriptScannerHTML \
+	scanner/sbomscanner:FuzzGoModSBOM
 
 FUZZTIME ?= 10s
 
@@ -114,3 +115,26 @@ fuzz:
 		go test -run=^$$ -fuzz=$$name -fuzztime=$(FUZZTIME) ./$$pkg || exit $$?; \
 	done
 	@echo "all fuzz targets completed"
+
+test-sbom-validate:
+	@mkdir -p /tmp
+	@go run ./internal/tools/sbomdump $(FIXTURE_DIR) > /tmp/fixture-20.2.sbom.json
+	@if command -v cyclonedx >/dev/null 2>&1; then \
+		echo ">> cyclonedx-cli (host)"; \
+		cyclonedx validate --input-file /tmp/fixture-20.2.sbom.json --input-format json --input-version v1_6 --fail-on-errors; \
+	elif command -v docker >/dev/null 2>&1; then \
+		echo ">> cyclonedx-cli (docker)"; \
+		docker run --rm --platform linux/amd64 -v /tmp:/tmp cyclonedx/cyclonedx-cli:0.30.0 \
+			validate --input-file /tmp/fixture-20.2.sbom.json --input-format json --input-version v1_6 --fail-on-errors; \
+	else \
+		echo "ERROR: neither cyclonedx CLI nor docker is available; install one of:"; \
+		echo "  brew install cyclonedx/cyclonedx-cli/cyclonedx-cli (macOS)"; \
+		echo "  https://github.com/CycloneDX/cyclonedx-cli/releases (binary)"; \
+		exit 1; \
+	fi
+	@echo "sbom-validate: passed (CycloneDX v1.6 schema)"
+
+sbom:
+	@mkdir -p dist
+	go run ./internal/tools/sbomdump . > dist/sbom.json
+	@echo "wrote dist/sbom.json ($$(wc -c < dist/sbom.json) bytes, $$(jq '.components | length' dist/sbom.json 2>/dev/null || echo '?') components)"

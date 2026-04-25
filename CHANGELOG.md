@@ -5,6 +5,108 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+### Fixed
+
+- Human-readable 6.3.2 cross-reference no longer includes an unknown-license count that depended on the local GOMODCACHE state. The line now reads `SBOM inventory: N components` only. Component count is deterministic from `go.mod`; the prior `N unknown-license` suffix varied across developer machines and CI runners, which caused spurious golden-snapshot diffs.
+- SBOM license acknowledgement corrected per CycloneDX 1.6 semantics: auto-detected licenses from scanning `LICENSE` files now report `acknowledgement: "concluded"` (verified by analysis) instead of `"declared"` (what authors stated). The previous value implied an upstream author declaration that pci-dss-mcp never observes.
+
+## [0.6.2] - 2026-04-24
+
+### Added
+
+- SBOM provenance metadata: every CycloneDX SBOM now carries `serialNumber` (urn:uuid v4), `metadata.timestamp` (RFC3339 UTC), `metadata.component` (the scanned project as the BOM subject with bom-ref + purl + name), and an enriched `metadata.tools.components[0]` block (name, version derived from `runtime/debug.ReadBuildInfo`, publisher, ExternalReferences for VCS + website, and a SHA-256 self-hash of the running pci-dss-mcp binary when not built from `go run`).
+- SPDX license detection via `github.com/google/licensecheck` v0.3.1 with a coverage threshold of 75 (matches `coverageThreshold = 75` in pkg.go.dev's production source). Detected licenses now emit valid SPDX identifiers (e.g., `MIT`, `Apache-2.0`, `BSD-3-Clause`) on `License.id` instead of the literal placeholder strings shipped in v0.6.1.
+- Reproducibility opt-in parameters on `generate_sbom`: `fixed_serial` (override the generated serialNumber; accepts bare UUID v4 or urn:uuid: form) and `no_timestamp` (omit `metadata.timestamp` for byte-reproducible SBOMs across runs). Use these to bind one SBOM identity to one release/build for VEX linking and audit pipelines.
+- `INVALID_FIXED_SERIAL` explicit error token (joins the existing `OUTPUT_PATH_*` family from v0.6.1).
+- License evidence trail per CycloneDX 1.6 `components[].evidence.licenses[]`: each detected license carries native `acknowledgement: "declared"` plus pci-dss-mcp-namespaced properties for confidence and source-file location.
+- CI standards-validation gate: new `make test-sbom-validate` target generates a fresh SBOM via the dogfood `sbomdump` CLI and validates it against the bom-1.6 schema using `cyclonedx-cli`. Wired into `.github/workflows/ci.yml` on ubuntu-latest.
+- sbomdump CLI flags: `-fixed-serial`, `-no-timestamp`, `-pretty`. Default output is now compact JSON to match the MCP tool's serializeSBOM path.
+- Synthetic license fixtures under `scanner/sbomscanner/testdata/license-fixtures/` covering MIT, Apache-2.0, BSD-3-Clause, dual MIT+Apache, no-license, garbage, and partial-coverage cases. Decouples license-detection unit tests from local `$GOMODCACHE` state.
+
+### Changed
+
+- **CycloneDX spec version: 1.5 -> 1.6.** All generated SBOMs now declare `specVersion: "1.6"`. Drove by the need for the native `License.acknowledgement` field which is not present in CycloneDX 1.5 (1.5 License objects are `additionalProperties: false`, so emitting `acknowledgement` against the 1.5 schema fails strict `cyclonedx-cli validate`). Downstream tools verified to support 1.6: cyclonedx-cli >= 0.27, syft 1.x, grype >= 0.74, trivy >= 0.50 (all released in 2024).
+- `generate_sbom` `OutputSchema` `spec_version` constant updated from `"1.5"` to `"1.6"`. Tool description text updated from "CycloneDX v1.5" to "CycloneDX v1.6".
+- `GenSBOMOutput.SpecVersion` field is now the literal string `"1.6"` in both file-output and inline-mode response shapes.
+- License placeholder strings `"DETECTED"` and `"UNKNOWN-LICENSE"` removed from the License.id field. Cache-miss / undetectable licenses now emit no License object at all and surface `pci-dss-mcp:license-status="unknown"` as a component property; the `unknown_licenses` counter in the response shape is unchanged.
+
+### Fixed
+
+- SPDX correctness: `License.id` no longer carries non-SPDX placeholder strings. Strict downstream validators (e.g., `cyclonedx-cli validate --fail-on-errors` against bom-1.6 schema) now accept our SBOMs.
+- Off-by-100 risk in license-coverage threshold: documented and pinned at `Coverage.Percent >= 75.0` (the licensecheck API returns the percent in 0..100, not 0..1).
+
+### Migration
+
+Clients that schema-validated their consumption of `generate_sbom` against the v0.6.1 OutputSchema constant `"spec_version": "1.5"` will need to update their consumer-side schema to `"1.6"`. Downstream SBOM consumers (Grype, Trivy, Snyk, dependency-track, VEX tooling) auto-detect the spec version from the SBOM's own `specVersion` field, no consumer change needed there. Clients that read `License.id == "UNKNOWN-LICENSE"` to detect license gaps must switch to checking `unknown_licenses` in the response (already populated since v0.6.1) or to checking for the `pci-dss-mcp:license-status` property on components without a `licenses[]` array.
+
+### Unchanged
+
+- Scanner detection logic. Fixture severity counts on `testdata/vulnerable-payment-service` remain 49 CRITICAL / 89 HIGH / 27 MEDIUM / 0 LOW / 59 INFO byte-for-byte with v0.6.1.
+- The `generate_sbom` parameter contract: existing parameters `path`, `format`, `output_path`, `inline` behave identically to v0.6.1. The two new parameters `fixed_serial` and `no_timestamp` are optional and default to the existing behavior (random urn:uuid v4 + current UTC timestamp).
+- All other 14 MCP tools.
+
+## [0.6.1] - 2026-04-24
+
+### Changed
+
+- `generate_sbom` now writes the CycloneDX document to disk by default and returns lightweight metadata instead of embedding the full SBOM inline. This matches the delivery model used by Syft, Trivy, Snyk, and cdxgen, and lifts the 64 KB cap that blocked v0.6.0 scans of large real-world Go projects (>1000 modules / several hundred KB).
+- New optional parameters on `generate_sbom`: `output_path` (absolute destination; default `{path}/sbom.json` or `.xml`) and `inline` (opt-in boolean; default false).
+- Default response shape (file mode) carries `mode="file"`, `output_path`, `size_bytes`, `component_count`, `unknown_licenses`, `format`, `generated_at`, `project_path`, `bom_format`, `spec_version`. No `serialized_bom` field in file mode.
+- New explicit error tokens: `OUTPUT_PATH_NOT_ABSOLUTE`, `OUTPUT_PATH_IS_DIRECTORY`, `OUTPUT_PATH_NOT_WRITABLE`, `DEFAULT_PATH_NOT_WRITABLE`. Clients and LLMs can pattern-match the token to surface a precise error.
+
+### Unchanged
+
+- `inline=true` preserves v0.6.0 behavior byte-for-byte: `serialized_bom` populated, 64 KB cap, `SBOM_TOO_LARGE` error on oversize.
+- Scanner detection logic. Fixture severity counts on `testdata/vulnerable-payment-service` remain 49 CRITICAL / 89 HIGH / 27 MEDIUM / 0 LOW / 59 INFO byte-for-byte with v0.6.0.
+- All other 14 MCP tools. Parameter schemas and OutputSchema shapes are identical to v0.6.0; only `generate_sbom` gained additive parameters.
+- Docker image label and MCP Registry identifier.
+
+### Migration
+
+Clients that called `generate_sbom(path, format)` in v0.6.0 and read the `serialized_bom` field from the response will see an empty `serialized_bom` in v0.6.1 (file mode is the new default). Two options:
+
+1. Preferred: switch to file mode. Read the SBOM from `output_path`. The response carries `size_bytes` so clients can sanity-check before `os.ReadFile`. This is the path downstream tools (Grype, Trivy) already use.
+2. Opt-out: pass `inline=true` explicitly. The v0.6.0 response shape is preserved exactly, including the 64 KB cap and `SBOM_TOO_LARGE` error path. Use this only when the MCP client has no filesystem access.
+
+Example. v0.6.0 call that relied on the inline default:
+
+```
+generate_sbom(path="/abs/project")   // returned serialized_bom in response
+```
+
+Equivalent v0.6.1 calls:
+
+```
+generate_sbom(path="/abs/project")                  // writes /abs/project/sbom.json; returns metadata only
+generate_sbom(path="/abs/project", inline=true)     // preserves v0.6.0 response shape
+```
+
+No schema break: every parameter added is optional, no existing parameter renamed or removed.
+
+### Semver
+
+- PATCH v0.6.0 -> v0.6.1. Additive parameters only; no MCP tool schema removal or rename. The default-behavior change is documented above under Migration. Clients that already passed `inline=true` explicitly need no code change.
+
+## [0.6.0] - 2026-04-24
+
+### Added
+
+- CycloneDX v1.5 SBOM generation via the new MCP tool `generate_sbom(path, format)`. Satisfies PCI DSS 6.3.2 (software inventory), which became mandatory on 2025-03-31. Accepts `path` (required, absolute Go project dir with go.mod) and optional `format: "json"` (default) / `"xml"`. Output is a compact (not pretty-printed) CycloneDX document plus metadata (component count, unknown-license count, format, generated_at, project_path). Works offline: `GOPROXY=off` + primed `$GOMODCACHE` still produces a valid SBOM; cache-miss modules surface as `UNKNOWN-LICENSE` property entries instead of silently dropping.
+- New package `scanner/sbomscanner/` exposes three public Go entry points for programmatic use alongside the MCP tool: `GenerateSBOM(ctx, path) (*SBOM, error)` for the full inventory, `InventoryProbe(path) (InventoryResult, error)` for the cheap 6.3.2 readiness check, and `RegisterTools(server)` for MCP wiring. Internal discovery uses `golang.org/x/mod/modfile` for go.mod parsing plus direct `go.sum` h1: SHA-256 base64 decoding - the same pattern `scanner/depscanner/` uses, avoiding a second go.mod parse implementation.
+- `generate_compliance_report` now carries PCI DSS 6.3.2 status: PASS when the project's go.mod parses cleanly and declares at least one dependency, FAIL otherwise. The `requirement_status["6.3.2"].cross_reference` field lists the component count and the cache-miss count. Before this release 6.3.2 was NOT_CHECKED because no scanner claimed it; the sbomscanner-inventory hook closes that gap.
+- `FuzzGoModSBOM` is the fifth fuzz target in the project. Exercises the full sbomscanner parsing stack - arbitrary fuzzed go.mod + go.sum bytes feed `listModules`, `hashFromH1Sum`, and `GenerateSBOM` in one pass. Seed corpus (5 seeds: minimal, fixture-derived, indirect-heavy, v2 module path, malformed) lives under `testdata/fuzz/FuzzGoModSBOM/`. Wired into `.github/workflows/ci.yml` (30s smoke per PR) and `.github/workflows/fuzz-nightly.yml` (30m nightly), matching the four existing targets' action-SHA pinning and cache-key conventions. `make fuzz` now runs all five targets.
+- `make sbom` Makefile target dogfoods the SBOM generator against the pci-dss-mcp source tree, writing `dist/sbom.json` for release attestation. The target runs a small `internal/tools/sbomdump` helper that re-uses the exported `sbomscanner.ToCycloneDX` converter and `cdx.NewBOMEncoder` so the generated file is standards-compliant CycloneDX v1.5 JSON (lowercase spec keys) rather than an internal-struct dump. Strengthens the OpenSSF Scorecard Signed-Releases story for downstream consumers.
+
+### Unchanged
+
+- Scanner detection logic. Fixture severity counts on `testdata/vulnerable-payment-service` remain 49 CRITICAL / 89 HIGH / 27 MEDIUM / 0 LOW / 59 INFO byte-for-byte with v0.5.3. The new SBOM emission is a report-level addition that does not touch any existing scanner's findings.
+- The 14 pre-v0.6.0 MCP tools. Tool names, parameter schemas, and OutputSchema shapes are identical to v0.5.3. `generate_sbom` is the 15th, additive surface.
+- Install paths: `go install github.com/shyshlakov/pci-dss-mcp@v0.6.0` and `docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.6.0` both produce byte-identical scan output on the fixture.
+
+### Semver
+
+- MINOR v0.5.3 -> v0.6.0. New public MCP tool (`generate_sbom`) is an additive surface change; no existing tool's input/output schema changed; no scanner behavior changed. MCP clients pinned to `v0` see the new tool appear in `tools/list` on first reconnect; clients pinned to `v0.5` continue working without seeing it.
+
 ## [0.5.3] - 2026-04-23
 
 ### Added

@@ -67,7 +67,7 @@ The binary lands at `$(go env GOPATH)/bin/pci-dss-mcp` and reads your source fil
 Pull the signed multi-arch image (linux/amd64 + linux/arm64):
 
 ```bash
-docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3
+docker pull ghcr.io/shyshlakov/pci-dss-mcp:v0.6.1
 ```
 
 The image carries a `go` runtime internally for taint analysis, so `include_taint: true` (the default) works without a host Go toolchain. Useful for CI pipelines, QSA auditors who do not develop Go locally, or any environment where you would rather not install a toolchain to run a scanner.
@@ -83,7 +83,7 @@ Listed in the official MCP Registry as `io.github.shyshlakov/pci-dss-mcp`. Query
 Every release image is signed with Sigstore keyless OIDC. To verify before use:
 
 ```bash
-DIGEST=$(docker buildx imagetools inspect ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3 --format '{{json .Manifest}}' | jq -r '.digest')
+DIGEST=$(docker buildx imagetools inspect ghcr.io/shyshlakov/pci-dss-mcp:v0.6.1 --format '{{json .Manifest}}' | jq -r '.digest')
 cosign verify ghcr.io/shyshlakov/pci-dss-mcp@$DIGEST \
   --certificate-identity-regexp '^https://github.com/shyshlakov/pci-dss-mcp/\.github/workflows/release-docker\.yml@refs/tags/v.+$' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
@@ -105,7 +105,7 @@ Edit `claude_desktop_config.json` (`~/Library/Application Support/Claude/` on ma
         "-i",
         "--rm",
         "--mount", "type=bind,src=/Users/you/go/src,dst=/Users/you/go/src,readonly",
-        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3"
+        "ghcr.io/shyshlakov/pci-dss-mcp:v0.6.1"
       ]
     }
   }
@@ -130,7 +130,7 @@ Register via the `claude mcp add` CLI:
 claude mcp add --scope user pci-dss-mcp -- \
   docker run -i --rm \
   --mount "type=bind,src=$HOME/go/src,dst=$HOME/go/src,readonly" \
-  ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3
+  ghcr.io/shyshlakov/pci-dss-mcp:v0.6.1
 ```
 
 This binds your entire `$GOPATH/src` tree at the same absolute path inside the container, so "scan this project" works on any repo under `$HOME/go/src` without path translation. Adjust `$HOME/go/src` if your Go workspace lives elsewhere.
@@ -154,7 +154,7 @@ Cursor supports [`${workspaceFolder}` substitution](https://cursor.com/docs/cont
         "-i",
         "--rm",
         "--mount", "type=bind,src=${workspaceFolder},dst=${workspaceFolder},readonly",
-        "ghcr.io/shyshlakov/pci-dss-mcp:v0.5.3"
+        "ghcr.io/shyshlakov/pci-dss-mcp:v0.6.1"
       ]
     }
   }
@@ -211,7 +211,7 @@ See [docs/usage.md](docs/usage.md) for more use cases: dependency checks, requir
 
 ## Tools
 
-pci-dss-mcp exposes **14 MCP tools**: 10 scanners, 1 orchestrator, 1 triage engine, 1 vulnerability DB updater, and 1 requirement lookup.
+pci-dss-mcp exposes **15 MCP tools**: 11 scanners, 1 orchestrator, 1 triage engine, 1 vulnerability DB updater, and 1 requirement lookup.
 
 | Tool | Description |
 |------|-------------|
@@ -227,10 +227,51 @@ pci-dss-mcp exposes **14 MCP tools**: 10 scanners, 1 orchestrator, 1 triage engi
 | `check_data_retention` | CVV/PAN storage without TTL, missing memory zeroing |
 | `check_payment_page_scripts` | CSP, SRI, nonce checks on Go handlers and HTML |
 | `check_dependencies` | Go dependency vulnerabilities via OSV.dev (offline-capable) |
+| `generate_sbom` | Generate CycloneDX v1.6 SBOM from go.mod + go.sum for PCI DSS 6.3.2 software inventory (offline-capable) |
 | `update_vulnerability_db` | Refresh the local OSV vulnerability cache for offline scans |
 | `explain_requirement` | Look up any PCI DSS v4.0.1 requirement |
 
 All tools declare typed `OutputSchema`. See [docs/tools.md](docs/tools.md) for parameters and example output.
+
+## SBOM workflow
+
+`generate_sbom` writes a CycloneDX v1.6 file by default so you can feed one SBOM into multiple downstream scanners (Grype, Trivy) without round-tripping bytes through MCP.
+
+Default behavior writes `{path}/sbom.json` (or `sbom.xml` when `format=xml`) and returns metadata only: `output_path`, `size_bytes`, `component_count`, `unknown_licenses`, `format`, `generated_at`, `project_path`, `bom_format`, `spec_version`, and `mode="file"`. No `serialized_bom` field is embedded in file mode, so the MCP response stays under ~400 bytes regardless of SBOM size.
+
+Override the destination with an absolute `output_path`:
+
+```
+generate_sbom(path="/abs/to/project", output_path="/abs/to/out/sbom.json")
+```
+
+Opt in to inline mode (SBOM bytes embedded in the MCP response, capped at 64 KB) when a client cannot read files from disk:
+
+```
+generate_sbom(path="/abs/to/project", inline=true)
+```
+
+Inline mode refuses oversized payloads with `SBOM_TOO_LARGE`; typical large real-world Go projects (>1000 modules) will need file output.
+
+Once the file is on disk, feed it into the downstream scanner of your choice. Both Grype and Trivy accept CycloneDX SBOMs directly:
+
+```sh
+# generate_sbom writes sbom.json next to go.mod
+grype sbom:./sbom.json
+trivy sbom ./sbom.json
+```
+
+The same file satisfies PCI DSS 6.3.2 software-inventory evidence.
+
+### Standards conformance
+
+The SBOM produced by `generate_sbom` is built and validated against the following standards. Each assertion is gated by CI:
+
+- **CycloneDX 1.6 JSON.** Format authority: `https://cyclonedx.org/docs/1.6/json/`. Schema-validated in CI via `cyclonedx-cli validate --input-version v1_6 --fail-on-errors`.
+- **SPDX License List v3.x.** License identifiers detected via the `github.com/google/licensecheck` v0.3.1 corpus, using the same `coverageThreshold = 75` value pkg.go.dev uses in production. Below-threshold or undetectable licenses surface as a `pci-dss-mcp:license-status="unknown"` property on the component, never as a fake SPDX identifier.
+- **NTIA Minimum Elements for SBOM (2021).** Covers 6 of 7 baseline data fields per component: Component Name, Version, Other Unique Identifiers (purl + SHA-256 hash), Author of SBOM Data (`metadata.tools.components[0]`), Timestamp (`metadata.timestamp`). The seventh element (Dependency Relationship) is intentionally deferred until Go-toolchain dependency-graph data becomes available; documented as a known gap in the roadmap.
+- **PCI DSS v4.0.1 §6.3.2.** Software-inventory requirement, fully required since 2025-03-31. The SBOM lists every direct and transitive Go dependency with version, hash, and detected SPDX license. The compliance report (`generate_compliance_report`) maps the SBOM artifact to PCI DSS 6.3.2 PASS/FAIL.
+- **Tool provenance.** Every SBOM identifies the producing tool (`pci-dss-mcp`) by name, version (derived from `runtime/debug.ReadBuildInfo`), source-repo URL, and SHA-256 self-hash. Auditors can verify the SBOM was produced by the exact binary they have on hand.
 
 ## Suppressing Findings
 
@@ -266,7 +307,7 @@ See [docs/severity.md](docs/severity.md) for the severity model.
 
 ## Coverage
 
-pci-dss-mcp checks **14 PCI DSS v4.0.1 requirements** across 10 scanners covering Requirements 3, 4, 6, 8, 10, and 11. This is approximately 6% of the ~251 PCI DSS v4.0.1 defined-approach sub-requirements.
+pci-dss-mcp checks **15 PCI DSS v4.0.1 requirements** across 11 scanners covering Requirements 3, 4, 6, 8, 10, and 11. This is approximately 6% of the ~251 PCI DSS v4.0.1 defined-approach sub-requirements.
 
 **Important:** Requirements outside scanner scope are marked `NOT_CHECKED` in the compliance report. `NOT_CHECKED` does not mean non-compliant — a QSA must verify these controls.
 
@@ -274,7 +315,7 @@ See [docs/pci-coverage.md](docs/pci-coverage.md) for the full coverage map.
 
 ## Documentation
 
-- [Tools Reference](docs/tools.md) — all 14 tools with parameters and example output
+- [Tools Reference](docs/tools.md) — all 15 tools with parameters and example output
 - [Severity Model](docs/severity.md) — CRITICAL / HIGH / MEDIUM / LOW / INFO classification
 - [Taint Analysis](docs/taint.md) — how taint-aware severity adjustment works
 - [Taint Scoping](docs/scoping.md) — when to use taint ON vs fast mode
@@ -294,7 +335,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the release history.
 ### Known limitations
 
 - **Go only** — no Python / Java / .NET support planned
-- **14 of ~250 PCI DSS v4.0.1 sub-requirements** covered (~5.6%) — the remaining ~94% require manual QSA review
+- **15 of ~250 PCI DSS v4.0.1 sub-requirements** covered (~6%) — the remaining ~94% require manual QSA review
 - **Taint analysis needs module cache** — falls back to AST-only on failure
 
 ## Contributing
@@ -303,7 +344,7 @@ Contributions welcome. Before opening a PR:
 
 1. **Run `make test`** — all 20+ packages must pass under `-race`
 2. **Run `make test-fixture`** — the golden fixture regression gate is binding for any scanner change
-3. **Run `make fuzz`** — 4-target smoke fuzz (Luhn, AST walker, cursor codec, HTML scanner), ~45 seconds wall time. Any new crash seed appearing under `testdata/fuzz/` blocks merge
+3. **Run `make fuzz`** — 5-target smoke fuzz (Luhn, AST walker, cursor codec, HTML scanner, go.mod/go.sum SBOM), ~55 seconds wall time. Any new crash seed appearing under `testdata/fuzz/` blocks merge
 4. **Match the atomic-commit convention** — conventional commit format (`feat(scope): ...`, `fix(scope): ...`)
 5. **No emoji in code, comments, or commit messages**
 
@@ -334,7 +375,7 @@ Smoke test locally with `make fuzz FUZZTIME=30s` before pushing. New crash seeds
 
 Planned features in rough priority order:
 
-- **SBOM generation (CycloneDX v1.5)** — PCI DSS 6.3.2 software inventory, works offline
+- **SBOM generation (CycloneDX v1.6)** — PCI DSS 6.3.2 software inventory, works offline
 - **Reachability-aware dependency scanning** — `govulncheck` integration, unreachable CVEs downgrade to INFO
 - **SARIF v2.1.0 output** — industry-standard format for CI pipelines and VS Code
 - **Semgrep adapter** — map Semgrep's 5000+ rules to PCI DSS requirements

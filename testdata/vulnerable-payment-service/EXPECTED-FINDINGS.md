@@ -1,7 +1,7 @@
 ---
 fixture_version: 1.11
-last_updated: 2026-04-21
-phase: 19.13
+last_updated: 2026-04-24
+phase: 20
 plan: 01
 total_intentional_violations: 157
 total_clean_patterns: 26
@@ -14,6 +14,13 @@ expected_summary:
  info: 59
 expected_active: 178
 expected_total_findings: 226
+expected_sbom_components: 40
+expected_sbom_format: cyclonedx-json
+expected_sbom_spec_version: "1.6"
+expected_sbom_serial_format: urn-uuid-v4
+expected_sbom_metadata_component: present
+expected_sbom_tools_self_hash: optional
+pci_6_3_2_status: PASS
 rules_coverage:
  panscanner: [PAN-KEYWORD, PAN-TYPE, PAN-LITERAL, PAN-LOGGER, PAN-ZEROING]
  cryptoscanner: [CRYPTO-WEAK-HASH, CRYPTO-HARDCODED-KEY, CRYPTO-PLAIN-HTTP]
@@ -314,3 +321,16 @@ fixture files change.
 | clean/webhook_signed/good_hmac_generic.go | B-22 T1 strong: hmac.Equal before json.Unmarshal — AUTH-WEBHOOK-VERIFIED INFO |
 | clean/webhook_signed/good_middleware_verified.go | B-22 middleware chain: VerifyWebhookSignatureMiddleware wrapper — AUTH-WEBHOOK-VERIFIED INFO |
 | clean/webhook_signed/webhook_with_local_helper.go | B-22 1-level recursion: local verifyStripeSignature helper with hmac.Equal — AUTH-WEBHOOK-VERIFIED INFO |
+
+## SBOM Generation (Phase 20)
+
+The SBOM contract verifies PCI DSS 6.3.2 (software inventory) coverage. Produced
+by `sbomscanner.GenerateSBOM` on the fixture root; serialized via the CycloneDX
+Go data model.
+
+- Tool: `generate_sbom` MCP tool; direct Go API `sbomscanner.GenerateSBOM(ctx, path)`
+- Format: CycloneDX v1.5 JSON (`bomFormat: "CycloneDX"`, `specVersion: "1.5"`)
+- Component count: >=40 (fixture resolves to ~47 unique direct + transitive modules; 40 is the floor per CONTEXT R-05)
+- Required fields per component: `name`, `version`, `purl`, `hashes` (SHA-256 from go.sum `h1:` lines); `licenses` best-effort per CONTEXT R-03
+- Offline-mode contract: SBOM generation MUST succeed with network blocked as long as `$GOMODCACHE` is primed for the fixture's modules; unknown licenses surface as the `UNKNOWN-LICENSE` property entry per CONTEXT R-03
+- PCI DSS 6.3.2 in `generate_compliance_report.requirement_status`: `PASS` on this fixture (go.mod present + parseable)

@@ -2,15 +2,22 @@ package reportscanner
 
 import (
 	"context"
+	"encoding/json"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/shyshlakov/pci-dss-mcp/pcidb"
 	"github.com/shyshlakov/pci-dss-mcp/scanner"
+	"github.com/shyshlakov/pci-dss-mcp/scanner/sbomscanner"
 )
+
+var urnUUIDv4Re = regexp.MustCompile(`^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 func TestVulnerablePaymentServiceFixture(t *testing.T) {
 	t.Parallel()
@@ -114,6 +121,198 @@ func TestVulnerablePaymentServiceFixture(t *testing.T) {
 					want.RuleID, want.FilePath, want.Line, want.RelatedRequirements, got.RelatedRequirements)
 			}
 		}
+	})
+
+	t.Run("sbom_generation", func(tt *testing.T) {
+		sbom, err := sbomscanner.GenerateSBOM(ctx, scanRoot)
+		if err != nil {
+			tt.Fatalf("GenerateSBOM failed: %v", err)
+		}
+		if sbom == nil {
+			tt.Fatal("GenerateSBOM returned nil SBOM")
+		}
+		if sbom.BOMFormat != "CycloneDX" {
+			tt.Errorf("BOMFormat: got %q want \"CycloneDX\"", sbom.BOMFormat)
+		}
+		if sbom.SpecVersion != "1.6" {
+			tt.Errorf("SpecVersion: got %q want \"1.6\"", sbom.SpecVersion)
+		}
+		if got := len(sbom.Components); got < 40 {
+			tt.Errorf("component count: got %d want >=40", got)
+		}
+		for i, c := range sbom.Components {
+			if c.Name == "" {
+				tt.Errorf("component[%d] missing Name", i)
+			}
+			if c.Version == "" {
+				tt.Errorf("component[%d] (%s) missing Version", i, c.Name)
+			}
+			if c.PURL == "" {
+				tt.Errorf("component[%d] (%s) missing PURL", i, c.Name)
+			}
+			hasSHA256 := false
+			for _, h := range c.Hashes {
+				if h.Algorithm == "SHA-256" && h.Content != "" {
+					hasSHA256 = true
+					break
+				}
+			}
+			if !hasSHA256 {
+				tt.Errorf("component[%d] (%s) missing SHA-256 hash", i, c.Name)
+			}
+		}
+
+		rawJSON, rawErr := sbomscanner.GenerateSBOMRawJSON(ctx, scanRoot, sbomscanner.SBOMOptions{})
+		if rawErr != nil {
+			tt.Fatalf("GenerateSBOMRawJSON: %v", rawErr)
+		}
+		var probe map[string]any
+		if jerr := json.Unmarshal(rawJSON, &probe); jerr != nil {
+			tt.Fatalf("re-parse rawJSON: %v", jerr)
+		}
+		if probe["specVersion"] != "1.6" {
+			tt.Errorf("rawJSON specVersion: got %v want 1.6", probe["specVersion"])
+		}
+		serial, _ := probe["serialNumber"].(string)
+		if !urnUUIDv4Re.MatchString(serial) {
+			tt.Errorf("serialNumber: got %q want urn:uuid v4 form", serial)
+		}
+		md, _ := probe["metadata"].(map[string]any)
+		if md == nil {
+			tt.Fatal("metadata block missing")
+		}
+		ts, _ := md["timestamp"].(string)
+		if ts == "" {
+			tt.Error("metadata.timestamp empty")
+		} else if _, err := time.Parse(time.RFC3339, ts); err != nil {
+			tt.Errorf("metadata.timestamp not RFC3339: %v", err)
+		}
+		mc, _ := md["component"].(map[string]any)
+		if mc == nil {
+			tt.Fatal("metadata.component missing")
+		}
+		if mc["bom-ref"] != mc["purl"] {
+			tt.Errorf("metadata.component bom-ref (%v) != purl (%v)", mc["bom-ref"], mc["purl"])
+		}
+		mainPURL, _ := mc["purl"].(string)
+		tools, _ := md["tools"].(map[string]any)
+		toolComps, _ := tools["components"].([]any)
+		if len(toolComps) == 0 {
+			tt.Fatal("metadata.tools.components empty")
+		}
+		firstTool, _ := toolComps[0].(map[string]any)
+		if firstTool["name"] != "pci-dss-mcp" {
+			tt.Errorf("first tool name: got %v want pci-dss-mcp", firstTool["name"])
+		}
+		rawComponents, _ := probe["components"].([]any)
+		for _, raw := range rawComponents {
+			c, _ := raw.(map[string]any)
+			if cp, _ := c["purl"].(string); cp != "" && cp == mainPURL {
+				tt.Errorf("main module purl %q must not appear in bom.Components", cp)
+			}
+		}
+
+		rs, ok := report.RequirementStatus["6.3.2"]
+		if !ok {
+			tt.Fatal("report.RequirementStatus missing key \"6.3.2\"")
+		}
+		if rs.Status != "PASS" {
+			tt.Errorf("6.3.2 status: got %q want \"PASS\"", rs.Status)
+		}
+		if !strings.Contains(rs.CrossReference, "components") {
+			tt.Errorf("6.3.2 CrossReference: got %q want substring \"components\"", rs.CrossReference)
+		}
+
+		tt.Run("default_file_output", func(ttt *testing.T) {
+			res, raw, err := sbomscanner.HandleGenerateSBOM(ctx, &mcp.CallToolRequest{}, sbomscanner.GenSBOMInput{Path: scanRoot})
+			if err != nil {
+				ttt.Fatalf("handler: %v", err)
+			}
+			if res.IsError {
+				ttt.Fatalf("handler returned IsError: %s", firstText(res))
+			}
+			out, ok := raw.(*sbomscanner.GenSBOMOutput)
+			if !ok {
+				ttt.Fatalf("raw type: got %T want *sbomscanner.GenSBOMOutput", raw)
+			}
+			wantPath := filepath.Join(scanRoot, "sbom.json")
+			if out.OutputPath != wantPath {
+				ttt.Errorf("OutputPath: got %q want %q", out.OutputPath, wantPath)
+			}
+			if out.SerializedBOM != "" {
+				ttt.Errorf("SerializedBOM: expected empty in file-output mode, got %d bytes", len(out.SerializedBOM))
+			}
+			if out.ComponentCount < 40 {
+				ttt.Errorf("ComponentCount: got %d want >=40", out.ComponentCount)
+			}
+			if out.SizeBytes <= 0 {
+				ttt.Errorf("SizeBytes: got %d want >0", out.SizeBytes)
+			}
+			body, rerr := os.ReadFile(wantPath)
+			if rerr != nil {
+				ttt.Fatalf("read sbom file: %v", rerr)
+			}
+			if len(body) == 0 {
+				ttt.Fatalf("sbom file is empty")
+			}
+			var probe map[string]any
+			if jerr := json.Unmarshal(body, &probe); jerr != nil {
+				ttt.Fatalf("sbom file not valid json: %v", jerr)
+			}
+			if probe["bomFormat"] != "CycloneDX" {
+				ttt.Errorf("bomFormat: got %v want CycloneDX", probe["bomFormat"])
+			}
+			if probe["specVersion"] != "1.6" {
+				ttt.Errorf("specVersion: got %v want 1.6", probe["specVersion"])
+			}
+			comps, _ := probe["components"].([]any)
+			if len(comps) < 40 {
+				ttt.Errorf("components count: got %d want >=40", len(comps))
+			}
+			diskSerial, _ := probe["serialNumber"].(string)
+			if !urnUUIDv4Re.MatchString(diskSerial) {
+				ttt.Errorf("disk serialNumber: got %q want urn:uuid v4 form", diskSerial)
+			}
+			diskMD, _ := probe["metadata"].(map[string]any)
+			if diskMD == nil {
+				ttt.Fatal("disk metadata block missing")
+			}
+			if dmc, _ := diskMD["component"].(map[string]any); dmc == nil || dmc["bom-ref"] != dmc["purl"] {
+				ttt.Errorf("disk metadata.component bom-ref/purl mismatch or missing")
+			}
+			if dts, _ := diskMD["timestamp"].(string); dts == "" {
+				ttt.Error("disk metadata.timestamp empty")
+			} else if _, terr := time.Parse(time.RFC3339, dts); terr != nil {
+				ttt.Errorf("disk metadata.timestamp not RFC3339: %v", terr)
+			}
+		})
+
+		tt.Run("inline_opt_in", func(ttt *testing.T) {
+			res, raw, err := sbomscanner.HandleGenerateSBOM(ctx, &mcp.CallToolRequest{}, sbomscanner.GenSBOMInput{Path: scanRoot, Inline: true})
+			if err != nil {
+				ttt.Fatalf("handler: %v", err)
+			}
+			if res.IsError {
+				ttt.Fatalf("handler returned IsError: %s", firstText(res))
+			}
+			out, ok := raw.(*sbomscanner.GenSBOMOutput)
+			if !ok {
+				ttt.Fatalf("raw type: got %T want *sbomscanner.GenSBOMOutput", raw)
+			}
+			if out.SerializedBOM == "" {
+				ttt.Errorf("SerializedBOM: expected non-empty in inline mode")
+			}
+			if out.ComponentCount < 40 {
+				ttt.Errorf("ComponentCount: got %d want >=40", out.ComponentCount)
+			}
+			if out.OutputPath != "" {
+				ttt.Errorf("OutputPath: expected empty in inline mode, got %q", out.OutputPath)
+			}
+			var probe map[string]any
+			if jerr := json.Unmarshal([]byte(out.SerializedBOM), &probe); jerr != nil {
+				ttt.Fatalf("inline SerializedBOM not valid json: %v", jerr)
+			}
+		})
 	})
 }
 
@@ -317,4 +516,14 @@ func TestReportToolDescription_LayerAHistogramNeedle(t *testing.T) {
 			t.Errorf("generate_compliance_report description missing substring %q", n)
 		}
 	}
+}
+
+func firstText(res *mcp.CallToolResult) string {
+	if res == nil || len(res.Content) == 0 {
+		return ""
+	}
+	if t, ok := res.Content[0].(*mcp.TextContent); ok {
+		return t.Text
+	}
+	return ""
 }

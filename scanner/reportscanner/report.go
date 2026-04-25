@@ -121,6 +121,7 @@ func (g *ReportGenerator) GenerateWithOptions(ctx context.Context, targetPath st
 
 	requirementStatus := g.buildRequirementStatus(coveredReqs, reqMap, suppressionResults)
 	propagateCrossReferences(requirementStatus, relatedReqPrimary)
+	addSBOMInventoryStatus(requirementStatus, targetPath)
 
 	reportFindings, suppressions := buildReportFindings(g.db, suppressionResults, findingScannerNames)
 	sort.SliceStable(reportFindings, func(i, j int) bool {
