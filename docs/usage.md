@@ -2,7 +2,7 @@
 
 Prompt templates to paste into any MCP-capable client. All examples assume the agent will invoke pci-dss-mcp tools automatically.
 
-For the four most common workflows (triage overview, focused drill-in, rule-specific triage, plain report), see the [README Use Cases section](../README.md#use-cases).
+For the most common workflows (dependency vulnerability check, requirement explanation, real-world triage, subdirectory scan, audit-ready report), see the prompt templates listed below in this page.
 
 ## Dependency vulnerability check
 
@@ -12,7 +12,7 @@ HIGH or CRITICAL CVE, show the fix command and the PCI DSS remediation
 SLA (30 days for HIGH).
 ```
 
-Triggers `check_dependencies` against OSV.dev. Works offline against a warm `~/.cache/osv` if you run `update_vulnerability_db` first.
+Triggers `check_dependencies` against OSV.dev. Works offline against a warm `~/.pci-dss-mcp/vuln-cache/` (override via `PCI_MCP_CACHE_DIR`) if you run `update_vulnerability_db` first.
 
 ## Explain a specific requirement
 
@@ -56,3 +56,25 @@ HIGH/CRITICAL.
 ```
 
 `NOT_CHECKED` requirements are not non-compliant -- they're outside the scanner's static-analysis scope and must be verified manually by a QSA.
+
+## Suppressing findings
+
+Add `pci-ignore` comments to suppress known false positives:
+
+```go
+var testKey = "not-a-real-key" // pci-ignore: test fixture
+```
+
+```yaml
+api_key: test-key-123  # pci-ignore: non-production test config
+```
+
+Or use a `.pci-dss-mcp-ignore` file in the project root:
+
+```
+testdata/**
+config/test.json:*
+config/prod.json:15
+```
+
+Suppressed findings appear as `SUPPRESSED` in reports, **never silently dropped**. Auditors must see what was suppressed and why.

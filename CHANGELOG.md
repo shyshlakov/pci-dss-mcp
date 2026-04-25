@@ -10,6 +10,26 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 - Human-readable 6.3.2 cross-reference no longer includes an unknown-license count that depended on the local GOMODCACHE state. The line now reads `SBOM inventory: N components` only. Component count is deterministic from `go.mod`; the prior `N unknown-license` suffix varied across developer machines and CI runners, which caused spurious golden-snapshot diffs.
 - SBOM license acknowledgement corrected per CycloneDX 1.6 semantics: auto-detected licenses from scanning `LICENSE` files now report `acknowledgement: "concluded"` (verified by analysis) instead of `"declared"` (what authors stated). The previous value implied an upstream author declaration that pci-dss-mcp never observes.
 
+### Changed
+
+- Documentation reorganized: each MCP tool now has a dedicated reference page under `docs/<tool>.md` (snake_case filenames matching tool names). The `README.md` is slimmed to a landing page (TL;DR claim, install command, 5-minute quickstart, tool index, badges). The previous monolithic `docs/tools.md` becomes a catalog index plus migration history; per-tool sections and synthetic example outputs are dropped (live golden findings live in `testdata/vulnerable-payment-service/EXPECTED-FINDINGS.md`).
+- `docs/pci-coverage.md`: corrected coverage count and added the missing PCI DSS 6.3.2 row covering SBOM emission via sbomscanner.
+- `docs/ci-cd.md`: corrected `@v1.0.0` Docker image tag references (project is at v0.6.2).
+- `docs/scoping.md`: filled in placeholder version strings in the `exclude-package` and taint-on-by-default mentions.
+- `docs/usage.md`: corrected the OSV vulnerability cache directory path to the actual default `~/.pci-dss-mcp/vuln-cache/`.
+- `CONTRIBUTING.md`: appended `## Adding a new fuzz target` and `## Running fuzz` sections (moved from README).
+- `docs/install-from-source.md`: appended `## Cosign verification (optional)` and `## Reloading after a rebuild` sections (moved from README).
+
+### Added
+
+- New repo-root `ROADMAP.md` (extracted from `README.md`).
+- New `scripts/docs-check.sh` plus `make docs-check` Makefile target plus `make docs-check-self-test` meta-test target. Advisory drift gate that asserts documented parameter names and error tokens still exist in scanner source code; CI step `docs-check (advisory)` after `make test` calls `make docs-check || true`.
+- New per-tool reference pages under `docs/`: `scan_pan_data.md`, `check_encryption.md`, `check_tls_config.md`, `check_secrets_in_configs.md`, `check_error_handling.md`, `check_auth_strength.md`, `audit_log_coverage.md`, `check_data_retention.md`, `check_payment_page_scripts.md`, `check_dependencies.md` (companion `update_vulnerability_db` covered inside), `generate_compliance_report.md`, `triage_findings.md`, `explain_requirement.md`, `generate_sbom.md`.
+
+### Deferred (out of scope; tracked as follow-up)
+
+- `testdata/vulnerable-payment-service/EXPECTED-FINDINGS.md` line 332 still reads `CycloneDX v1.5 JSON` while live emission is `1.6`. The fix requires a fixture edit and is out of scope for this docs-only phase. Tracked for the next SBOM-related phase or hotfix (AUDIT row A-47).
+
 ## [0.6.2] - 2026-04-24
 
 ### Added

@@ -39,6 +39,8 @@ Other tools listed here -- Semgrep, CodeQL, gosec, Snyk Code -- are not MCP serv
 
 pci-dss-mcp is a plain Go binary that can run fully air-gapped. Twelve of the thirteen scanners are pure static analysis with zero network I/O. The one exception is `check_dependencies`, which defaults to `auto` mode (online OSV fetch with offline fallback); set `dep_scan_mode=offline` to force the local OSV cache path -- refreshable on a connected host via `update_vulnerability_db`, then carried into the isolated environment. This makes pci-dss-mcp usable in fintech CI/CD, bank networks, and isolated compliance environments where LLM-driven agents that call a hosted model cannot reach a backend.
 
+Note that v0.6.x added sbomscanner, which depends on a populated GOMODCACHE on the host filesystem (not network), and depscanner additionally has an online OSV API mode (offline mode falls back to the local cache). Both surfaces remain compatible with air-gapped operation: sbomscanner needs only a one-time `go mod download` against the target's go.sum on a connected host before the cache is carried into the isolated environment, and depscanner respects `dep_scan_mode=offline`.
+
 (Semgrep CLI, CodeQL CLI, and gosec also run offline -- this is table stakes for non-LLM SAST tools. The differentiator is specifically against LLM-based code-review agents that require a hosted model API at runtime.)
 
 ## Feature comparison (verified against public sources)

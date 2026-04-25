@@ -1,5 +1,6 @@
 .PHONY: build test lint vet clean run build-fixture test-fixture scan-fixture \
-        tools fmt-check check ci validate-server-json docker-build-local docker-smoke fuzz sbom test-sbom-validate
+        tools fmt-check check ci validate-server-json docker-build-local docker-smoke fuzz sbom test-sbom-validate \
+        docs-check docs-check-self-test
 
 BINARY := pci-dss-mcp
 MODULE := github.com/shyshlakov/pci-dss-mcp
@@ -138,3 +139,19 @@ sbom:
 	@mkdir -p dist
 	go run ./internal/tools/sbomdump . > dist/sbom.json
 	@echo "wrote dist/sbom.json ($$(wc -c < dist/sbom.json) bytes, $$(jq '.components | length' dist/sbom.json 2>/dev/null || echo '?') components)"
+
+docs-check:
+	@bash scripts/docs-check.sh
+
+docs-check-self-test:
+	@bash scripts/docs-check-self-test.sh > /tmp/docs-check-self-test.out 2>&1; \
+		actual=$$(grep '^WARN:' /tmp/docs-check-self-test.out | sort); \
+		expected=$$(sort < scripts/testdata/docs-check-fixture/expect.txt); \
+		if [ "$$actual" = "$$expected" ]; then \
+			echo "docs-check-self-test: PASS"; \
+		else \
+			echo "docs-check-self-test: FAIL"; \
+			echo "expected:"; echo "$$expected"; \
+			echo "actual:"; echo "$$actual"; \
+			exit 1; \
+		fi

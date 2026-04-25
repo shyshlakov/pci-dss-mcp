@@ -30,7 +30,7 @@ test still asserts the rule_id exists in source).
 | CSP-UNSAFE-INLINE | 6.4.3 |  | scriptscanner | full | unsafe-inline defeats the 6.4.3 authorization clause |
 | CSP-VALUE-UNANALYZABLE | 6.4.3 |  | scriptscanner | partial (static-only, needs QSA) | CSP value set from a non-literal; static analysis cannot verify correctness |
 | DEP-CACHE-STALE | 6.3.3 |  | depscanner | partial (static-only, needs QSA) | meta-finding; warns about stale vuln cache, not a direct 6.3.3 violation |
-| DEP-VULN | 6.3.3 |  | depscanner | full | direct OSV.dev CVE match is a direct 6.3.3 violation under v4.0.1 patch SLAs |
+| DEP-VULN | 6.3.3 |  | depscanner | full | direct OSV.dev CVE match is a direct 6.3.3 violation under v4.0.1 patch SLAs; complementary 6.3.2 inventory of bespoke and custom software is provided by sbomscanner.GenerateSBOM (no rule_id, emission deliverable; see generate_sbom.md) |
 | ERR-LEAK-DIRECT | 6.2.4 |  | errorscanner | full | direct err.Error() to response in payment context falls under 6.2.4 improper-error-handling |
 | ERR-LEAK-ENCODE | 6.2.4 |  | errorscanner | full | encoding an error struct into the response body falls under 6.2.4 improper-error-handling |
 | ERR-LEAK-FORMAT | 6.2.4 |  | errorscanner | full | fmt.Sprintf("%v", err) propagating to response falls under 6.2.4 improper-error-handling |

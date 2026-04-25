@@ -1,0 +1,2 @@
+WARN: scripts/testdata/docs-check-fixture/docs/dummy_tool.md mentions param 'fake_param' not found in scripts/testdata/docs-check-fixture/scanner/dummytool/tool.go OutputSchema
+WARN: scripts/testdata/docs-check-fixture/docs/dummy_tool.md mentions error token 'PLANTED_DRIFT_TOKEN' not found in scripts/testdata/docs-check-fixture/scanner/dummytool/tool.go

@@ -137,3 +137,11 @@ Context affects confidence, not severity. Both high-confidence and low-confidenc
 |---------|----------|-------------|-------------|
 | DEP-VULN | varies | 6.3.3 | Known vulnerability in dependency (severity from CVSS) |
 | DEP-CACHE-STALE | LOW | 6.3.3 | Vulnerability cache is older than 7 days |
+
+## Why INFO findings matter
+
+pci-dss-mcp never silently skips a detected pattern. When the scanner finds a sensitive pattern **and** verifies it is safe (e.g. transit-only DTO, banking domain context, dev-context secret, encrypted storage), it emits the finding as INFO instead of dropping it. This means:
+
+- **For developers:** INFO findings confirm the scanner checked your code. No action required.
+- **For auditors:** INFO findings provide an audit trail of what was evaluated.
+- **For CI pipelines:** filter on `min_severity: "HIGH"` for pass/fail gates, but preserve INFO in the full report for audit evidence.
