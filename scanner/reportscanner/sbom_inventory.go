@@ -30,7 +30,7 @@ func addSBOMInventoryStatus(requirementStatus map[string]RequirementStatus, proj
 	default:
 		rs.Status = "PASS"
 		rs.FindingCount = 0
-		rs.CrossReference = fmt.Sprintf("SBOM inventory: %d components, %d unknown-license", res.ComponentCount, res.UnknownLicenseCount)
+		rs.CrossReference = fmt.Sprintf("SBOM inventory: %d components", res.ComponentCount)
 	}
 	requirementStatus[sbomRequirementID] = rs
 }

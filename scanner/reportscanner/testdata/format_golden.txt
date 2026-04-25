@@ -1417,7 +1417,7 @@ Cross-Referenced Requirements:
   FAIL 2.2.7 -- Covered by same finding (see 4.2.1)
   FAIL 3.3.1.2 -- Covered by same finding (see 3.3.1)
   FAIL 4.2.1.1 -- Covered by same finding (see 4.2.1)
-  PASS 6.3.2 -- SBOM inventory: 58 components, 21 unknown-license
+  PASS 6.3.2 -- SBOM inventory: 58 components
   FAIL 8.6.1 -- Covered by same finding (see 8.4.2)
 
 NOTE: NOT_CHECKED != non-compliant. Static analysis cannot verify these controls.

@@ -5,6 +5,10 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+### Fixed
+
+- Human-readable 6.3.2 cross-reference no longer includes an unknown-license count that depended on the local GOMODCACHE state. The line now reads `SBOM inventory: N components` only. Component count is deterministic from `go.mod`; the prior `N unknown-license` suffix varied across developer machines and CI runners, which caused spurious golden-snapshot diffs.
+
 ## [0.6.2] - 2026-04-24
 
 ### Added
