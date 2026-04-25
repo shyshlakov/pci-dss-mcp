@@ -98,10 +98,6 @@ func pickBestMatch(matches []licensecheck.Match) licensecheck.Match {
 	return best
 }
 
-func findLicenseFile(modulePath, version string) (string, bool) {
-	return findLicenseFileIn(resolveGomodcache(), modulePath, version)
-}
-
 func findLicenseFileIn(gomodcache, modulePath, version string) (string, bool) {
 	if gomodcache == "" {
 		return "", false
