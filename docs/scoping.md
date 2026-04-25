@@ -6,8 +6,8 @@ functions should be analyzed for payment-specific compliance rules
 scorer is deliberately **recall-biased**: it prefers to emit a finding you
 can triage over silently skipping code that might contain a real PCI DSS
 violation. On a pure payment service this is exactly what you want. On a
-mixed-domain project — a codebase that contains both payment code AND
-something the scorer can plausibly confuse with payment code — you will
+mixed-domain project (a codebase that contains both payment code AND
+something the scorer can plausibly confuse with payment code), you will
 occasionally see findings on genuinely non-payment packages.
 
 This page explains how to scope pci-dss-mcp down when that happens, without
@@ -18,7 +18,7 @@ suppressing individual findings one-by-one.
 Add a `.pci-dss-mcp-ignore` file at your project root with one or more
 `exclude-package:` directives. Each directive is a glob pattern against the
 package directory relative to the project root. Matching packages are
-**short-circuited** — pci-dss-mcp does not parse any files inside them.
+**short-circuited**: pci-dss-mcp does not parse any files inside them.
 
 **Glob syntax:**
 
@@ -32,7 +32,7 @@ package directory relative to the project root. Matching packages are
 exactly which packages were scoped out and the count of findings dropped.
 Silent scope reduction is not possible.
 
-## Example 1 — Card game with a `/card/` package
+## Example 1: Card game with a `/card/` package
 
 A chess/poker/blackjack engine lives at `internal/card/`. The scorer treats
 `/card/` as payment context (signal 2, +2) because real payment services use
@@ -52,7 +52,7 @@ entry per matched pattern:
 SUPPRESSED-PACKAGE  INFO  internal/card/**  Package pattern "internal/card/**" excluded by .pci-dss-mcp-ignore (dropped N findings).
 ```
 
-## Example 2 — Multi-service monorepo with billing + user profiles
+## Example 2: Multi-service monorepo with billing + user profiles
 
 A monorepo contains `services/billing/` (real payment code, in scope) and
 `services/user-profile/` (handles user metadata, out of scope). Payment
@@ -69,23 +69,23 @@ All payment-context findings inside `services/billing/` continue to fire.
 Everything under the excluded service directories is skipped before parsing,
 which is also a measurable performance win on large monorepos.
 
-## Example 3 — Shared `pkg/models/` with a `Card` struct
+## Example 3: Shared `pkg/models/` with a `Card` struct
 
 A shared types package at `pkg/models/` defines a `Card` struct used by both
 payment services (in scope) AND non-payment services (out of scope). Because
-pci-dss-mcp is a static analyzer, it cannot know which consumers are in-scope —
+pci-dss-mcp is a static analyzer, it cannot know which consumers are in-scope:
 it flags every consumer that imports the package. The fix is to exclude the
 non-payment consumers, not the shared types:
 
 ```
 # .pci-dss-mcp-ignore
-# Shared types stay in scope — they are the CDE boundary
+# Shared types stay in scope: they are the CDE boundary
 exclude-package: services/inventory/**
 exclude-package: services/catalog/**
 exclude-package: services/analytics/**
 ```
 
-The shared `pkg/models/` IS in scope — its contents are cardholder data type
+The shared `pkg/models/` IS in scope: its contents are cardholder data type
 definitions, and any consumer that imports them inherits the PCI DSS handling
 responsibility. Exclude only the specific consumers you have determined via
 architectural review to be out-of-scope (e.g. tokenized-data-only readers).
@@ -108,7 +108,7 @@ catastrophes and false positives (noise on game code) are inconveniences. We
 prefer the noise plus ergonomic exclusion over silent skips.
 
 If you find yourself editing `.pci-dss-mcp-ignore` every day to suppress
-individual findings, that is a signal the scoring is wrong — please file
+individual findings, that is a signal the scoring is wrong: please file
 an issue with the false-positive pattern so we can trim the signal weights
 per the deterministic trim sequence captured in
 `internal/keywords/payment_context_calibration_test.go`.
@@ -129,10 +129,10 @@ dropped. Share this with your QSA so the audit trail is explicit.
 
 The following suppression mechanisms are complementary to `exclude-package:`:
 
-- `rule: <RULE-ID> path: <path>` — suppress specific finding types in specific paths (existing).
-- `<glob>:*` or `<glob>:N` — file-level or line-level suppression (existing).
-- Inline `// pci-ignore: <reason>` comments — suppress individual findings at the source line (existing).
-- `exclude-package: <glob>` — short-circuit package-level scanning (new in ).
+- `rule: <RULE-ID> path: <path>`: suppress specific finding types in specific paths (existing).
+- `<glob>:*` or `<glob>:N`: file-level or line-level suppression (existing).
+- Inline `// pci-ignore: <reason>` comments: suppress individual findings at the source line (existing).
+- `exclude-package: <glob>`: short-circuit package-level scanning (new in v0.5.0).
 
 Use `exclude-package:` when an entire package is out-of-scope. Use the other
 mechanisms when only specific findings or files need scoping. Both kinds of
@@ -143,16 +143,18 @@ intact.
 
 The taint engine improves report precision by downgrading
 transit-only cardholder-data findings (CHD in request bodies that get
-tokenized and returned masked) from HIGH/MEDIUM to INFO. As of
+tokenized and returned masked) from HIGH/MEDIUM to INFO. As of v0.5.0,
 taint analysis is **ON by default** for production scans.
 
 **Use taint-ON (default) for:**
 
 - CI/CD pipelines and pre-merge gates
 - QSA audit scans -- auditors must see the precision-adjusted report
-- Compliance reports shared with stakeholders
-  from 14 HIGH / 7 MEDIUM under taint-OFF to 5 HIGH / 3 MEDIUM under
-  taint-ON, eliminating 9 HIGH + 4 MEDIUM transit-only false positives)
+- Compliance reports shared with stakeholders. On a representative real-world
+  internal scan baseline, taint-ON brought severity counts from about
+  14 HIGH / 7 MEDIUM under taint-OFF down to about 5 HIGH / 3 MEDIUM,
+  eliminating roughly 9 HIGH + 4 MEDIUM transit-only false positives.
+  Exact numbers vary by codebase.
 
 **Use taint-OFF (opt-out) for:**
 
