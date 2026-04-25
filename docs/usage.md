@@ -56,3 +56,25 @@ HIGH/CRITICAL.
 ```
 
 `NOT_CHECKED` requirements are not non-compliant -- they're outside the scanner's static-analysis scope and must be verified manually by a QSA.
+
+## Suppressing findings
+
+Add `pci-ignore` comments to suppress known false positives:
+
+```go
+var testKey = "not-a-real-key" // pci-ignore: test fixture
+```
+
+```yaml
+api_key: test-key-123  # pci-ignore: non-production test config
+```
+
+Or use a `.pci-dss-mcp-ignore` file in the project root:
+
+```
+testdata/**
+config/test.json:*
+config/prod.json:15
+```
+
+Suppressed findings appear as `SUPPRESSED` in reports, **never silently dropped**. Auditors must see what was suppressed and why.
