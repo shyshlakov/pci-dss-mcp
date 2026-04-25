@@ -37,7 +37,7 @@ macOS tags unsigned binaries with a `com.apple.provenance` attribute that can ca
 codesign --force --sign - "$(which pci-dss-mcp)"
 ```
 
-The Docker path does not hit this issue — the provenance attribute applies only to host-native binaries.
+The Docker path does not hit this issue. The provenance attribute applies only to host-native binaries.
 
 ## Verify the binary runs
 
@@ -65,3 +65,22 @@ Use this JSON variant in place of the Docker block in any of the Usage sections 
 ```
 
 For Cursor add `"type": "stdio"` next to `"command"`. For Claude Code use `claude mcp add --scope user pci-dss-mcp -- "$(which pci-dss-mcp)"` instead of a JSON file.
+
+## Cosign verification (optional)
+
+Every release image is signed with Sigstore keyless OIDC. To verify before use:
+
+```bash
+DIGEST=$(docker buildx imagetools inspect ghcr.io/shyshlakov/pci-dss-mcp:v0.6.2 --format '{{json .Manifest}}' | jq -r '.digest')
+cosign verify ghcr.io/shyshlakov/pci-dss-mcp@$DIGEST \
+  --certificate-identity-regexp '^https://github.com/shyshlakov/pci-dss-mcp/\.github/workflows/release-docker\.yml@refs/tags/v.+$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+Install cosign locally with `brew install cosign` (macOS) or see [sigstore/cosign](https://github.com/sigstore/cosign#installation).
+
+## Reloading after a rebuild
+
+- **Claude Desktop:** quit and relaunch
+- **Claude Code:** `/mcp reload` or restart session
+- **Cursor:** restart Cursor
