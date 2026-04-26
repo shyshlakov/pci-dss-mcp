@@ -1,6 +1,8 @@
 # Glama badge preview
 
-Pick one of the two glama badge variants below. After you decide, this file gets deleted in the same PR and only the chosen variant lands in `README.md`.
+Pick one of the three glama badge variants below. After you decide, this file gets deleted in the same PR and only the chosen variant lands in `README.md`.
+
+**Also dropping in this PR:** the `CI` badge and the `Release` badge. CI green/red is visible in the GitHub Actions tab; latest release is shown in the GitHub repo right sidebar (no need to duplicate either signal in the README badge block).
 
 ---
 
@@ -16,10 +18,9 @@ Pick one of the two glama badge variants below. After you decide, this file gets
 [![License: MIT](https://img.shields.io/github/license/shyshlakov/pci-dss-mcp)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/shyshlakov/pci-dss-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/shyshlakov/pci-dss-mcp)
 [![pci-dss-mcp MCP server](https://glama.ai/mcp/servers/shyshlakov/pci-dss-mcp/badges/score.svg)](https://glama.ai/mcp/servers/shyshlakov/pci-dss-mcp)
-[![Release](https://img.shields.io/github/v/release/shyshlakov/pci-dss-mcp?label=release)](https://github.com/shyshlakov/pci-dss-mcp/releases/latest)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-io.github.shyshlakov%2Fpci--dss--mcp-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=pci-dss-mcp)
 
-**Pros:** uniform badge-block style, fits beside Go Report Card / Scorecard / Release / MCP Registry. One number, scannable.
+**Pros:** uniform badge-block style, fits beside Go Report Card / Scorecard / MCP Registry. One number, scannable.
 **Cons:** less visually distinctive than the card variant, casual readers may miss it.
 
 ---
@@ -37,7 +38,6 @@ Pick one of the two glama badge variants below. After you decide, this file gets
 [![Go Report Card](https://goreportcard.com/badge/github.com/shyshlakov/pci-dss-mcp?v=2)](https://goreportcard.com/report/github.com/shyshlakov/pci-dss-mcp)
 [![License: MIT](https://img.shields.io/github/license/shyshlakov/pci-dss-mcp)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/shyshlakov/pci-dss-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/shyshlakov/pci-dss-mcp)
-[![Release](https://img.shields.io/github/v/release/shyshlakov/pci-dss-mcp?label=release)](https://github.com/shyshlakov/pci-dss-mcp/releases/latest)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-io.github.shyshlakov%2Fpci--dss--mcp-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=pci-dss-mcp)
 
 **Featured on:**
@@ -57,7 +57,6 @@ Pick one of the two glama badge variants below. After you decide, this file gets
 [![License: MIT](https://img.shields.io/github/license/shyshlakov/pci-dss-mcp)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/shyshlakov/pci-dss-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/shyshlakov/pci-dss-mcp)
 [![pci-dss-mcp MCP server](https://glama.ai/mcp/servers/shyshlakov/pci-dss-mcp/badges/score.svg)](https://glama.ai/mcp/servers/shyshlakov/pci-dss-mcp)
-[![Release](https://img.shields.io/github/v/release/shyshlakov/pci-dss-mcp?label=release)](https://github.com/shyshlakov/pci-dss-mcp/releases/latest)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-io.github.shyshlakov%2Fpci--dss--mcp-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=pci-dss-mcp)
 
 ### Plus a "Featured on" card lower in the README
