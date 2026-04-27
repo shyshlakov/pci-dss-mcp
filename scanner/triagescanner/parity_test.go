@@ -48,9 +48,9 @@ func TestTriageReportParity(t *testing.T) {
 	}
 
 	// Layer 1: direct reportscanner with taint ON (the production default
-	// after). offline dep mode keeps the test network-free.
+	// after). auto dep mode uses the local OSV cache to keep the test network-free.
 	gen := reportscanner.NewReportGenerator(db)
-	report, err := gen.GenerateWithOptions(ctx, scanRoot, "offline", false, true)
+	report, err := gen.GenerateWithOptions(ctx, scanRoot, "auto", false, true)
 	if err != nil {
 		t.Fatalf("GenerateWithOptions: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestTriageReportParity(t *testing.T) {
 
 	result, err := session.CallTool(ctx, &mcp.CallToolParams{
 		Name:      "triage_findings",
-		Arguments: map[string]any{"path": scanRoot, "dep_scan_mode": "offline"},
+		Arguments: map[string]any{"path": scanRoot, "dep_scan_mode": "auto"},
 	})
 	if err != nil {
 		t.Fatalf("triage_findings CallTool: %v", err)

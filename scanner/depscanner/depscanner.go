@@ -48,11 +48,9 @@ func (s *DependencyScanner) Scan(ctx context.Context, targetPath string) (*scann
 	return s.ScanWithMode(ctx, targetPath, "auto")
 }
 
-// ScanWithMode analyzes the target path for dependency vulnerabilities with the specified mode.
-// Supported modes: "online", "offline", "auto" (default when empty).
 func (s *DependencyScanner) ScanWithMode(ctx context.Context, targetPath string, mode string) (*scanner.ScanResult, error) {
-	if mode == "" {
-		mode = "auto"
+	if mode != "" && mode != "auto" {
+		return nil, fmt.Errorf("invalid mode %q: only \"auto\" is supported, the \"online\" and \"offline\" modes were removed in v0.6.3 to prevent module-name disclosure to OSV.dev (see CHANGELOG and docs/check_dependencies.md for migration guidance)", mode)
 	}
 
 	start := time.Now()
@@ -62,102 +60,58 @@ func (s *DependencyScanner) ScanWithMode(ctx context.Context, targetPath string,
 		return nil, fmt.Errorf("parse dependencies: %w", err)
 	}
 
-	var result *scanner.ScanResult
-
-	switch mode {
-	case "online":
-		result, err = s.scanOnline(ctx, deps)
-	case "offline":
-		result, err = s.scanOffline(deps)
-	case "auto":
-		result, err = s.scanAuto(ctx, deps)
-	default:
-		return nil, fmt.Errorf("unknown scan mode: %q (supported: auto, online, offline)", mode)
+	cacheDir, derr := resolveCachePath()
+	if derr != nil {
+		cacheDir = ""
 	}
+	state := ensureCacheFresh(ctx, cacheDir)
 
+	result, err := s.scanFromCache(ctx, deps, cacheDir, state)
 	if err != nil {
 		return nil, err
 	}
 
 	result.Metadata.DurationMS = time.Since(start).Milliseconds()
-	result.Metadata.ScannedFiles = 1 // go.mod
+	result.Metadata.ScannedFiles = 1
 
 	return result, nil
 }
 
-// scanOnline queries the OSV API for vulnerability data.
-func (s *DependencyScanner) scanOnline(ctx context.Context, deps []Dependency) (*scanner.ScanResult, error) {
-	// Query OSV batch API.
-	batchResp, err := s.osvClient.QueryBatch(ctx, deps)
-	if err != nil {
-		return nil, fmt.Errorf("online scan failed: %w", err)
+func (s *DependencyScanner) scanFromCache(ctx context.Context, deps []Dependency, cacheDir string, state cacheState) (*scanner.ScanResult, error) {
+	if state.noWritableDir {
+		return &scanner.ScanResult{
+			Findings: []scanner.Finding{noDirFinding()},
+			Metadata: scanner.ScanMetadata{},
+		}, nil
+	}
+	if state.coldCache {
+		return &scanner.ScanResult{
+			Findings: []scanner.Finding{coldFinding()},
+			Metadata: scanner.ScanMetadata{},
+		}, nil
 	}
 
-	// Collect unique vuln IDs from batch response.
-	seenIDs := make(map[string]bool)
-	var vulnIDs []string
-	for _, qr := range batchResp.Results {
-		for _, vRef := range qr.Vulns {
-			if !seenIDs[vRef.ID] {
-				seenIDs[vRef.ID] = true
-				vulnIDs = append(vulnIDs, vRef.ID)
-			}
-		}
+	cachePath, cacheDate, lookupErr := locateCacheFile(cacheDir)
+	if lookupErr != nil {
+		return nil, fmt.Errorf("no vulnerability cache available: %w. Run update_vulnerability_db to download OSV cache", lookupErr)
 	}
 
-	// Fetch full details for each unique vuln.
-	var allVulns []*Vulnerability
-	for _, id := range vulnIDs {
-		vuln, err := s.osvClient.FetchVuln(ctx, id)
-		if err != nil {
-			slog.Warn("failed to fetch vulnerability details", "id", id, "error", err)
-			continue
-		}
-		allVulns = append(allVulns, vuln)
-	}
-
-	// Deduplicate.
-	deduped := deduplicateVulns(allVulns)
-
-	// Build findings.
-	var findings []scanner.Finding
-	for _, vuln := range deduped {
-		for _, dep := range deps {
-			for _, aff := range vuln.Affected {
-				if aff.Package.Name != dep.Path {
-					continue
-				}
-				if isAffected(dep.Version, aff.Ranges) {
-					fixVersion := extractFixVersion(vuln, dep.Path)
-					findings = append(findings, buildFinding(dep, vuln, fixVersion))
+	cache, loadErr := loadCache(cachePath)
+	if loadErr != nil {
+		canonical := canonicalCachePath(cacheDir)
+		if dlErr := refreshCache(ctx, canonical); dlErr == nil {
+			cache, loadErr = loadCache(canonical)
+			if loadErr == nil {
+				if info, sErr := os.Stat(canonical); sErr == nil {
+					cacheDate = info.ModTime()
 				}
 			}
 		}
+		if loadErr != nil {
+			return nil, fmt.Errorf("load cache: %w", loadErr)
+		}
 	}
 
-	return &scanner.ScanResult{
-		Findings: findings,
-		Metadata: scanner.ScanMetadata{},
-	}, nil
-}
-
-// scanOffline uses the local vulnerability cache for scanning.
-func (s *DependencyScanner) scanOffline(deps []Dependency) (*scanner.ScanResult, error) {
-	cacheDir := resolveCachePath()
-
-	cachePath, cacheDate, err := latestCacheFile(cacheDir)
-	if err != nil {
-		return nil, fmt.Errorf("no vulnerability cache available: %w. Run update_vulnerability_db to download OSV cache", err)
-	}
-
-	cache, err := loadCache(cachePath)
-	if err != nil {
-		return nil, fmt.Errorf("load cache: %w", err)
-	}
-
-	staleness := checkStaleness(cacheDate)
-
-	// Build findings from cache.
 	var allVulns []*Vulnerability
 	depVulnMap := make(map[string][]*Vulnerability)
 	for _, dep := range deps {
@@ -168,10 +122,8 @@ func (s *DependencyScanner) scanOffline(deps []Dependency) (*scanner.ScanResult,
 		}
 	}
 
-	// Deduplicate all found vulns.
 	deduped := deduplicateVulns(allVulns)
 
-	// Build findings from deduplicated vulns.
 	dedupedSet := make(map[string]bool)
 	for _, v := range deduped {
 		dedupedSet[v.ID] = true
@@ -186,31 +138,14 @@ func (s *DependencyScanner) scanOffline(deps []Dependency) (*scanner.ScanResult,
 			}
 			fixVersion := extractFixVersion(vuln, dep.Path)
 			findings = append(findings, buildFinding(dep, vuln, fixVersion))
-			// Remove from deduped set so we don't produce duplicate findings.
 			delete(dedupedSet, vuln.ID)
 		}
 	}
 
-	// Add staleness warning as a finding.
-	if staleness != CacheFresh {
-		warningText := stalenessWarning(staleness, cacheDate)
-		var severity scanner.Severity
-		if staleness == CacheStale {
-			severity = scanner.SeverityMedium
-		} else {
-			severity = scanner.SeverityHigh
-		}
-		findings = append(findings, scanner.Finding{
-			RuleID:        "DEP-CACHE-STALE",
-			Severity:      severity,
-			RequirementID: "6.3.3",
-			FilePath:      "go.mod",
-			Description:   warningText,
-			Suggestion:    "Run update_vulnerability_db to refresh OSV cache",
-		})
+	if state.staleFallback {
+		findings = append(findings, staleFinding(state.cacheAge))
 	}
 
-	// Always include cache age info.
 	ageMsg := cacheAgeMessage(cacheDate)
 	slog.Info(ageMsg)
 
@@ -220,23 +155,45 @@ func (s *DependencyScanner) scanOffline(deps []Dependency) (*scanner.ScanResult,
 	}, nil
 }
 
-// scanAuto tries online first, falls back to offline.
-func (s *DependencyScanner) scanAuto(ctx context.Context, deps []Dependency) (*scanner.ScanResult, error) {
-	// Try online first.
-	result, err := s.scanOnline(ctx, deps)
-	if err == nil {
-		return result, nil
+func locateCacheFile(cacheDir string) (string, time.Time, error) {
+	canonical := canonicalCachePath(cacheDir)
+	if info, err := os.Stat(canonical); err == nil {
+		return canonical, info.ModTime(), nil
 	}
+	return latestCacheFile(cacheDir)
+}
 
-	// Online failed — log and fall back to offline.
-	slog.Warn("online scan failed, falling back to offline mode", "error", err)
-
-	result, offlineErr := s.scanOffline(deps)
-	if offlineErr != nil {
-		return nil, fmt.Errorf("auto scan: online failed (%v) and offline failed (%v)", err, offlineErr)
+func noDirFinding() scanner.Finding {
+	return scanner.Finding{
+		RuleID:        ruleDepCacheNoDir,
+		Severity:      scanner.SeverityInfo,
+		RequirementID: "6.3.3",
+		FilePath:      "go.mod",
+		Description:   "OSV vulnerability cache directory cannot be determined. Set PCI_MCP_CACHE_DIR to a writable path or ensure HOME / XDG_CACHE_HOME is set.",
+		Suggestion:    "Set PCI_MCP_CACHE_DIR to a writable directory and re-run.",
 	}
+}
 
-	return result, nil
+func coldFinding() scanner.Finding {
+	return scanner.Finding{
+		RuleID:        ruleDepCacheCold,
+		Severity:      scanner.SeverityInfo,
+		RequirementID: "6.3.3",
+		FilePath:      "go.mod",
+		Description:   "OSV vulnerability cache is empty and network refresh failed. Run with network access OR bind-mount the cache directory to enable scanning. Run update_vulnerability_db once with network to bootstrap.",
+		Suggestion:    "Run update_vulnerability_db with network access, or bind-mount a populated cache directory.",
+	}
+}
+
+func staleFinding(age time.Duration) scanner.Finding {
+	return scanner.Finding{
+		RuleID:        ruleDepCacheStale,
+		Severity:      scanner.SeverityInfo,
+		RequirementID: "6.3.3",
+		FilePath:      "go.mod",
+		Description:   fmt.Sprintf("OSV vulnerability cache is %s old; network refresh failed. Run with network access OR bind-mount the cache directory to refresh.", durationHuman(age)),
+		Suggestion:    "Run update_vulnerability_db to refresh OSV cache.",
+	}
 }
 
 // parseGoMod reads and parses go.mod from the given directory, returning

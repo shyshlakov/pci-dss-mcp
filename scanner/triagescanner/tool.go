@@ -21,7 +21,7 @@ const toolNameTriage = "triage_findings"
 
 type TriageInput struct {
 	Path         string `json:"path" jsonschema:"Path to the Go project to triage. If empty, uses current directory (.)"`
-	DepScanMode  string `json:"dep_scan_mode,omitempty" jsonschema:"Dependency scanner mode: auto (default), online, offline"`
+	DepScanMode  string `json:"dep_scan_mode,omitempty" jsonschema:"Dependency scanner mode: only 'auto' (default) is supported after v0.6.3. Empty value is treated as 'auto'."`
 	IncludeTests bool   `json:"include_tests,omitempty" jsonschema:"Include _test.go files in scan results. Default false"`
 	IncludeTaint *bool  `json:"include_taint,omitempty" jsonschema:"Enable flow-based severity adjustment via go/packages type analysis. When true, panscanner downgrades PAN-KEYWORD and suppresses PAN-TYPE findings for transit-only CHD fields. Adds 5-30 seconds to scan time. Default true (production-grade precision, matches generate_compliance_report). Set false for fast dev iteration. Requires 'go' binary on PATH; falls back to AST-only scanning on failure."`
 	MinSeverity  string `json:"min_severity,omitempty" jsonschema:"Filter findings by minimum severity. One of CRITICAL / HIGH / MEDIUM / LOW / INFO (case-insensitive). Default: no severity filter. Applied BEFORE enrichment to save context-collection cost."`
@@ -86,8 +86,8 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 		if path == "" {
 			path = "."
 		}
-		if input.DepScanMode != "" && input.DepScanMode != "auto" && input.DepScanMode != "online" && input.DepScanMode != "offline" {
-			return triageErrorResult(fmt.Sprintf("Invalid dep_scan_mode %q. Valid modes: auto, online, offline", input.DepScanMode)), nil, nil
+		if input.DepScanMode != "" && input.DepScanMode != "auto" {
+			return triageErrorResult(fmt.Sprintf("Invalid dep_scan_mode %q. Only \"auto\" is supported. The \"online\" and \"offline\" modes were removed in v0.6.3 to prevent module-name disclosure to OSV.dev. See CHANGELOG and docs/check_dependencies.md for migration guidance.", input.DepScanMode)), nil, nil
 		}
 		if input.Limit == -1 {
 			return triageErrorResult("LIMIT_MINUS_ONE_REMOVED: limit=-1 is no longer accepted. For interactive use, call with default params (summary-first with next_cursor) or apply min_severity/rule_filter for a paged flat response; follow the cursor for subsequent pages."), nil, nil

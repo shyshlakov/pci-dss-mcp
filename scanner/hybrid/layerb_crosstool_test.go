@@ -51,7 +51,7 @@ func TestLayerB_CrossTool_SizeBudget(t *testing.T) {
 		Name: "triage_findings",
 		Arguments: map[string]any{
 			"path":          absFixture,
-			"dep_scan_mode": "offline",
+			"dep_scan_mode": "auto",
 			"include_taint": true,
 		},
 	})

@@ -692,10 +692,9 @@ func TestGenerateWithOptions_DepScanMode(t *testing.T) {
 
 	dir := t.TempDir()
 
-	// GenerateWithOptions with depScanMode="offline" should not error.
-	report, err := gen.GenerateWithOptions(context.Background(), dir, "offline", false, false)
+	report, err := gen.GenerateWithOptions(context.Background(), dir, "auto", false, false)
 	if err != nil {
-		t.Fatalf("GenerateWithOptions with depScanMode=offline error: %v", err)
+		t.Fatalf("GenerateWithOptions with depScanMode=auto error: %v", err)
 	}
 
 	if report.Metadata.ScannerCount != 11 {

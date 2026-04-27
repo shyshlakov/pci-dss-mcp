@@ -55,7 +55,7 @@ func main() {
 		Name: "triage_findings",
 		Arguments: map[string]any{
 			"path":          abs,
-			"dep_scan_mode": "offline",
+			"dep_scan_mode": "auto",
 			"include_taint": true,
 		},
 	})
@@ -72,7 +72,7 @@ func main() {
 	}
 
 	panRes, err := session.CallTool(ctx, &mcp.CallToolParams{
-		Name: "scan_pan_data",
+		Name:      "scan_pan_data",
 		Arguments: map[string]any{"path": abs},
 	})
 	if err != nil {

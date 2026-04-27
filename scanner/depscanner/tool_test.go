@@ -110,13 +110,60 @@ func TestCheckDepsInvalidMode(t *testing.T) {
 	if !strings.Contains(text, "Invalid mode") {
 		t.Errorf("Expected 'Invalid mode' in error, got: %s", text)
 	}
+	if !strings.Contains(text, "auto") {
+		t.Errorf("Expected error to mention \"auto\" as supported value, got: %s", text)
+	}
+}
+
+func TestToolRejectsRemovedModes(t *testing.T) {
+	t.Parallel()
+	session := setupToolServer(t)
+
+	tt := []struct {
+		name string
+		mode string
+	}{
+		{name: "online_rejected", mode: "online"},
+		{name: "offline_rejected", mode: "offline"},
+		{name: "garbage_rejected", mode: "garbage"},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+				Name: "check_dependencies",
+				Arguments: map[string]any{
+					"path": t.TempDir(),
+					"mode": tc.mode,
+				},
+			})
+			if err != nil {
+				t.Fatalf("CallTool failed: %v", err)
+			}
+			if !result.IsError {
+				t.Fatalf("Expected IsError=true for mode=%q, got success", tc.mode)
+			}
+			text := extractToolText(t, result)
+			if !strings.Contains(text, "auto") {
+				t.Errorf("Expected error to mention \"auto\"; got: %s", text)
+			}
+			if tc.mode == "online" || tc.mode == "offline" {
+				if !strings.Contains(text, "removed in v0.6.3") {
+					t.Errorf("Expected error to reference removal in v0.6.3 for mode=%q; got: %s", tc.mode, text)
+				}
+				if !strings.Contains(text, "module-name disclosure") {
+					t.Errorf("Expected error to explain privacy rationale for mode=%q; got: %s", tc.mode, text)
+				}
+			}
+		})
+	}
 }
 
 func TestCheckDepsDefaultMode(t *testing.T) {
 	t.Parallel()
 	session := setupToolServer(t)
 
-	// Call without mode — should default to "auto" and return an error
+	// Call without mode: should default to "auto" and return an error
 	// (no go.mod in temp dir), but the error should NOT be about invalid mode.
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_dependencies",

@@ -7,6 +7,7 @@ toolchain go1.25.9
 require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/CycloneDX/cyclonedx-go v0.9.3
+	github.com/gofrs/flock v0.12.1
 	github.com/google/jsonschema-go v0.4.2
 	github.com/google/licensecheck v0.3.1
 	github.com/google/uuid v1.6.0

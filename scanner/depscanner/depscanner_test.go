@@ -3,8 +3,6 @@ package depscanner
 import (
 	"context"
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -411,94 +409,7 @@ func setupTestCache(t *testing.T) string {
 	return dir
 }
 
-// setupMockOSV creates an httptest server that mimics OSV API behavior.
-func setupMockOSV(t *testing.T) *httptest.Server {
-	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		switch {
-		case r.URL.Path == "/v1/querybatch" && r.Method == "POST":
-			resp := QueryBatchResponse{
-				Results: []QueryResult{
-					{Vulns: []VulnRef{{ID: "GHSA-test-0001", Modified: "2024-01-01"}}},
-				},
-			}
-			json.NewEncoder(w).Encode(resp)
-
-		case strings.HasPrefix(r.URL.Path, "/v1/vulns/"):
-			vuln := Vulnerability{
-				ID:               "GHSA-test-0001",
-				Summary:          "Test vulnerability in x/net",
-				Aliases:          []string{"CVE-2024-0001"},
-				DatabaseSpecific: DatabaseSpecific{Severity: "HIGH"},
-				Affected: []Affected{
-					{
-						Package: AffectedPackage{Name: "golang.org/x/net", Ecosystem: "Go"},
-						Ranges: []Range{
-							{Type: "SEMVER", Events: []Event{{Introduced: "0"}, {Fixed: "0.23.0"}}},
-						},
-					},
-				},
-			}
-			json.NewEncoder(w).Encode(vuln)
-
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-}
-
-func TestScanOnline(t *testing.T) {
-	server := setupMockOSV(t)
-	defer server.Close()
-
-	dir := setupTestGoMod(t)
-
-	s := New()
-	s.osvClient.baseURL = server.URL
-
-	result, err := s.ScanWithMode(context.Background(), dir, "online")
-	if err != nil {
-		t.Fatalf("ScanWithMode(online) error: %v", err)
-	}
-
-	if result == nil {
-		t.Fatal("result is nil")
-	}
-	if len(result.Findings) == 0 {
-		t.Fatal("expected findings for vulnerable dependency")
-	}
-
-	f := result.Findings[0]
-	if f.RequirementID != "6.3.3" {
-		t.Errorf("RequirementID = %q, want 6.3.3", f.RequirementID)
-	}
-	if f.Severity != scanner.SeverityHigh {
-		t.Errorf("Severity = %q, want HIGH", f.Severity)
-	}
-	if !strings.Contains(f.Description, "GHSA-test-0001") {
-		t.Errorf("description missing vuln ID: %q", f.Description)
-	}
-	if !strings.Contains(f.Suggestion, "go get") {
-		t.Errorf("suggestion missing 'go get': %q", f.Suggestion)
-	}
-}
-
-func TestScanOnlineNetworkError(t *testing.T) {
-	s := New()
-	// Point to a non-existent server.
-	s.osvClient.baseURL = "http://127.0.0.1:1"
-
-	dir := setupTestGoMod(t)
-
-	_, err := s.ScanWithMode(context.Background(), dir, "online")
-	if err == nil {
-		t.Fatal("expected error for unreachable server")
-	}
-}
-
-func TestScanOffline(t *testing.T) {
+func TestScanFromCache(t *testing.T) {
 	cacheDir := setupTestCache(t)
 	dir := setupTestGoMod(t)
 
@@ -506,9 +417,9 @@ func TestScanOffline(t *testing.T) {
 
 	s := New()
 
-	result, err := s.ScanWithMode(context.Background(), dir, "offline")
+	result, err := s.ScanWithMode(context.Background(), dir, "auto")
 	if err != nil {
-		t.Fatalf("ScanWithMode(offline) error: %v", err)
+		t.Fatalf("ScanWithMode(auto) error: %v", err)
 	}
 
 	if result == nil {
@@ -518,7 +429,6 @@ func TestScanOffline(t *testing.T) {
 		t.Fatal("expected findings from cache")
 	}
 
-	// Verify finding has correct data.
 	found := false
 	for _, f := range result.Findings {
 		if f.RuleID == "DEP-VULN" && strings.Contains(f.Description, "GHSA-test-0001") {
@@ -531,172 +441,64 @@ func TestScanOffline(t *testing.T) {
 	}
 }
 
-func TestScanOfflineNoCache(t *testing.T) {
+func TestScanFromCacheNoCache(t *testing.T) {
 	dir := setupTestGoMod(t)
 
 	t.Setenv("PCI_MCP_CACHE_DIR", filepath.Join(t.TempDir(), "nonexistent"))
+	t.Setenv("OSV_BASE_URL", "http://127.0.0.1:1")
 
 	s := New()
-
-	_, err := s.ScanWithMode(context.Background(), dir, "offline")
-	if err == nil {
-		t.Fatal("expected error when no cache exists")
-	}
-}
-
-func TestScanAutoSuccess(t *testing.T) {
-	server := setupMockOSV(t)
-	defer server.Close()
-
-	dir := setupTestGoMod(t)
-
-	s := New()
-	s.osvClient.baseURL = server.URL
 
 	result, err := s.ScanWithMode(context.Background(), dir, "auto")
 	if err != nil {
-		t.Fatalf("ScanWithMode(auto) error: %v", err)
+		t.Fatalf("expected graceful degradation, got err: %v", err)
 	}
-
-	if result == nil {
-		t.Fatal("result is nil")
-	}
-	if len(result.Findings) == 0 {
-		t.Fatal("expected findings in auto mode (online path)")
-	}
-}
-
-func TestScanAutoFallback(t *testing.T) {
-	cacheDir := setupTestCache(t)
-	dir := setupTestGoMod(t)
-
-	t.Setenv("PCI_MCP_CACHE_DIR", cacheDir)
-
-	s := New()
-	// Point to unreachable server to force fallback.
-	s.osvClient.baseURL = "http://127.0.0.1:1"
-
-	result, err := s.ScanWithMode(context.Background(), dir, "auto")
-	if err != nil {
-		t.Fatalf("ScanWithMode(auto fallback) error: %v", err)
-	}
-
-	if result == nil {
-		t.Fatal("result is nil")
-	}
-	if len(result.Findings) == 0 {
-		t.Fatal("expected findings from cache fallback")
-	}
-}
-
-func TestScanAutoNoBoth(t *testing.T) {
-	dir := setupTestGoMod(t)
-
-	t.Setenv("PCI_MCP_CACHE_DIR", filepath.Join(t.TempDir(), "nonexistent"))
-
-	s := New()
-	s.osvClient.baseURL = "http://127.0.0.1:1"
-
-	_, err := s.ScanWithMode(context.Background(), dir, "auto")
-	if err == nil {
-		t.Fatal("expected error when both online and offline fail")
-	}
-}
-
-func TestScanDefaultMode(t *testing.T) {
-	server := setupMockOSV(t)
-	defer server.Close()
-
-	dir := setupTestGoMod(t)
-
-	s := New()
-	s.osvClient.baseURL = server.URL
-
-	// Empty mode should default to "auto".
-	result, err := s.ScanWithMode(context.Background(), dir, "")
-	if err != nil {
-		t.Fatalf("ScanWithMode('') error: %v", err)
-	}
-
-	if result == nil {
-		t.Fatal("result is nil")
-	}
-	if len(result.Findings) == 0 {
-		t.Fatal("expected findings with default mode")
-	}
-}
-
-func TestScanDeduplication(t *testing.T) {
-	// Create server that returns both GHSA and GO entries for same CVE.
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		switch r.URL.Path {
-		case "/v1/querybatch":
-			resp := QueryBatchResponse{
-				Results: []QueryResult{
-					{Vulns: []VulnRef{
-						{ID: "GHSA-test-0001"},
-						{ID: "GO-2024-0001"},
-					}},
-				},
-			}
-			json.NewEncoder(w).Encode(resp)
-
-		case "/v1/vulns/GHSA-test-0001":
-			vuln := Vulnerability{
-				ID:               "GHSA-test-0001",
-				Summary:          "Test vuln (GHSA)",
-				Aliases:          []string{"CVE-2024-0001", "GO-2024-0001"},
-				DatabaseSpecific: DatabaseSpecific{Severity: "HIGH"},
-				Affected: []Affected{
-					{
-						Package: AffectedPackage{Name: "golang.org/x/net", Ecosystem: "Go"},
-						Ranges:  []Range{{Type: "SEMVER", Events: []Event{{Introduced: "0"}, {Fixed: "0.23.0"}}}},
-					},
-				},
-			}
-			json.NewEncoder(w).Encode(vuln)
-
-		case "/v1/vulns/GO-2024-0001":
-			vuln := Vulnerability{
-				ID:      "GO-2024-0001",
-				Summary: "Test vuln (GO)",
-				Aliases: []string{"CVE-2024-0001", "GHSA-test-0001"},
-				Affected: []Affected{
-					{
-						Package: AffectedPackage{Name: "golang.org/x/net", Ecosystem: "Go"},
-						Ranges:  []Range{{Type: "SEMVER", Events: []Event{{Introduced: "0"}, {Fixed: "0.23.0"}}}},
-					},
-				},
-			}
-			json.NewEncoder(w).Encode(vuln)
-
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer server.Close()
-
-	dir := setupTestGoMod(t)
-
-	s := New()
-	s.osvClient.baseURL = server.URL
-
-	result, err := s.ScanWithMode(context.Background(), dir, "online")
-	if err != nil {
-		t.Fatalf("ScanWithMode(online) error: %v", err)
-	}
-
-	// Should deduplicate to single finding.
-	vulnFindings := 0
+	saw := false
 	for _, f := range result.Findings {
-		if f.RuleID == "DEP-VULN" {
-			vulnFindings++
+		if f.RuleID == "DEP-CACHE-COLD" && f.Severity == scanner.SeverityInfo {
+			saw = true
+			break
 		}
 	}
-	if vulnFindings != 1 {
-		t.Errorf("expected 1 deduplicated finding, got %d", vulnFindings)
+	if !saw {
+		t.Fatalf("expected DEP-CACHE-COLD INFO finding when no cache exists; got %+v", result.Findings)
+	}
+}
+
+func TestScanWithModeRejectsRemovedKeywords(t *testing.T) {
+	dir := setupTestGoMod(t)
+	t.Setenv("PCI_MCP_CACHE_DIR", t.TempDir())
+
+	s := New()
+
+	tt := []struct {
+		name string
+		mode string
+	}{
+		{name: "online_rejected", mode: "online"},
+		{name: "offline_rejected", mode: "offline"},
+		{name: "garbage_rejected", mode: "garbage"},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := s.ScanWithMode(context.Background(), dir, tc.mode)
+			if err == nil {
+				t.Fatalf("ScanWithMode(%q) returned nil err; want migration error", tc.mode)
+			}
+			msg := err.Error()
+			if !strings.Contains(msg, "auto") {
+				t.Errorf("error must mention \"auto\" as supported value; got: %s", msg)
+			}
+			if tc.mode == "online" || tc.mode == "offline" {
+				if !strings.Contains(msg, "removed in v0.6.3") {
+					t.Errorf("error must reference removal in v0.6.3 for mode=%q; got: %s", tc.mode, msg)
+				}
+				if !strings.Contains(msg, "module-name disclosure") {
+					t.Errorf("error must explain privacy rationale (module-name disclosure) for mode=%q; got: %s", tc.mode, msg)
+				}
+			}
+		})
 	}
 }
 
@@ -711,7 +513,7 @@ func TestScanDeduplication(t *testing.T) {
 // BOGUS declaration of golang.org/x/net on a high line number. The scan-root go.mod
 // also declares golang.org/x/net, but on a low line number. If the scanner ever
 // starts climbing past the scan root, the finding would cite the ancestor's line
-// number — this test catches that regression.
+// number; this test catches that regression.
 func TestDepscanner_NeverClimbsAncestor(t *testing.T) {
 	cacheDir := setupTestCache(t)
 	t.Setenv("PCI_MCP_CACHE_DIR", cacheDir)
@@ -771,9 +573,9 @@ require golang.org/x/net v0.20.0
 
 	s := New()
 
-	result, err := s.ScanWithMode(context.Background(), scanRoot, "offline")
+	result, err := s.ScanWithMode(context.Background(), scanRoot, "auto")
 	if err != nil {
-		t.Fatalf("ScanWithMode(offline) error: %v", err)
+		t.Fatalf("ScanWithMode(auto) error: %v", err)
 	}
 	if result == nil {
 		t.Fatal("result is nil")
@@ -804,6 +606,6 @@ require golang.org/x/net v0.20.0
 	}
 
 	if depVulns == 0 {
-		t.Fatal("no DEP-VULN findings produced from scan-root go.mod — test cannot verify path behavior; check setupTestCache vulnerability entry")
+		t.Fatal("no DEP-VULN findings produced from scan-root go.mod; test cannot verify path behavior; check setupTestCache vulnerability entry")
 	}
 }

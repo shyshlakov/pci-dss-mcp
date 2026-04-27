@@ -14,7 +14,10 @@ func TestResolveCachePath(t *testing.T) {
 	t.Run("returns PCI_MCP_CACHE_DIR env value when set", func(t *testing.T) {
 		t.Setenv("PCI_MCP_CACHE_DIR", "/custom/cache/path")
 
-		result := resolveCachePath()
+		result, err := resolveCachePath()
+		if err != nil {
+			t.Fatalf("resolveCachePath() err = %v", err)
+		}
 		if result != "/custom/cache/path" {
 			t.Errorf("resolveCachePath() = %q, want /custom/cache/path", result)
 		}
@@ -23,15 +26,96 @@ func TestResolveCachePath(t *testing.T) {
 	t.Run("returns ~/.pci-dss-mcp/vuln-cache/ when env not set", func(t *testing.T) {
 		t.Setenv("PCI_MCP_CACHE_DIR", "")
 
-		result := resolveCachePath()
+		result, err := resolveCachePath()
+		if err != nil {
+			t.Fatalf("resolveCachePath() err = %v", err)
+		}
 		if !strings.HasSuffix(result, filepath.Join(".pci-dss-mcp", "vuln-cache")) {
 			t.Errorf("resolveCachePath() = %q, should end with .pci-dss-mcp/vuln-cache", result)
 		}
-		// Should not be empty or relative.
 		if result == "" || result[0] != '/' {
 			t.Errorf("resolveCachePath() = %q, expected absolute path", result)
 		}
 	})
+}
+
+func TestResolveCachePathChain(t *testing.T) {
+	tt := []struct {
+		name string
+		run  func(t *testing.T)
+	}{
+		{
+			name: "explicit_env_var_wins",
+			run: func(t *testing.T) {
+				t.Setenv("PCI_MCP_CACHE_DIR", "/tmp/x")
+				t.Setenv("XDG_CACHE_HOME", "/abs/xdg")
+				t.Setenv("HOME", "/abs/home")
+
+				got, err := resolveCachePath()
+				if err != nil {
+					t.Fatalf("err = %v", err)
+				}
+				if got != "/tmp/x" {
+					t.Errorf("got %q, want /tmp/x", got)
+				}
+			},
+		},
+		{
+			name: "xdg_absolute_used",
+			run: func(t *testing.T) {
+				t.Setenv("PCI_MCP_CACHE_DIR", "")
+				t.Setenv("XDG_CACHE_HOME", "/abs/path")
+				t.Setenv("HOME", "/abs/home")
+
+				got, err := resolveCachePath()
+				if err != nil {
+					t.Fatalf("err = %v", err)
+				}
+				want := filepath.Join("/abs/path", "pci-dss-mcp", "vuln-cache")
+				if got != want {
+					t.Errorf("got %q, want %q", got, want)
+				}
+			},
+		},
+		{
+			name: "xdg_relative_skipped",
+			run: func(t *testing.T) {
+				t.Setenv("PCI_MCP_CACHE_DIR", "")
+				t.Setenv("XDG_CACHE_HOME", "relative/path")
+				t.Setenv("HOME", "/h")
+
+				got, err := resolveCachePath()
+				if err != nil {
+					t.Fatalf("err = %v", err)
+				}
+				want := filepath.Join("/h", defaultCacheDir)
+				if got != want {
+					t.Errorf("got %q, want %q (relative XDG must be skipped)", got, want)
+				}
+			},
+		},
+		{
+			name: "home_default",
+			run: func(t *testing.T) {
+				t.Setenv("PCI_MCP_CACHE_DIR", "")
+				t.Setenv("XDG_CACHE_HOME", "")
+				t.Setenv("HOME", "/h")
+
+				got, err := resolveCachePath()
+				if err != nil {
+					t.Fatalf("err = %v", err)
+				}
+				want := filepath.Join("/h", defaultCacheDir)
+				if got != want {
+					t.Errorf("got %q, want %q", got, want)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, tc.run)
+	}
 }
 
 func TestLatestCacheFile(t *testing.T) {

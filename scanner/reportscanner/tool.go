@@ -13,7 +13,7 @@ import (
 
 type ReportInput struct {
 	Path         string `json:"path" jsonschema:"Path to the Go project to scan for PCI DSS compliance. If empty, uses current directory (.)"`
-	DepScanMode  string `json:"dep_scan_mode,omitempty" jsonschema:"Dependency scanner mode: auto (default), online, offline. Controls network behavior for vulnerability checking"`
+	DepScanMode  string `json:"dep_scan_mode,omitempty" jsonschema:"Dependency scanner mode: only 'auto' (default) is supported after v0.6.3. Empty value is treated as 'auto'."`
 	IncludeTests bool   `json:"include_tests,omitempty" jsonschema:"Include _test.go files in scan results. Default false excludes test files per industry SAST consensus"`
 	IncludeTaint *bool  `json:"include_taint,omitempty" jsonschema:"Enable flow-based severity adjustment via go/packages type analysis. When true, panscanner downgrades PAN-KEYWORD and suppresses PAN-TYPE findings for transit-only CHD fields (request/response DTOs, API client models) per and the PCI SSC FAQ on non-persistent memory. Adds 5-30 seconds to scan time. Default true (production-grade precision). Set false for fast dev iteration. Requires 'go' binary on PATH; falls back to AST-only scanning on failure."`
 	MinSeverity  string `json:"min_severity,omitempty" jsonschema:"Filter findings by minimum severity. One of CRITICAL / HIGH / MEDIUM / LOW / INFO (case-insensitive). Default: no severity filter. Useful for AI clients that only need HIGH-or-above results."`
@@ -75,10 +75,10 @@ func RegisterTools(server *mcp.Server, db *pcidb.DB) {
 		}
 		input.Path = path
 
-		if input.DepScanMode != "" && input.DepScanMode != "auto" && input.DepScanMode != "online" && input.DepScanMode != "offline" {
+		if input.DepScanMode != "" && input.DepScanMode != "auto" {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf(
-					"Invalid dep_scan_mode %q. Valid modes: auto, online, offline", input.DepScanMode)}},
+					"Invalid dep_scan_mode %q. Only \"auto\" is supported. The \"online\" and \"offline\" modes were removed in v0.6.3 to prevent module-name disclosure to OSV.dev. See CHANGELOG and docs/check_dependencies.md for migration guidance.", input.DepScanMode)}},
 				IsError: true,
 			}, nil, nil
 		}

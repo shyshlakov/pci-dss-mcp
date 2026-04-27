@@ -45,7 +45,7 @@ func callTriageDefault(t *testing.T, path string) *mcp.CallToolResult {
 		Name: "triage_findings",
 		Arguments: map[string]any{
 			"path":          path,
-			"dep_scan_mode": "offline",
+			"dep_scan_mode": "auto",
 			"include_taint": includeTaint,
 		},
 	})
@@ -238,7 +238,7 @@ func TestTriageLayerB_FilterSet_StillFlat(t *testing.T) {
 		Name: "triage_findings",
 		Arguments: map[string]any{
 			"path":          scanRoot,
-			"dep_scan_mode": "offline",
+			"dep_scan_mode": "auto",
 			"min_severity":  "HIGH",
 			"include_taint": includeTaint,
 		},
@@ -304,7 +304,7 @@ func TestTriageLayerA_SizeBudget(t *testing.T) {
 		Name: "triage_findings",
 		Arguments: map[string]any{
 			"path":          scanRoot,
-			"dep_scan_mode": "offline",
+			"dep_scan_mode": "auto",
 			"min_severity":  "MEDIUM",
 			"include_taint": includeTaint,
 		},
@@ -415,7 +415,7 @@ func TestTriageLayerA_IncludesHistogram(t *testing.T) {
 		Name: "triage_findings",
 		Arguments: map[string]any{
 			"path":          scanRoot,
-			"dep_scan_mode": "offline",
+			"dep_scan_mode": "auto",
 			"min_severity":  "HIGH",
 			"include_taint": true,
 		},

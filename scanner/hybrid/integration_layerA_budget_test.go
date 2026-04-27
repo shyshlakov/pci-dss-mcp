@@ -145,10 +145,10 @@ func TestAllLayerA_SizeBudget20KB(t *testing.T) {
 		{"audit_log_coverage", map[string]any{"path": fixtureAbs, "include_tests": true, "min_severity": "MEDIUM"}},
 		{"check_data_retention", map[string]any{"path": fixtureAbs, "include_tests": true, "min_severity": "MEDIUM"}},
 		{"check_payment_page_scripts", map[string]any{"path": fixtureAbs, "include_tests": true, "min_severity": "MEDIUM"}},
-		{"check_dependencies", map[string]any{"path": depFixture, "mode": "offline", "min_severity": "HIGH"}},
+		{"check_dependencies", map[string]any{"path": depFixture, "mode": "auto", "min_severity": "HIGH"}},
 		{"scan_pan_data", map[string]any{"path": fixtureAbs, "include_tests": true, "min_severity": "HIGH"}},
-		{"triage_findings", map[string]any{"path": fixtureAbs, "dep_scan_mode": "offline", "include_taint": true, "min_severity": "HIGH"}},
-		{"generate_compliance_report", map[string]any{"path": fixtureAbs, "dep_scan_mode": "offline", "include_taint": true, "min_severity": "MEDIUM"}},
+		{"triage_findings", map[string]any{"path": fixtureAbs, "dep_scan_mode": "auto", "include_taint": true, "min_severity": "HIGH"}},
+		{"generate_compliance_report", map[string]any{"path": fixtureAbs, "dep_scan_mode": "auto", "include_taint": true, "min_severity": "MEDIUM"}},
 	}
 
 	const budget = 20480
