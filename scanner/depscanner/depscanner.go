@@ -48,8 +48,6 @@ func (s *DependencyScanner) Scan(ctx context.Context, targetPath string) (*scann
 	return s.ScanWithMode(ctx, targetPath, "auto")
 }
 
-// ScanWithMode analyzes the target path for dependency vulnerabilities with the specified mode.
-// Supported modes: "online", "offline", "auto" (default when empty).
 func (s *DependencyScanner) ScanWithMode(ctx context.Context, targetPath string, mode string) (*scanner.ScanResult, error) {
 	if mode == "" {
 		mode = "auto"
@@ -62,87 +60,22 @@ func (s *DependencyScanner) ScanWithMode(ctx context.Context, targetPath string,
 		return nil, fmt.Errorf("parse dependencies: %w", err)
 	}
 
-	var result *scanner.ScanResult
-
-	switch mode {
-	case "online":
-		result, err = s.scanOnline(ctx, deps)
-	case "offline":
-		result, err = s.scanOffline(deps)
-	case "auto":
-		result, err = s.scanAuto(ctx, deps)
-	default:
-		return nil, fmt.Errorf("unknown scan mode: %q (supported: auto, online, offline)", mode)
+	if mode != "auto" {
+		return nil, fmt.Errorf("unknown scan mode: %q (supported: auto)", mode)
 	}
 
+	result, err := s.scanFromCache(deps)
 	if err != nil {
 		return nil, err
 	}
 
 	result.Metadata.DurationMS = time.Since(start).Milliseconds()
-	result.Metadata.ScannedFiles = 1 // go.mod
+	result.Metadata.ScannedFiles = 1
 
 	return result, nil
 }
 
-// scanOnline queries the OSV API for vulnerability data.
-func (s *DependencyScanner) scanOnline(ctx context.Context, deps []Dependency) (*scanner.ScanResult, error) {
-	// Query OSV batch API.
-	batchResp, err := s.osvClient.QueryBatch(ctx, deps)
-	if err != nil {
-		return nil, fmt.Errorf("online scan failed: %w", err)
-	}
-
-	// Collect unique vuln IDs from batch response.
-	seenIDs := make(map[string]bool)
-	var vulnIDs []string
-	for _, qr := range batchResp.Results {
-		for _, vRef := range qr.Vulns {
-			if !seenIDs[vRef.ID] {
-				seenIDs[vRef.ID] = true
-				vulnIDs = append(vulnIDs, vRef.ID)
-			}
-		}
-	}
-
-	// Fetch full details for each unique vuln.
-	var allVulns []*Vulnerability
-	for _, id := range vulnIDs {
-		vuln, err := s.osvClient.FetchVuln(ctx, id)
-		if err != nil {
-			slog.Warn("failed to fetch vulnerability details", "id", id, "error", err)
-			continue
-		}
-		allVulns = append(allVulns, vuln)
-	}
-
-	// Deduplicate.
-	deduped := deduplicateVulns(allVulns)
-
-	// Build findings.
-	var findings []scanner.Finding
-	for _, vuln := range deduped {
-		for _, dep := range deps {
-			for _, aff := range vuln.Affected {
-				if aff.Package.Name != dep.Path {
-					continue
-				}
-				if isAffected(dep.Version, aff.Ranges) {
-					fixVersion := extractFixVersion(vuln, dep.Path)
-					findings = append(findings, buildFinding(dep, vuln, fixVersion))
-				}
-			}
-		}
-	}
-
-	return &scanner.ScanResult{
-		Findings: findings,
-		Metadata: scanner.ScanMetadata{},
-	}, nil
-}
-
-// scanOffline uses the local vulnerability cache for scanning.
-func (s *DependencyScanner) scanOffline(deps []Dependency) (*scanner.ScanResult, error) {
+func (s *DependencyScanner) scanFromCache(deps []Dependency) (*scanner.ScanResult, error) {
 	cacheDir := resolveCachePath()
 
 	cachePath, cacheDate, err := latestCacheFile(cacheDir)
@@ -218,25 +151,6 @@ func (s *DependencyScanner) scanOffline(deps []Dependency) (*scanner.ScanResult,
 		Findings: findings,
 		Metadata: scanner.ScanMetadata{},
 	}, nil
-}
-
-// scanAuto tries online first, falls back to offline.
-func (s *DependencyScanner) scanAuto(ctx context.Context, deps []Dependency) (*scanner.ScanResult, error) {
-	// Try online first.
-	result, err := s.scanOnline(ctx, deps)
-	if err == nil {
-		return result, nil
-	}
-
-	// Online failed — log and fall back to offline.
-	slog.Warn("online scan failed, falling back to offline mode", "error", err)
-
-	result, offlineErr := s.scanOffline(deps)
-	if offlineErr != nil {
-		return nil, fmt.Errorf("auto scan: online failed (%v) and offline failed (%v)", err, offlineErr)
-	}
-
-	return result, nil
 }
 
 // parseGoMod reads and parses go.mod from the given directory, returning

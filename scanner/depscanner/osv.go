@@ -60,39 +60,6 @@ type Event struct {
 	LastAffected string `json:"last_affected,omitempty"`
 }
 
-// QueryBatchRequest is the request body for POST /v1/querybatch.
-type QueryBatchRequest struct {
-	Queries []Query `json:"queries"`
-}
-
-// Query represents a single package query within a querybatch request.
-type Query struct {
-	Package QueryPackage `json:"package"`
-	Version string       `json:"version"`
-}
-
-// QueryPackage identifies a package for querying.
-type QueryPackage struct {
-	Name      string `json:"name"`
-	Ecosystem string `json:"ecosystem"`
-}
-
-// QueryBatchResponse is the response from POST /v1/querybatch.
-type QueryBatchResponse struct {
-	Results []QueryResult `json:"results"`
-}
-
-// QueryResult holds the vulnerability references for a single query.
-type QueryResult struct {
-	Vulns []VulnRef `json:"vulns"`
-}
-
-// VulnRef is a lightweight vulnerability reference returned by querybatch.
-type VulnRef struct {
-	ID       string `json:"id"`
-	Modified string `json:"modified"`
-}
-
 // CacheFile is the local cache format for offline vulnerability scanning.
 type CacheFile struct {
 	Generated time.Time                  `json:"generated"`
@@ -171,7 +138,7 @@ func deduplicateVulns(vulns []*Vulnerability) []*Vulnerability {
 		}
 
 		if groupKey == "" {
-			// New group — use the vuln's primary ID as key.
+			// New group: use the vuln's primary ID as key.
 			groupKey = v.ID
 		}
 
