@@ -445,12 +445,23 @@ func TestScanFromCacheNoCache(t *testing.T) {
 	dir := setupTestGoMod(t)
 
 	t.Setenv("PCI_MCP_CACHE_DIR", filepath.Join(t.TempDir(), "nonexistent"))
+	t.Setenv("OSV_BASE_URL", "http://127.0.0.1:1")
 
 	s := New()
 
-	_, err := s.ScanWithMode(context.Background(), dir, "auto")
-	if err == nil {
-		t.Fatal("expected error when no cache exists")
+	result, err := s.ScanWithMode(context.Background(), dir, "auto")
+	if err != nil {
+		t.Fatalf("expected graceful degradation, got err: %v", err)
+	}
+	saw := false
+	for _, f := range result.Findings {
+		if f.RuleID == "DEP-CACHE-COLD" && f.Severity == scanner.SeverityInfo {
+			saw = true
+			break
+		}
+	}
+	if !saw {
+		t.Fatalf("expected DEP-CACHE-COLD INFO finding when no cache exists; got %+v", result.Findings)
 	}
 }
 

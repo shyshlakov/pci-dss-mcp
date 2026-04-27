@@ -268,9 +268,9 @@ func TestIntegrationCheckDepsOfflineWithCache(t *testing.T) {
 func TestIntegrationCheckDepsOfflineNoCache(t *testing.T) {
 	session := setupIntegrationServer(t)
 
-	// Empty cache dir -- no cache files.
 	cacheDir := t.TempDir()
 	t.Setenv("PCI_MCP_CACHE_DIR", cacheDir)
+	t.Setenv("OSV_BASE_URL", "http://127.0.0.1:1")
 
 	projectDir := t.TempDir()
 	copyGoMod(t, projectDir)
@@ -278,27 +278,31 @@ func TestIntegrationCheckDepsOfflineNoCache(t *testing.T) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_dependencies",
 		Arguments: map[string]any{
-			"path": projectDir,
-			"mode": "auto",
+			"path":         projectDir,
+			"mode":         "auto",
+			"min_severity": "INFO",
 		},
 	})
 	if err != nil {
 		t.Fatalf("CallTool failed: %v", err)
 	}
-	if !result.IsError {
-		t.Fatal("Expected IsError=true for missing cache")
+	if result.IsError {
+		t.Fatalf("Expected graceful success with DEP-CACHE-COLD INFO finding, got IsError=true: %s", extractText(t, result))
 	}
 
-	text := extractText(t, result)
-
-	if !strings.Contains(text, "action_required") {
-		t.Errorf("Expected 'action_required' in error, got:\n%s", text)
+	out := parseOut(t, result)
+	saw := false
+	for _, f := range out.Findings {
+		if f.RuleID == "DEP-CACHE-COLD" {
+			saw = true
+			if !strings.Contains(f.Description, "update_vulnerability_db") {
+				t.Errorf("DEP-CACHE-COLD description should mention update_vulnerability_db; got: %s", f.Description)
+			}
+			break
+		}
 	}
-	if !strings.Contains(text, "update_vulnerability_db") {
-		t.Errorf("Expected 'update_vulnerability_db' in error, got:\n%s", text)
-	}
-	if !strings.Contains(text, "pci_impact") {
-		t.Errorf("Expected 'pci_impact' in error, got:\n%s", text)
+	if !saw {
+		t.Errorf("expected DEP-CACHE-COLD INFO finding for cold cache + no network; got: %+v", out.Findings)
 	}
 }
 
@@ -457,7 +461,6 @@ func TestIntegrationCheckDepsStaleCacheWarning(t *testing.T) {
 	projectDir := t.TempDir()
 	copyGoMod(t, projectDir)
 
-	// Create cache dated 10 days ago.
 	cacheDir := t.TempDir()
 	staleDate := time.Now().AddDate(0, 0, -10)
 	vulns := map[string][]json.RawMessage{
@@ -466,15 +469,20 @@ func TestIntegrationCheckDepsStaleCacheWarning(t *testing.T) {
 		},
 	}
 	buildTestCache(t, cacheDir, staleDate, vulns)
+	stalePath := filepath.Join(cacheDir, fmt.Sprintf("go-osv-%s.json", staleDate.Format("2006-01-02")))
+	if err := os.Chtimes(stalePath, staleDate, staleDate); err != nil {
+		t.Fatalf("chtimes stale cache: %v", err)
+	}
 
 	t.Setenv("PCI_MCP_CACHE_DIR", cacheDir)
+	t.Setenv("OSV_BASE_URL", "http://127.0.0.1:1")
 
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "check_dependencies",
 		Arguments: map[string]any{
 			"path":         projectDir,
 			"mode":         "auto",
-			"min_severity": "MEDIUM",
+			"min_severity": "INFO",
 		},
 	})
 	if err != nil {
@@ -485,15 +493,17 @@ func TestIntegrationCheckDepsStaleCacheWarning(t *testing.T) {
 	}
 
 	out := parseOut(t, result)
-	sawWarning := false
+	sawStale := false
 	for _, f := range out.Findings {
-		if strings.Contains(f.Suggestion, "update_vulnerability_db") ||
-			strings.Contains(f.Description, "update_vulnerability_db") {
-			sawWarning = true
+		if f.RuleID == "DEP-CACHE-STALE" {
+			sawStale = true
+			if !strings.Contains(f.Suggestion, "update_vulnerability_db") {
+				t.Errorf("DEP-CACHE-STALE suggestion should mention update_vulnerability_db; got: %s", f.Suggestion)
+			}
 			break
 		}
 	}
-	if !sawWarning {
-		t.Errorf("Expected stale cache warning mentioning update_vulnerability_db, got: %+v", out.Findings)
+	if !sawStale {
+		t.Errorf("Expected DEP-CACHE-STALE finding on stale cache + network failure, got: %+v", out.Findings)
 	}
 }

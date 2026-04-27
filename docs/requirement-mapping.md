@@ -29,6 +29,8 @@ test still asserts the rule_id exists in source).
 | CSP-UNSAFE-EVAL | 6.4.3 |  | scriptscanner | full | unsafe-eval defeats the 6.4.3 authorization clause |
 | CSP-UNSAFE-INLINE | 6.4.3 |  | scriptscanner | full | unsafe-inline defeats the 6.4.3 authorization clause |
 | CSP-VALUE-UNANALYZABLE | 6.4.3 |  | scriptscanner | partial (static-only, needs QSA) | CSP value set from a non-literal; static analysis cannot verify correctness |
+| DEP-CACHE-COLD | 6.3.3 |  | depscanner | partial (static-only, needs QSA) | meta-finding; cache absent and network refresh failed (air-gapped first run); not a direct 6.3.3 violation |
+| DEP-CACHE-NO-DIR | 6.3.3 |  | depscanner | partial (static-only, needs QSA) | meta-finding; no writable cache directory available; not a direct 6.3.3 violation |
 | DEP-CACHE-STALE | 6.3.3 |  | depscanner | partial (static-only, needs QSA) | meta-finding; warns about stale vuln cache, not a direct 6.3.3 violation |
 | DEP-VULN | 6.3.3 |  | depscanner | full | direct OSV.dev CVE match is a direct 6.3.3 violation under v4.0.1 patch SLAs; complementary 6.3.2 inventory of bespoke and custom software is provided by sbomscanner.GenerateSBOM (no rule_id, emission deliverable; see generate_sbom.md) |
 | ERR-LEAK-DIRECT | 6.2.4 |  | errorscanner | full | direct err.Error() to response in payment context falls under 6.2.4 improper-error-handling |

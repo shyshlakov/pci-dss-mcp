@@ -158,6 +158,16 @@ func cacheAgeMessage(cacheDate time.Time) string {
 		cacheDate.Format(cacheDateFormat), days)
 }
 
+func durationHuman(d time.Duration) string {
+	hours := int(d.Hours())
+	if hours < 48 {
+		return fmt.Sprintf("%dh", hours)
+	}
+	days := hours / 24
+	rem := hours % 24
+	return fmt.Sprintf("%dd %dh", days, rem)
+}
+
 // lookupCache finds vulnerabilities for a dependency in the cache.
 // Checks both exact match on dep.Path and prefix match (OSV package may be
 // subpackage like golang.org/x/net/http2 while go.mod has golang.org/x/net).

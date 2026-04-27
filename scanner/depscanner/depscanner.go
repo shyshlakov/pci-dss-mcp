@@ -60,7 +60,13 @@ func (s *DependencyScanner) ScanWithMode(ctx context.Context, targetPath string,
 		return nil, fmt.Errorf("parse dependencies: %w", err)
 	}
 
-	result, err := s.scanFromCache(deps)
+	cacheDir, derr := resolveCachePath()
+	if derr != nil {
+		cacheDir = ""
+	}
+	state := ensureCacheFresh(ctx, cacheDir)
+
+	result, err := s.scanFromCache(ctx, deps, cacheDir, state)
 	if err != nil {
 		return nil, err
 	}
@@ -71,28 +77,42 @@ func (s *DependencyScanner) ScanWithMode(ctx context.Context, targetPath string,
 	return result, nil
 }
 
-func (s *DependencyScanner) scanFromCache(deps []Dependency) (*scanner.ScanResult, error) {
-	cacheDir, err := resolveCachePath()
-	if err != nil {
+func (s *DependencyScanner) scanFromCache(ctx context.Context, deps []Dependency, cacheDir string, state cacheState) (*scanner.ScanResult, error) {
+	if state.noWritableDir {
 		return &scanner.ScanResult{
-			Findings: nil,
+			Findings: []scanner.Finding{noDirFinding()},
+			Metadata: scanner.ScanMetadata{},
+		}, nil
+	}
+	if state.coldCache {
+		return &scanner.ScanResult{
+			Findings: []scanner.Finding{coldFinding()},
 			Metadata: scanner.ScanMetadata{},
 		}, nil
 	}
 
-	cachePath, cacheDate, err := latestCacheFile(cacheDir)
-	if err != nil {
-		return nil, fmt.Errorf("no vulnerability cache available: %w. Run update_vulnerability_db to download OSV cache", err)
+	cachePath, cacheDate, lookupErr := locateCacheFile(cacheDir)
+	if lookupErr != nil {
+		return nil, fmt.Errorf("no vulnerability cache available: %w. Run update_vulnerability_db to download OSV cache", lookupErr)
 	}
 
-	cache, err := loadCache(cachePath)
-	if err != nil {
-		return nil, fmt.Errorf("load cache: %w", err)
+	cache, loadErr := loadCache(cachePath)
+	if loadErr != nil {
+		canonical := canonicalCachePath(cacheDir)
+		if dlErr := refreshCache(ctx, canonical); dlErr == nil {
+			cache, loadErr = loadCache(canonical)
+			if loadErr == nil {
+				cachePath = canonical
+				if info, sErr := os.Stat(canonical); sErr == nil {
+					cacheDate = info.ModTime()
+				}
+			}
+		}
+		if loadErr != nil {
+			return nil, fmt.Errorf("load cache: %w", loadErr)
+		}
 	}
 
-	staleness := checkStaleness(cacheDate)
-
-	// Build findings from cache.
 	var allVulns []*Vulnerability
 	depVulnMap := make(map[string][]*Vulnerability)
 	for _, dep := range deps {
@@ -103,10 +123,8 @@ func (s *DependencyScanner) scanFromCache(deps []Dependency) (*scanner.ScanResul
 		}
 	}
 
-	// Deduplicate all found vulns.
 	deduped := deduplicateVulns(allVulns)
 
-	// Build findings from deduplicated vulns.
 	dedupedSet := make(map[string]bool)
 	for _, v := range deduped {
 		dedupedSet[v.ID] = true
@@ -121,31 +139,14 @@ func (s *DependencyScanner) scanFromCache(deps []Dependency) (*scanner.ScanResul
 			}
 			fixVersion := extractFixVersion(vuln, dep.Path)
 			findings = append(findings, buildFinding(dep, vuln, fixVersion))
-			// Remove from deduped set so we don't produce duplicate findings.
 			delete(dedupedSet, vuln.ID)
 		}
 	}
 
-	// Add staleness warning as a finding.
-	if staleness != CacheFresh {
-		warningText := stalenessWarning(staleness, cacheDate)
-		var severity scanner.Severity
-		if staleness == CacheStale {
-			severity = scanner.SeverityMedium
-		} else {
-			severity = scanner.SeverityHigh
-		}
-		findings = append(findings, scanner.Finding{
-			RuleID:        "DEP-CACHE-STALE",
-			Severity:      severity,
-			RequirementID: "6.3.3",
-			FilePath:      "go.mod",
-			Description:   warningText,
-			Suggestion:    "Run update_vulnerability_db to refresh OSV cache",
-		})
+	if state.staleFallback {
+		findings = append(findings, staleFinding(state.cacheAge))
 	}
 
-	// Always include cache age info.
 	ageMsg := cacheAgeMessage(cacheDate)
 	slog.Info(ageMsg)
 
@@ -153,6 +154,47 @@ func (s *DependencyScanner) scanFromCache(deps []Dependency) (*scanner.ScanResul
 		Findings: findings,
 		Metadata: scanner.ScanMetadata{},
 	}, nil
+}
+
+func locateCacheFile(cacheDir string) (string, time.Time, error) {
+	canonical := canonicalCachePath(cacheDir)
+	if info, err := os.Stat(canonical); err == nil {
+		return canonical, info.ModTime(), nil
+	}
+	return latestCacheFile(cacheDir)
+}
+
+func noDirFinding() scanner.Finding {
+	return scanner.Finding{
+		RuleID:        ruleDepCacheNoDir,
+		Severity:      scanner.SeverityInfo,
+		RequirementID: "6.3.3",
+		FilePath:      "go.mod",
+		Description:   "OSV vulnerability cache directory cannot be determined. Set PCI_MCP_CACHE_DIR to a writable path or ensure HOME / XDG_CACHE_HOME is set.",
+		Suggestion:    "Set PCI_MCP_CACHE_DIR to a writable directory and re-run.",
+	}
+}
+
+func coldFinding() scanner.Finding {
+	return scanner.Finding{
+		RuleID:        ruleDepCacheCold,
+		Severity:      scanner.SeverityInfo,
+		RequirementID: "6.3.3",
+		FilePath:      "go.mod",
+		Description:   "OSV vulnerability cache is empty and network refresh failed. Run with network access OR bind-mount the cache directory to enable scanning. Run update_vulnerability_db once with network to bootstrap.",
+		Suggestion:    "Run update_vulnerability_db with network access, or bind-mount a populated cache directory.",
+	}
+}
+
+func staleFinding(age time.Duration) scanner.Finding {
+	return scanner.Finding{
+		RuleID:        ruleDepCacheStale,
+		Severity:      scanner.SeverityInfo,
+		RequirementID: "6.3.3",
+		FilePath:      "go.mod",
+		Description:   fmt.Sprintf("OSV vulnerability cache is %s old; network refresh failed. Run with network access OR bind-mount the cache directory to refresh.", durationHuman(age)),
+		Suggestion:    "Run update_vulnerability_db to refresh OSV cache.",
+	}
 }
 
 // parseGoMod reads and parses go.mod from the given directory, returning
