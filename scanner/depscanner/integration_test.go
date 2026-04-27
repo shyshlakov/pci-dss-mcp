@@ -404,9 +404,7 @@ func TestIntegrationUpdateVulnDB(t *testing.T) {
 	}))
 	defer mockServer.Close()
 
-	// Override the OSV ZIP URL to point to our mock server.
-	restore := depscanner.SetOSVZipURL(mockServer.URL)
-	defer restore()
+	t.Setenv("OSV_BASE_URL", mockServer.URL)
 
 	session := setupIntegrationServer(t)
 

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -21,8 +23,12 @@ type OSVClient struct {
 }
 
 func NewOSVClient() *OSVClient {
+	base := defaultOSVBaseURL
+	if env := strings.TrimRight(os.Getenv("OSV_BASE_URL"), "/"); env != "" {
+		base = env
+	}
 	return &OSVClient{
-		baseURL: defaultOSVBaseURL,
+		baseURL: base,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},

@@ -134,10 +134,12 @@ func TestDownloadAndBuildCache(t *testing.T) {
 			t.Fatalf("downloadAndBuildCache() error: %v", err)
 		}
 
-		// Verify no temp files left behind.
+		// Verify no temp files left behind. The cache file plus its sidecar
+		// .meta.json (ETag/Last-Modified for conditional revalidation) are the
+		// only legitimate residents.
 		entries, _ := os.ReadDir(dir)
 		for _, e := range entries {
-			if e.Name() != "go-osv-test.json" {
+			if e.Name() != "go-osv-test.json" && e.Name() != "go-osv-test.json.meta.json" {
 				t.Errorf("unexpected file in output dir: %s (temp file not cleaned up?)", e.Name())
 			}
 		}

@@ -244,7 +244,7 @@ func RegisterTools(server *mcp.Server) {
 		outputPath := filepath.Join(outputDir,
 			fmt.Sprintf("go-osv-%s.json", time.Now().Format("2006-01-02")))
 
-		result, err := downloadAndBuildCache(ctx, outputPath, osvGoZipURL)
+		result, err := downloadAndBuildCache(ctx, outputPath, snapshotURL())
 		if err != nil {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf(

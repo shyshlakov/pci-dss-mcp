@@ -14,9 +14,14 @@ import (
 	"time"
 )
 
-// osvGoZipURL is the GCS URL for the Go vulnerability snapshot.
-// It is a var (not const) so integration tests can substitute a mock server URL.
-var osvGoZipURL = "https://storage.googleapis.com/osv-vulnerabilities/Go/all.zip"
+const defaultOSVGoZipURL = "https://storage.googleapis.com/osv-vulnerabilities/Go/all.zip"
+
+func snapshotURL() string {
+	if env := strings.TrimRight(os.Getenv("OSV_BASE_URL"), "/"); env != "" {
+		return env + "/osv-vulnerabilities/Go/all.zip"
+	}
+	return defaultOSVGoZipURL
+}
 
 const (
 	// maxDownloadSize caps the OSV ZIP download at 100 MB.
@@ -31,11 +36,6 @@ type UpdateResult struct {
 	PreviousCacheDate *time.Time `json:"previous_cache_date,omitempty"`
 }
 
-// downloadAndBuildCache downloads a ZIP from the given URL, extracts Go vulnerability
-// JSON files, builds a package-indexed CacheFile, and writes it atomically to outputPath.
-//
-// The zipURL parameter allows tests to substitute a mock server URL.
-// For production use, pass osvGoZipURL.
 func downloadAndBuildCache(ctx context.Context, outputPath string, zipURL string) (*UpdateResult, error) {
 	outputDir := filepath.Dir(outputPath)
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
@@ -52,6 +52,8 @@ func downloadAndBuildCache(ctx context.Context, outputPath string, zipURL string
 	if err != nil {
 		return nil, fmt.Errorf("download vulnerability data: %w", err)
 	}
+	etag := resp.Header.Get("Etag")
+	lastMod := resp.Header.Get("Last-Modified")
 	defer func() {
 		if cerr := resp.Body.Close(); cerr != nil {
 			slog.Warn("close osv response body", "err", cerr)
@@ -139,6 +141,10 @@ func downloadAndBuildCache(ctx context.Context, outputPath string, zipURL string
 			slog.Warn("remove temp output after rename error", "path", tmpOutputPath, "err", rerr)
 		}
 		return nil, fmt.Errorf("rename cache file: %w", err)
+	}
+
+	if merr := saveMeta(outputPath, cacheMeta{ETag: etag, LastModified: lastMod}); merr != nil {
+		slog.Warn("save cache meta", "err", merr)
 	}
 
 	result := &UpdateResult{
