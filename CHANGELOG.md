@@ -5,6 +5,8 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## [0.6.3] - 2026-04-27
+
 ### Changed (BREAKING for callers passing mode="online" or mode="offline" to check_dependencies)
 
 - `check_dependencies` `mode` parameter: `online` and `offline` keywords removed. Only `auto` (default) is supported. Callers passing the removed values now get an error: `Invalid mode: "online". Only "auto" is supported. The "online" and "offline" modes were removed in v0.6.3 to prevent module-name disclosure to OSV.dev. See CHANGELOG and docs/check_dependencies.md for migration guidance.`
