@@ -29,7 +29,7 @@ func TestHybrid_Default_UnfilteredReturnsSummary(t *testing.T) {
 	ResetSessionCacheForTest(nil)
 	gen, path := scanFixtureInput(t)
 
-	in := ReportInput{Path: path, DepScanMode: "offline"}
+	in := ReportInput{Path: path, DepScanMode: "auto"}
 	summary, flat, errResp, err := SelectAndExecute(context.Background(), gen, in, "generate_compliance_report")
 	if err != nil {
 		t.Fatalf("SelectAndExecute: %v", err)
@@ -63,7 +63,7 @@ func TestHybrid_Cursor_ResumesAtOffset(t *testing.T) {
 	ResetSessionCacheForTest(nil)
 	gen, path := scanFixtureInput(t)
 
-	in := ReportInput{Path: path, DepScanMode: "offline"}
+	in := ReportInput{Path: path, DepScanMode: "auto"}
 	summary, _, _, err := SelectAndExecute(context.Background(), gen, in, "generate_compliance_report")
 	if err != nil {
 		t.Fatalf("SelectAndExecute first call: %v", err)
@@ -96,7 +96,7 @@ func TestHybrid_Cursor_Expired_ReturnsCursorExpiredError(t *testing.T) {
 	ResetSessionCacheForTest(clk)
 	gen, path := scanFixtureInput(t)
 
-	in := ReportInput{Path: path, DepScanMode: "offline"}
+	in := ReportInput{Path: path, DepScanMode: "auto"}
 	summary, _, _, err := SelectAndExecute(context.Background(), gen, in, "generate_compliance_report")
 	if err != nil {
 		t.Fatalf("first scan: %v", err)
@@ -148,7 +148,7 @@ func TestHybrid_RuleFilter_ReturnsFlatPaged(t *testing.T) {
 	ResetSessionCacheForTest(nil)
 	gen, path := scanFixtureInput(t)
 
-	in := ReportInput{Path: path, DepScanMode: "offline", RuleFilter: "PAN-KEYWORD"}
+	in := ReportInput{Path: path, DepScanMode: "auto", RuleFilter: "PAN-KEYWORD"}
 	summary, flat, errResp, err := SelectAndExecute(context.Background(), gen, in, "generate_compliance_report")
 	if err != nil {
 		t.Fatalf("SelectAndExecute: %v", err)
@@ -176,7 +176,7 @@ func TestHybrid_MinSeverity_ReturnsFlatPaged(t *testing.T) {
 	ResetSessionCacheForTest(nil)
 	gen, path := scanFixtureInput(t)
 
-	in := ReportInput{Path: path, DepScanMode: "offline", MinSeverity: "HIGH"}
+	in := ReportInput{Path: path, DepScanMode: "auto", MinSeverity: "HIGH"}
 	summary, flat, errResp, err := SelectAndExecute(context.Background(), gen, in, "generate_compliance_report")
 	if err != nil {
 		t.Fatalf("SelectAndExecute: %v", err)
@@ -201,7 +201,7 @@ func TestHybrid_Limit100_ReturnsExactFlat(t *testing.T) {
 	ResetSessionCacheForTest(nil)
 	gen, path := scanFixtureInput(t)
 
-	in := ReportInput{Path: path, DepScanMode: "offline", Limit: 100}
+	in := ReportInput{Path: path, DepScanMode: "auto", Limit: 100}
 	summary, flat, errResp, err := SelectAndExecute(context.Background(), gen, in, "generate_compliance_report")
 	if err != nil {
 		t.Fatalf("SelectAndExecute: %v", err)
@@ -224,7 +224,7 @@ func TestLayerB_FixtureBudget25KB(t *testing.T) {
 	ResetSessionCacheForTest(nil)
 	gen, path := scanFixtureInput(t)
 
-	in := ReportInput{Path: path, DepScanMode: "offline"}
+	in := ReportInput{Path: path, DepScanMode: "auto"}
 	summary, _, _, err := SelectAndExecute(context.Background(), gen, in, "generate_compliance_report")
 	if err != nil {
 		t.Fatalf("SelectAndExecute: %v", err)
@@ -246,7 +246,7 @@ func TestHybrid_Selector_CursorBeatsFilter(t *testing.T) {
 	ResetSessionCacheForTest(nil)
 	gen, path := scanFixtureInput(t)
 
-	in := ReportInput{Path: path, DepScanMode: "offline"}
+	in := ReportInput{Path: path, DepScanMode: "auto"}
 	summary, _, _, err := SelectAndExecute(context.Background(), gen, in, "generate_compliance_report")
 	if err != nil {
 		t.Fatalf("first scan: %v", err)
@@ -286,7 +286,7 @@ func TestHybrid_CrossToolCursor_Rejected(t *testing.T) {
 	ResetSessionCacheForTest(nil)
 	gen, path := scanFixtureInput(t)
 
-	in := ReportInput{Path: path, DepScanMode: "offline"}
+	in := ReportInput{Path: path, DepScanMode: "auto"}
 	summary, _, _, err := SelectAndExecute(context.Background(), gen, in, "generate_compliance_report")
 	if err != nil {
 		t.Fatalf("first scan: %v", err)

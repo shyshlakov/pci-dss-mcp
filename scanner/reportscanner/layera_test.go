@@ -47,7 +47,7 @@ func TestReportLayerA_SizeBudget(t *testing.T) {
 		Name: "generate_compliance_report",
 		Arguments: map[string]any{
 			"path":          absFixture,
-			"dep_scan_mode": "offline",
+			"dep_scan_mode": "auto",
 			"min_severity":  "MEDIUM",
 		},
 	})

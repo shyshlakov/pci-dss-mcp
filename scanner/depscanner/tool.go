@@ -20,7 +20,7 @@ const toolNameDep = "check_dependencies"
 
 type CheckDepsInput struct {
 	Path        string `json:"path" jsonschema:"required,Path to the project directory containing go.mod to scan for vulnerable dependencies"`
-	Mode        string `json:"mode,omitempty" jsonschema:"Scan mode: auto (default - try online then offline), online (OSV API only), offline (local cache only)"`
+	Mode        string `json:"mode,omitempty" jsonschema:"Scan mode: only 'auto' (default) is supported after v0.6.3. Empty value is treated as 'auto'."`
 	Cursor      string `json:"cursor,omitempty" jsonschema:"Opaque cursor token from a prior check_dependencies response. When set resumes pagination from the stored session cache (10-minute TTL). Leave empty for a fresh scan."`
 	Limit       int    `json:"limit,omitempty" jsonschema:"Maximum number of findings to return per call. Default 0 (summary-first response with next_cursor). To fetch more findings than fit in one response, follow next_cursor; do NOT raise this value to fetch all at once (server caps at the per-tool page size and rejects with LIMIT_EXCEEDS_PAGE_SIZE)."`
 	MinSeverity string `json:"min_severity,omitempty" jsonschema:"Filter by minimum severity (CRITICAL/HIGH/MEDIUM/LOW/INFO). Setting this forces the flat response shape."`
@@ -79,7 +79,11 @@ func RegisterTools(server *mcp.Server) {
 
 	depTool := &mcp.Tool{
 		Name: toolNameDep,
-		Description: "Scan go.mod dependencies for known vulnerabilities via OSV.dev database (PCI DSS 6.3.3). Modes: 'auto' (default, try online then offline cache), 'online' (OSV API only, fails without network), 'offline' (local cache only). This tool NEVER makes network requests in offline mode. Run update_vulnerability_db first to populate the offline cache. " +
+		Description: "Scan go.mod dependencies for known vulnerabilities (PCI DSS 6.3.3). " +
+			"Bulk-downloads the public OSV Go vulnerability snapshot and intersects locally against go.mod, " +
+			"matching the govulncheck privacy model. No module names are sent to OSV.dev. " +
+			"Cache TTL: 24h fresh, 24h-7d revalidate via ETag, >7d force-refresh. " +
+			"Run update_vulnerability_db first to bootstrap the cache for air-gapped environments. " +
 			"Default: returns response_shape \"summary\" with by_severity counts, a capped by_rule histogram (top 10 + more_rules), and top 1 per severity findings - plus a pagination.next_cursor for drill-down. " +
 			"Prefer this for mixed queries; min_severity / rule_filter drop to response_shape \"flat\" but still carry summary.by_severity + summary.by_rule for full-scan context. " +
 			"Follow the cursor for the full paginated list. " +
@@ -91,11 +95,11 @@ func RegisterTools(server *mcp.Server) {
 
 	mcp.AddTool(server, depTool, func(ctx context.Context, req *mcp.CallToolRequest, input CheckDepsInput) (*mcp.CallToolResult, any, error) {
 		mode := input.Mode
+		if mode != "" && mode != "auto" {
+			return depErrorResult(fmt.Sprintf("Invalid mode %q. Only \"auto\" is supported. The \"online\" and \"offline\" modes were removed in v0.6.3 to prevent module-name disclosure to OSV.dev. See CHANGELOG and docs/check_dependencies.md for migration guidance.", mode)), nil, nil
+		}
 		if mode == "" {
 			mode = "auto"
-		}
-		if mode != "auto" && mode != "online" && mode != "offline" {
-			return depErrorResult(fmt.Sprintf("Invalid mode %q. Valid modes: auto, online, offline", mode)), nil, nil
 		}
 
 		if input.Limit == -1 {

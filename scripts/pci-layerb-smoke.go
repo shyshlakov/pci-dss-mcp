@@ -55,7 +55,7 @@ func main() {
 		Name: "triage_findings",
 		Arguments: map[string]any{
 			"path":          abs,
-			"dep_scan_mode": "offline",
+			"dep_scan_mode": "auto",
 			"include_taint": true,
 		},
 	})
