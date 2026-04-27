@@ -409,7 +409,7 @@ func setupTestCache(t *testing.T) string {
 	return dir
 }
 
-func TestScanOffline(t *testing.T) {
+func TestScanFromCache(t *testing.T) {
 	cacheDir := setupTestCache(t)
 	dir := setupTestGoMod(t)
 
@@ -417,9 +417,9 @@ func TestScanOffline(t *testing.T) {
 
 	s := New()
 
-	result, err := s.ScanWithMode(context.Background(), dir, "offline")
+	result, err := s.ScanWithMode(context.Background(), dir, "auto")
 	if err != nil {
-		t.Fatalf("ScanWithMode(offline) error: %v", err)
+		t.Fatalf("ScanWithMode(auto) error: %v", err)
 	}
 
 	if result == nil {
@@ -429,7 +429,6 @@ func TestScanOffline(t *testing.T) {
 		t.Fatal("expected findings from cache")
 	}
 
-	// Verify finding has correct data.
 	found := false
 	for _, f := range result.Findings {
 		if f.RuleID == "DEP-VULN" && strings.Contains(f.Description, "GHSA-test-0001") {
@@ -442,16 +441,53 @@ func TestScanOffline(t *testing.T) {
 	}
 }
 
-func TestScanOfflineNoCache(t *testing.T) {
+func TestScanFromCacheNoCache(t *testing.T) {
 	dir := setupTestGoMod(t)
 
 	t.Setenv("PCI_MCP_CACHE_DIR", filepath.Join(t.TempDir(), "nonexistent"))
 
 	s := New()
 
-	_, err := s.ScanWithMode(context.Background(), dir, "offline")
+	_, err := s.ScanWithMode(context.Background(), dir, "auto")
 	if err == nil {
 		t.Fatal("expected error when no cache exists")
+	}
+}
+
+func TestScanWithModeRejectsRemovedKeywords(t *testing.T) {
+	dir := setupTestGoMod(t)
+	t.Setenv("PCI_MCP_CACHE_DIR", t.TempDir())
+
+	s := New()
+
+	tt := []struct {
+		name string
+		mode string
+	}{
+		{name: "online_rejected", mode: "online"},
+		{name: "offline_rejected", mode: "offline"},
+		{name: "garbage_rejected", mode: "garbage"},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := s.ScanWithMode(context.Background(), dir, tc.mode)
+			if err == nil {
+				t.Fatalf("ScanWithMode(%q) returned nil err; want migration error", tc.mode)
+			}
+			msg := err.Error()
+			if !strings.Contains(msg, "auto") {
+				t.Errorf("error must mention \"auto\" as supported value; got: %s", msg)
+			}
+			if tc.mode == "online" || tc.mode == "offline" {
+				if !strings.Contains(msg, "removed in v0.6.3") {
+					t.Errorf("error must reference removal in v0.6.3 for mode=%q; got: %s", tc.mode, msg)
+				}
+				if !strings.Contains(msg, "module-name disclosure") {
+					t.Errorf("error must explain privacy rationale (module-name disclosure) for mode=%q; got: %s", tc.mode, msg)
+				}
+			}
+		})
 	}
 }
 
@@ -526,9 +562,9 @@ require golang.org/x/net v0.20.0
 
 	s := New()
 
-	result, err := s.ScanWithMode(context.Background(), scanRoot, "offline")
+	result, err := s.ScanWithMode(context.Background(), scanRoot, "auto")
 	if err != nil {
-		t.Fatalf("ScanWithMode(offline) error: %v", err)
+		t.Fatalf("ScanWithMode(auto) error: %v", err)
 	}
 	if result == nil {
 		t.Fatal("result is nil")

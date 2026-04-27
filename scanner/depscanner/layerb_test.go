@@ -118,7 +118,7 @@ func callDepDefault(t *testing.T, session *mcp.ClientSession, path string) *mcp.
 		Name: "check_dependencies",
 		Arguments: map[string]any{
 			"path": path,
-			"mode": "offline",
+			"mode": "auto",
 		},
 	})
 	if err != nil {
@@ -317,7 +317,7 @@ func TestDepLayerB_FilterSet_StillFlat(t *testing.T) {
 		Name: "check_dependencies",
 		Arguments: map[string]any{
 			"path":         projectDir,
-			"mode":         "offline",
+			"mode":         "auto",
 			"min_severity": "MEDIUM",
 		},
 	})
@@ -340,7 +340,7 @@ func TestDepLayerA_SizeBudget(t *testing.T) {
 		Name: "check_dependencies",
 		Arguments: map[string]any{
 			"path":         projectDir,
-			"mode":         "offline",
+			"mode":         "auto",
 			"min_severity": "MEDIUM",
 		},
 	})
@@ -535,7 +535,7 @@ func TestDepLayerA_IncludesHistogram(t *testing.T) {
 		Name: "check_dependencies",
 		Arguments: map[string]any{
 			"path":         projectDir,
-			"mode":         "offline",
+			"mode":         "auto",
 			"min_severity": "HIGH",
 		},
 	})

@@ -49,8 +49,8 @@ func (s *DependencyScanner) Scan(ctx context.Context, targetPath string) (*scann
 }
 
 func (s *DependencyScanner) ScanWithMode(ctx context.Context, targetPath string, mode string) (*scanner.ScanResult, error) {
-	if mode == "" {
-		mode = "auto"
+	if mode != "" && mode != "auto" {
+		return nil, fmt.Errorf("Invalid mode %q. Only \"auto\" is supported. The \"online\" and \"offline\" modes were removed in v0.6.3 to prevent module-name disclosure to OSV.dev. See CHANGELOG and docs/check_dependencies.md for migration guidance.", mode)
 	}
 
 	start := time.Now()
@@ -58,10 +58,6 @@ func (s *DependencyScanner) ScanWithMode(ctx context.Context, targetPath string,
 	deps, err := parseGoMod(targetPath)
 	if err != nil {
 		return nil, fmt.Errorf("parse dependencies: %w", err)
-	}
-
-	if mode != "auto" {
-		return nil, fmt.Errorf("unknown scan mode: %q (supported: auto)", mode)
 	}
 
 	result, err := s.scanFromCache(deps)

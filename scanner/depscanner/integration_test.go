@@ -226,7 +226,7 @@ func TestIntegrationCheckDepsOfflineWithCache(t *testing.T) {
 		Name: "check_dependencies",
 		Arguments: map[string]any{
 			"path":         projectDir,
-			"mode":         "offline",
+			"mode":         "auto",
 			"min_severity": "INFO",
 		},
 	})
@@ -279,7 +279,7 @@ func TestIntegrationCheckDepsOfflineNoCache(t *testing.T) {
 		Name: "check_dependencies",
 		Arguments: map[string]any{
 			"path": projectDir,
-			"mode": "offline",
+			"mode": "auto",
 		},
 	})
 	if err != nil {
@@ -357,7 +357,7 @@ require (
 		Name: "check_dependencies",
 		Arguments: map[string]any{
 			"path": projectDir,
-			"mode": "offline",
+			"mode": "auto",
 		},
 	})
 	if err != nil {
@@ -475,7 +475,7 @@ func TestIntegrationCheckDepsStaleCacheWarning(t *testing.T) {
 		Name: "check_dependencies",
 		Arguments: map[string]any{
 			"path":         projectDir,
-			"mode":         "offline",
+			"mode":         "auto",
 			"min_severity": "MEDIUM",
 		},
 	})
