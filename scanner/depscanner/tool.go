@@ -230,7 +230,14 @@ func RegisterTools(server *mcp.Server) {
 			"This is the ONLY tool that makes network requests. " +
 			"Cache stored at PCI_MCP_CACHE_DIR or ~/.pci-dss-mcp/vuln-cache/ by default.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input UpdateDBInput) (*mcp.CallToolResult, *UpdateDBOutput, error) {
-		outputDir := resolveCachePath()
+		outputDir, derr := resolveCachePath()
+		if derr != nil {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf(
+					"update_vulnerability_db error: %s", derr.Error())}},
+				IsError: true,
+			}, nil, nil
+		}
 		if input.OutputPath != "" {
 			outputDir = input.OutputPath
 		}

@@ -72,7 +72,13 @@ func (s *DependencyScanner) ScanWithMode(ctx context.Context, targetPath string,
 }
 
 func (s *DependencyScanner) scanFromCache(deps []Dependency) (*scanner.ScanResult, error) {
-	cacheDir := resolveCachePath()
+	cacheDir, err := resolveCachePath()
+	if err != nil {
+		return &scanner.ScanResult{
+			Findings: nil,
+			Metadata: scanner.ScanMetadata{},
+		}, nil
+	}
 
 	cachePath, cacheDate, err := latestCacheFile(cacheDir)
 	if err != nil {

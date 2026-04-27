@@ -1,8 +1,6 @@
 package depscanner
 
 import (
-	"errors"
-
 	_ "github.com/gofrs/flock"
 )
 
@@ -16,6 +14,4 @@ func SetOSVZipURL(url string) func() {
 	}
 }
 
-func ResolveCachePathForTest() (string, error) {
-	return "", errors.New("ResolveCachePathForTest: not yet implemented")
-}
+var ResolveCachePathForTest = resolveCachePath

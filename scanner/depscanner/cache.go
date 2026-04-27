@@ -2,6 +2,7 @@ package depscanner
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -32,20 +33,26 @@ const (
 	criticalDaysThreshold = 14
 )
 
-// resolveCachePath returns the cache directory path:
-// (1) PCI_MCP_CACHE_DIR env variable if set, (2) default ~/.pci-dss-mcp/vuln-cache/.
-func resolveCachePath() string {
+const (
+	ruleDepCacheCold  = "DEP-CACHE-COLD"
+	ruleDepCacheStale = "DEP-CACHE-STALE"
+	ruleDepCacheNoDir = "DEP-CACHE-NO-DIR"
+)
+
+func resolveCachePath() (string, error) {
 	if envDir := os.Getenv(cacheEnvVar); envDir != "" {
-		return envDir
+		return envDir, nil
 	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		// Fallback to current directory if home cannot be resolved.
-		return filepath.Join(".", defaultCacheDir)
+	if xdg := os.Getenv("XDG_CACHE_HOME"); xdg != "" && filepath.IsAbs(xdg) {
+		return filepath.Join(xdg, "pci-dss-mcp", "vuln-cache"), nil
 	}
-
-	return filepath.Join(home, defaultCacheDir)
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		return filepath.Join(home, defaultCacheDir), nil
+	}
+	if base, err := os.UserCacheDir(); err == nil && base != "" {
+		return filepath.Join(base, "pci-dss-mcp", "vuln-cache"), nil
+	}
+	return "", errors.New("cache directory cannot be determined: set PCI_MCP_CACHE_DIR")
 }
 
 // latestCacheFile finds the most recent go-osv-YYYY-MM-DD.json file in the given directory.
