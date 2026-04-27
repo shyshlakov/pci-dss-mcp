@@ -84,7 +84,7 @@ Two prompts to paste into your MCP client:
 | `audit_log_coverage` | Missing audit logs on payment flows (10.2.1) | [docs/audit_log_coverage.md](docs/audit_log_coverage.md) |
 | `check_data_retention` | Missing TTL, sensitive storage, missing zeroing (3.2.1, 3.3.1) | [docs/check_data_retention.md](docs/check_data_retention.md) |
 | `check_payment_page_scripts` | Missing CSP/SRI/nonce on payment pages (6.4.3, 11.6.1) | [docs/check_payment_page_scripts.md](docs/check_payment_page_scripts.md) |
-| `check_dependencies` | Vulnerable Go dependencies via OSV (6.3.3); also covers `update_vulnerability_db` | [docs/check_dependencies.md](docs/check_dependencies.md) |
+| `check_dependencies` | Vulnerable Go dependencies via OSV (6.3.3); govulncheck-style privacy: no module names sent to OSV.dev. See [docs/check_dependencies.md](docs/check_dependencies.md#privacy). Also covers `update_vulnerability_db`. | [docs/check_dependencies.md](docs/check_dependencies.md) |
 | `generate_sbom` | CycloneDX 1.6 SBOM from go.mod/go.sum (6.3.2) | [docs/generate_sbom.md](docs/generate_sbom.md) |
 | `explain_requirement` | Look up a PCI DSS v4.0.1 requirement by ID | [docs/explain_requirement.md](docs/explain_requirement.md) |
 

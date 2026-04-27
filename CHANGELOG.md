@@ -5,6 +5,30 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+### Changed (BREAKING for callers passing mode="online" or mode="offline" to check_dependencies)
+
+- `check_dependencies` `mode` parameter: `online` and `offline` keywords removed. Only `auto` (default) is supported. Callers passing the removed values now get an error: `Invalid mode: "online". Only "auto" is supported. The "online" and "offline" modes were removed in v0.6.3 to prevent module-name disclosure to OSV.dev. See CHANGELOG and docs/check_dependencies.md for migration guidance.`
+
+### Privacy
+
+- Dependency scanner no longer sends Go module names (private or public) to OSV.dev. Switched to govulncheck-style architecture: bulk-download of the public OSV Go vulnerability snapshot (`storage.googleapis.com/osv-vulnerabilities/Go/all.zip`) plus local intersect against `go.mod`. The only outbound request is a generic GET on the public snapshot URL, indistinguishable from any other govulncheck user. Result: zero leak of internal/private Go module names regardless of GOPRIVATE / shell environment / Docker configuration.
+- HTTP-cache lifecycle: 0-24h fresh (zero outbound), 24h-7d conditional GET via `If-None-Match` and `If-Modified-Since` (304 = revalidate, near-zero bytes), greater than 7d force-refresh. File-locked refresh (cross-platform) prevents parallel-scan races. Stale-fallback emits `DEP-CACHE-STALE` INFO finding only when the actual fallback path was taken (not on every greater-than-24h cache).
+- New INFO findings: `DEP-CACHE-COLD` (cache absent + network refresh failed), `DEP-CACHE-STALE` (stale fallback used), `DEP-CACHE-NO-DIR` (no writable cache directory found in the resolution chain).
+- New env var: `OSV_BASE_URL` for enterprise self-hosted OSV mirrors. Default unchanged.
+- Cache directory resolution chain: PCI_MCP_CACHE_DIR -> XDG_CACHE_HOME/pci-dss-mcp/vuln-cache -> $HOME/.pci-dss-mcp/vuln-cache -> os.UserCacheDir/pci-dss-mcp/vuln-cache -> hard-fail INFO. Existing users at $HOME/.pci-dss-mcp continue to work without migration.
+
+### Removed (Internal)
+
+- `scanner/depscanner.OSVClient.QueryBatch()` deleted. The `QueryBatchRequest`, `QueryBatchResponse`, `Query`, `QueryPackage`, `VulnRef`, and `QueryResult` types deleted. The `defaultOSVBaseURL` constant retained for the single-vuln `FetchVuln` path.
+- `scanner/depscanner.scanOnline()` and `scanner/depscanner.scanAuto()` consolidated into the cache-ensure path.
+
+### Migration
+
+For callers of `check_dependencies`:
+
+- `mode="online"`: replace with `mode="auto"` (or omit `mode`. Default is `auto`). Behavior change: privacy by default. First scan downloads ~8MB cache.
+- `mode="offline"`: replace with `mode="auto"`. The TTL-driven cache covers the air-gapped use case. Bind-mount `$HOME/.pci-dss-mcp` into the container or set `PCI_MCP_CACHE_DIR` to your air-gap-allowed path. Run `update_vulnerability_db` once with network access to bootstrap. See `docs/check_dependencies.md` for the canonical bind-mount example and the full cache directory resolution chain.
+
 ### Fixed
 
 - Human-readable 6.3.2 cross-reference no longer includes an unknown-license count that depended on the local GOMODCACHE state. The line now reads `SBOM inventory: N components` only. Component count is deterministic from `go.mod`; the prior `N unknown-license` suffix varied across developer machines and CI runners, which caused spurious golden-snapshot diffs.

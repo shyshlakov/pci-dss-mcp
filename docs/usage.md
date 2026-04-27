@@ -12,7 +12,7 @@ HIGH or CRITICAL CVE, show the fix command and the PCI DSS remediation
 SLA (30 days for HIGH).
 ```
 
-Triggers `check_dependencies` against OSV.dev. Works offline against a warm `~/.pci-dss-mcp/vuln-cache/` (override via `PCI_MCP_CACHE_DIR`) if you run `update_vulnerability_db` first.
+Triggers `check_dependencies` against the local OSV vulnerability cache. The scanner uses the govulncheck privacy model: it bulk-downloads the public OSV Go snapshot once and intersects locally against `go.mod`. No module names are sent to OSV.dev. Cache lives at `~/.pci-dss-mcp/vuln-cache/` (override via `PCI_MCP_CACHE_DIR`). For air-gapped environments and Docker, see [docs/check_dependencies.md](check_dependencies.md#privacy) for the bind-mount pattern.
 
 ## Explain a specific requirement
 
