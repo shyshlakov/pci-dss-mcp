@@ -127,6 +127,45 @@ func TestCacheLifecycle(t *testing.T) {
 			},
 		},
 		{
+			name: "cache_miss_cold_uncreated_dir",
+			run: func(t *testing.T) {
+				parent := t.TempDir()
+				cacheDir := filepath.Join(parent, "pci-dss-mcp", "vuln-cache")
+
+				if _, statErr := os.Stat(cacheDir); statErr == nil {
+					t.Fatalf("test precondition: cacheDir must not exist before scan, got existing %s", cacheDir)
+				}
+
+				srv, _, _ := newRecordingOSVServer(t)
+				defer srv.Close()
+
+				t.Setenv("PCI_MCP_CACHE_DIR", cacheDir)
+				t.Setenv("OSV_BASE_URL", srv.URL)
+
+				result, err := New().Scan(context.Background(), fixturePath(t))
+				if err != nil {
+					t.Fatalf("scan: %v", err)
+				}
+				if countFindingsByRule(result.Findings, "DEP-VULN") == 0 {
+					t.Errorf("expected DEP-VULN finding after fresh dir + refresh; got 0")
+				}
+				if _, present := findInfoFinding(result.Findings, "DEP-CACHE-COLD"); present {
+					t.Errorf("DEP-CACHE-COLD INFO must not emit when refresh succeeds")
+				}
+				if _, present := findInfoFinding(result.Findings, "DEP-CACHE-NO-DIR"); present {
+					t.Errorf("DEP-CACHE-NO-DIR INFO must not emit when dir is creatable")
+				}
+				cachePath := filepath.Join(cacheDir, "go-osv.json")
+				if _, statErr := os.Stat(cachePath); statErr != nil {
+					t.Errorf("expected cache file at %s after refresh: %v", cachePath, statErr)
+				}
+				metaPath := cachePath + ".meta.json"
+				if _, statErr := os.Stat(metaPath); statErr != nil {
+					t.Errorf("expected sidecar meta at %s after refresh: %v", metaPath, statErr)
+				}
+			},
+		},
+		{
 			name: "revalidate_304",
 			run: func(t *testing.T) {
 				cacheDir := t.TempDir()
