@@ -41,6 +41,10 @@ func ensureCacheFresh(ctx context.Context, cacheDir string) cacheState {
 		return cacheState{noWritableDir: true}
 	}
 
+	if !cacheDirWritable(cacheDir) {
+		return cacheState{noWritableDir: true}
+	}
+
 	cachePath := canonicalCachePath(cacheDir)
 
 	info, statErr := os.Stat(cachePath)
