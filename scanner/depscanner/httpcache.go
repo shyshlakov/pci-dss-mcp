@@ -16,8 +16,8 @@ import (
 const canonicalCacheFile = "go-osv.json"
 
 const (
-	cacheFreshTTL  = 24 * time.Hour
-	cacheStaleTTL  = 7 * 24 * time.Hour
+	cacheFreshTTL = 24 * time.Hour
+	cacheStaleTTL = 7 * 24 * time.Hour
 )
 
 type cacheState struct {

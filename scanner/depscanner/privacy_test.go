@@ -17,56 +17,80 @@ import (
 )
 
 type loggedRequest struct {
-	Method string
-	Path   string
-	Host   string
-	Body   []byte
+	Method   string
+	Path     string
+	RawQuery string
+	Host     string
+	Body     []byte
 }
 
-func buildMinimalGoOSVZip(t *testing.T) []byte {
+type osvEntry struct {
+	id         string
+	pkg        string
+	fixedAtVer string
+}
+
+func defaultGoJoseEntry() osvEntry {
+	return osvEntry{
+		id:         "GHSA-test-go-jose",
+		pkg:        "github.com/go-jose/go-jose/v4",
+		fixedAtVer: "v4.1.4",
+	}
+}
+
+func buildOSVZip(t *testing.T, entries ...osvEntry) []byte {
 	t.Helper()
 
-	entry := map[string]any{
-		"id":      "GHSA-test-go-jose",
-		"summary": "test advisory for go-jose",
-		"aliases": []string{},
-		"affected": []map[string]any{
-			{
-				"package": map[string]string{
-					"name":      "github.com/go-jose/go-jose/v4",
-					"ecosystem": "Go",
-				},
-				"ranges": []map[string]any{
-					{
-						"type": "SEMVER",
-						"events": []map[string]string{
-							{"introduced": "0"},
-							{"fixed": "v4.1.4"},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	data, err := json.Marshal(entry)
-	if err != nil {
-		t.Fatalf("marshal osv entry: %v", err)
+	if len(entries) == 0 {
+		entries = []osvEntry{defaultGoJoseEntry()}
 	}
 
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
-	w, err := zw.Create("GHSA-test-go-jose.json")
-	if err != nil {
-		t.Fatalf("zip create: %v", err)
-	}
-	if _, err := w.Write(data); err != nil {
-		t.Fatalf("zip write: %v", err)
+	for _, e := range entries {
+		entry := map[string]any{
+			"id":      e.id,
+			"summary": "test advisory for " + e.pkg,
+			"aliases": []string{},
+			"affected": []map[string]any{
+				{
+					"package": map[string]string{
+						"name":      e.pkg,
+						"ecosystem": "Go",
+					},
+					"ranges": []map[string]any{
+						{
+							"type": "SEMVER",
+							"events": []map[string]string{
+								{"introduced": "0"},
+								{"fixed": e.fixedAtVer},
+							},
+						},
+					},
+				},
+			},
+		}
+		data, err := json.Marshal(entry)
+		if err != nil {
+			t.Fatalf("marshal osv entry: %v", err)
+		}
+		w, err := zw.Create(e.id + ".json")
+		if err != nil {
+			t.Fatalf("zip create: %v", err)
+		}
+		if _, err := w.Write(data); err != nil {
+			t.Fatalf("zip write: %v", err)
+		}
 	}
 	if err := zw.Close(); err != nil {
 		t.Fatalf("zip close: %v", err)
 	}
 	return buf.Bytes()
+}
+
+func buildMinimalGoOSVZip(t *testing.T) []byte {
+	t.Helper()
+	return buildOSVZip(t, defaultGoJoseEntry())
 }
 
 func newRecordingOSVServer(t *testing.T) (*httptest.Server, *[]loggedRequest, *sync.Mutex) {
@@ -83,10 +107,11 @@ func newRecordingOSVServer(t *testing.T) (*httptest.Server, *[]loggedRequest, *s
 		}
 		mu.Lock()
 		requests = append(requests, loggedRequest{
-			Method: r.Method,
-			Path:   r.URL.Path,
-			Host:   r.Host,
-			Body:   body,
+			Method:   r.Method,
+			Path:     r.URL.Path,
+			RawQuery: r.URL.RawQuery,
+			Host:     r.Host,
+			Body:     body,
 		})
 		mu.Unlock()
 
@@ -128,6 +153,14 @@ func TestNetTrafficZeroQueryBatch(t *testing.T) {
 		t.Logf("first scan returned err (RED state expected): %v", err)
 	}
 
+	fixtureModuleFragments := []string{
+		"go-jose",
+		"golang.org/x/net",
+		"golang.org/x/crypto",
+		"gin-gonic/gin",
+		"sirupsen/logrus",
+	}
+
 	mu.Lock()
 	countAfterFirst := len(*requests)
 	getCount := 0
@@ -137,6 +170,16 @@ func TestNetTrafficZeroQueryBatch(t *testing.T) {
 		}
 		if bytes.Contains(req.Body, []byte(`"package"`)) || bytes.Contains(req.Body, []byte(`"version"`)) {
 			t.Errorf("request body contains package/version JSON, module-name leak!")
+		}
+		urlSurface := []byte(req.Path + "?" + req.RawQuery)
+		for _, frag := range fixtureModuleFragments {
+			fragB := []byte(frag)
+			if bytes.Contains(req.Body, fragB) {
+				t.Errorf("request body to %s leaked module-name fragment %q", req.Path, frag)
+			}
+			if bytes.Contains(urlSurface, fragB) {
+				t.Errorf("request URL %s?%s leaked module-name fragment %q", req.Path, req.RawQuery, frag)
+			}
 		}
 		if req.Method == http.MethodGet && strings.Contains(req.Path, "/Go/all.zip") {
 			getCount++

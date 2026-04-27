@@ -2,7 +2,6 @@ package depscanner
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -322,7 +321,7 @@ func TestCacheLifecycle(t *testing.T) {
 					t.Errorf("parallel scans returned different DEP-VULN counts: %d vs %d", results[0], results[1])
 				}
 				if got := atomic.LoadInt32(&getCount); got != 1 {
-					t.Errorf("parallel cold cache: file-lock must serialise refresh; GET count = %d, want 1", got)
+					t.Errorf("parallel cold cache: file-lock must serialize refresh; GET count = %d, want 1", got)
 				}
 			},
 		},
@@ -379,17 +378,111 @@ func TestCacheLifecycle(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "corrupted_meta_json",
+			run: func(t *testing.T) {
+				cacheDir := t.TempDir()
+				cachePath := writeFreshCacheFile(t, cacheDir)
+				past := time.Now().Add(-25 * time.Hour)
+				setFileMtime(t, cachePath, past)
+				if err := os.WriteFile(cachePath+".meta.json", []byte("{not valid json"), 0o644); err != nil {
+					t.Fatalf("write corrupt meta: %v", err)
+				}
+
+				var sawConditionalHeader int32
+				zipBody := buildMinimalGoOSVZip(t)
+				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/Go/all.zip") {
+						if r.Header.Get("If-None-Match") != "" || r.Header.Get("If-Modified-Since") != "" {
+							atomic.StoreInt32(&sawConditionalHeader, 1)
+						}
+						w.Header().Set("ETag", `"refreshed-etag"`)
+						w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+						w.Header().Set("Content-Type", "application/zip")
+						if _, werr := w.Write(zipBody); werr != nil {
+							t.Logf("server write zip: %v", werr)
+						}
+						return
+					}
+					w.WriteHeader(http.StatusNotFound)
+				}))
+				defer srv.Close()
+
+				t.Setenv("PCI_MCP_CACHE_DIR", cacheDir)
+				t.Setenv("OSV_BASE_URL", srv.URL)
+
+				result, err := New().Scan(context.Background(), fixturePath(t))
+				if err != nil {
+					t.Fatalf("scan with corrupt sidecar must recover: %v", err)
+				}
+				if countFindingsByRule(result.Findings, "DEP-VULN") == 0 {
+					t.Errorf("expected DEP-VULN finding after corrupt-sidecar recovery")
+				}
+				if atomic.LoadInt32(&sawConditionalHeader) != 0 {
+					t.Errorf("corrupt sidecar must yield unconditional GET (no If-None-Match / If-Modified-Since)")
+				}
+				meta, mErr := loadMeta(filepath.Join(cacheDir, "go-osv.json"))
+				if mErr != nil {
+					t.Errorf("expected sidecar meta refreshed to valid JSON, got: %v", mErr)
+				}
+				if meta.ETag != `"refreshed-etag"` {
+					t.Errorf("expected refreshed sidecar ETag = \"refreshed-etag\"; got %q", meta.ETag)
+				}
+			},
+		},
+		{
+			name: "subpackage_match_preserved",
+			run: func(t *testing.T) {
+				cacheDir := t.TempDir()
+
+				zipBody := buildOSVZip(t,
+					osvEntry{
+						id:         "GHSA-test-go-jose-jwt-subpath",
+						pkg:        "github.com/go-jose/go-jose/v4/jwt",
+						fixedAtVer: "v999.0.0",
+					},
+				)
+				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/Go/all.zip") {
+						w.Header().Set("ETag", `"subpkg-etag"`)
+						w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+						w.Header().Set("Content-Type", "application/zip")
+						if _, werr := w.Write(zipBody); werr != nil {
+							t.Logf("server write zip: %v", werr)
+						}
+						return
+					}
+					w.WriteHeader(http.StatusNotFound)
+				}))
+				defer srv.Close()
+
+				t.Setenv("PCI_MCP_CACHE_DIR", cacheDir)
+				t.Setenv("OSV_BASE_URL", srv.URL)
+
+				result, err := New().Scan(context.Background(), fixturePath(t))
+				if err != nil {
+					t.Fatalf("scan: %v", err)
+				}
+				matched := false
+				for _, f := range result.Findings {
+					if f.RuleID != "DEP-VULN" {
+						continue
+					}
+					if strings.Contains(f.Description, "github.com/go-jose/go-jose/v4") || strings.Contains(f.Suggestion, "github.com/go-jose/go-jose/v4") {
+						matched = true
+						break
+					}
+				}
+				if !matched {
+					t.Errorf("expected DEP-VULN finding for go-jose/v4 (sub-path match preserved on go-jose/v4/jwt OSV entry); got %d findings, none mentioning go-jose/v4", len(result.Findings))
+				}
+			},
+		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, tc.run)
 	}
-}
-
-type errRoundTripper struct{}
-
-func (errRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
-	return nil, errors.New("simulated network failure")
 }
 
 func TestAirGappedScan(t *testing.T) {
@@ -424,7 +517,7 @@ func TestAirGappedScan(t *testing.T) {
 				if !strings.Contains(cold.Description, "cache") {
 					t.Errorf("DEP-CACHE-COLD description must mention 'cache'; got: %s", cold.Description)
 				}
-				if !(strings.Contains(cold.Description, "network") || strings.Contains(cold.Description, "bind-mount")) {
+				if !strings.Contains(cold.Description, "network") && !strings.Contains(cold.Description, "bind-mount") {
 					t.Errorf("DEP-CACHE-COLD description must mention 'network' or 'bind-mount'; got: %s", cold.Description)
 				}
 			},
