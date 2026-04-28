@@ -26,6 +26,13 @@ type passthroughSpec struct {
 	// VariadicTaint applies to functions like errors.Join / multierror.Append
 	// where ANY element of a variadic chunk taints the return.
 	VariadicTaint bool
+	// ReverseFlow indicates source-arg-to-destination propagation: when the
+	// source argument is tainted, the destination object referenced by the
+	// dst arg (free fn) or the receiver (method) becomes tainted. Used for
+	// sink-shaped stdlib helpers like io.Copy / io.WriteString and
+	// append-style methods like (*bytes.Buffer).Write*. Default false
+	// preserves all existing forward-flow rows.
+	ReverseFlow bool
 }
 
 var userInputPassthrough = []passthroughSpec{
@@ -89,6 +96,33 @@ var userInputPassthrough = []passthroughSpec{
 	{PkgPath: "bytes", TypeName: "Buffer", Method: "String"},
 	{PkgPath: "bytes", TypeName: "Buffer", Method: "Bytes"},
 	{PkgPath: "strings", TypeName: "Builder", Method: "String"},
+
+	// ---- Plan 21.1-07 (D-08+) reverse method-projectors -----------------
+	// Source-arg-to-destination flow: when the source argument is tainted,
+	// the destination object (passed by pointer for free functions, the
+	// receiver for methods) becomes tainted. This closes the io.Copy +
+	// (*bytes.Buffer).String() chain where buf would otherwise never become
+	// tainted.
+	//
+	// Free functions: dst is call.Args[0], src is call.Args[1]. The
+	// dispatcher derefs &ident shapes to resolve the underlying *types.Var.
+	// Other dst shapes (composite literals, function returns) cannot be
+	// modeled without SSA and silently no-op (recall-biased acceptable per
+	// feedback_scanner_recall_bias).
+	//
+	// Rune-write methods on Buffer/Builder are intentionally absent -
+	// rune-typed args carry no string-shaped leak risk.
+	{PkgPath: "io", Method: "Copy", ReverseFlow: true},
+	{PkgPath: "io", Method: "CopyN", ReverseFlow: true},
+	{PkgPath: "io", Method: "CopyBuffer", ReverseFlow: true},
+	{PkgPath: "io", Method: "WriteString", ReverseFlow: true},
+
+	{PkgPath: "bytes", TypeName: "Buffer", Method: "Write", ReverseFlow: true},
+	{PkgPath: "bytes", TypeName: "Buffer", Method: "WriteString", ReverseFlow: true},
+	{PkgPath: "bytes", TypeName: "Buffer", Method: "WriteByte", ReverseFlow: true},
+	{PkgPath: "strings", TypeName: "Builder", Method: "Write", ReverseFlow: true},
+	{PkgPath: "strings", TypeName: "Builder", Method: "WriteString", ReverseFlow: true},
+	{PkgPath: "strings", TypeName: "Builder", Method: "WriteByte", ReverseFlow: true},
 }
 
 // propagateUserInput is the per-CallExpr dispatcher for D-13 propagators. It
@@ -124,6 +158,38 @@ func propagateUserInput(call *ast.CallExpr, info *types.Info, state *flowState) 
 		if spec.TypeName != "" && spec.TypeName != recvName {
 			continue
 		}
+
+		// Plan 21.1-07 reverse-flow: tainted src arg -> tainted dst object.
+		// For free functions (TypeName==""), dst is call.Args[0] and src
+		// is call.Args[1] (io.Copy/CopyN/CopyBuffer/WriteString all share
+		// this shape). For methods (TypeName!=""), dst is the receiver
+		// (SelectorExpr.X) and any tainted positional arg triggers
+		// propagation.
+		if spec.ReverseFlow {
+			var dstExpr ast.Expr
+			var srcArgs []ast.Expr
+			if spec.TypeName != "" {
+				if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+					dstExpr = sel.X
+				}
+				srcArgs = call.Args
+			} else {
+				if len(call.Args) >= 1 {
+					dstExpr = call.Args[0]
+				}
+				if len(call.Args) >= 2 {
+					srcArgs = []ast.Expr{call.Args[1]}
+				}
+			}
+			for _, a := range srcArgs {
+				if isArgTainted(a, info, state) {
+					taintDestObject(dstExpr, info, state)
+					return false
+				}
+			}
+			return false
+		}
+
 		for _, a := range call.Args {
 			if isArgTainted(a, info, state) {
 				state.taintedReturns[fn] = true
@@ -158,6 +224,49 @@ func propagateUserInput(call *ast.CallExpr, info *types.Info, state *flowState) 
 	}
 
 	return false
+}
+
+// taintDestObject marks the *types.Var referenced by dstExpr as tainted in
+// flowState. Handles two destination shapes used by io.Copy(&buf, src) and
+// (*bytes.Buffer).Write(buf, ...) call sites:
+//   - *ast.UnaryExpr{Op: AND, X: *ast.Ident}: deref &ident
+//   - *ast.Ident: bare identifier (typed pointer or interface receiver)
+//
+// Other shapes (composite literals, function returns, selector chains) are
+// not modeled - they require SSA-level alias tracking to be sound. Silent
+// no-op on unmodeled shapes is recall-biased: misses are acceptable, false
+// taints are not. Plan 21.1-07 / D-08+.
+func taintDestObject(dstExpr ast.Expr, info *types.Info, state *flowState) {
+	if dstExpr == nil || info == nil || state == nil {
+		return
+	}
+	var ident *ast.Ident
+	switch x := dstExpr.(type) {
+	case *ast.UnaryExpr:
+		if x.Op != token.AND {
+			return
+		}
+		if id, ok := x.X.(*ast.Ident); ok {
+			ident = id
+		}
+	case *ast.Ident:
+		ident = x
+	case *ast.ParenExpr:
+		taintDestObject(x.X, info, state)
+		return
+	}
+	if ident == nil {
+		return
+	}
+	obj := info.ObjectOf(ident)
+	if obj == nil {
+		return
+	}
+	v, ok := obj.(*types.Var)
+	if !ok {
+		return
+	}
+	state.tainted[v] = true
 }
 
 // propagateUserInputBinaryExpr handles string concatenation BinaryExpr nodes
