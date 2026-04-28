@@ -200,6 +200,10 @@ func (e *TaintEngine) propagateInFile(pkg *packages.Package, f *ast.File, state 
 				hit = true
 				return false
 			}
+			// USER_INPUT propagator hook (Plan 21-01 Task 1, Tasks 2/3 fill in).
+			if e.propagateUserInputCall(node, info, state) {
+				return true
+			}
 			// R3: tainted argument → taint callee parameter.
 			e.applyRule3(pkg, node, state)
 			// R4 consumer side: if callee returns tainted, downstream
