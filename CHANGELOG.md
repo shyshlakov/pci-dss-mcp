@@ -5,6 +5,44 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+### Added
+
+- HTTP input taint tracking: three new rule IDs detect raw framework input flowing into log, error, and panic sinks without a sanitizer barrier:
+  - `HTTP-INPUT-LOG`: framework input flowing into a log sink. PCI DSS 10.2.1 (audit log content). MEDIUM by default; HIGH and related 3.3.1 / 3.5.1 when the source identifier name matches a PAN keyword (`bin`, `card`, `pan`, `account`, `iban`, `cvv`, `pin`, `apikey`).
+  - `HTTP-INPUT-ERROR`: framework input baked into `fmt.Errorf`, written to `http.ResponseWriter`, or surfaced through a centralized abort helper. PCI DSS 6.2.4 (improper error handling). MEDIUM.
+  - `HTTP-INPUT-PANIC`: framework input reaching `panic(...)` or a `defer recover()` re-log path. PCI DSS 10.2.1 (related 6.2.4). MEDIUM.
+- New `INFO` rule ID `HTTP-INPUT-TAINT-OFF` emitted once per scan when `include_taint=false` so users understand why HTTP-INPUT-* rules did not fire.
+- New scanner package `scanner/httpinputscanner/` registered in `reportscanner.NewReportGenerator` (12th scanner). Implements `scanner.Scanner` plus the `taintCapableScanner` interface; runs through `triage_findings` and `generate_compliance_report` orchestrators.
+- New taint kind `USER_INPUT` in the `internal/taint` engine; additive, does not change existing PAN / CVV / SAD behavior. Unblocks Phase 25 (Custom YAML Rule Engine) D-04 grammar.
+- New TriageHint tags drive AI triage clustering and user-facing summaries:
+  - `http-input-leak` for HTTP-INPUT-LOG findings.
+  - `framework-input-error` for HTTP-INPUT-ERROR findings.
+  - `recovery-leak` for HTTP-INPUT-PANIC findings.
+- Tier 1 framework source coverage: gin, chi, gorilla/mux, net/http (Go 1.22+), echo v4, fiber v2, validator/v10. Body decoders recognized: JSON, XML, YAML, TOML, MsgPack, Protobuf, CBOR, Form, Header, Query, URI binding.
+- Tier 1 logger sink coverage: log/slog (positional kv plus `*Context` variants and `slog.Group`), sirupsen/logrus (`WithField`, `WithFields(logrus.Fields{})`, `WithFields(map[string]any{})`, `WithFields(map[string]interface{}{})`), uber-go/zap (Field builders plus Sugared positional kv), rs/zerolog Event chain finalized by `.Msg`/`.Msgf`/`.Send`, go-logr/logr, k8s.io/klog/v2 structured `InfoS`/`ErrorS`, hashicorp/go-hclog.
+- Custom-helper indirection (D-14): centralized abort helpers (any function taking an `error` parameter whose body contains a slog/logrus/zap/log.Print call) and context-extracted loggers (any function taking `context.Context` and returning a logger-shaped value) recognized as one-hop sink wrappers.
+- Sanitizer barrier recognition: public `mask.*` / `card.Maskify` package shape, method-on-struct `(*Bundle).Mask([]byte) []byte`, function-shape `Mask`/`Maskify` by signature, regex-redact heuristic, and the `interaction.NewClientTransport(http.Client, mask.NewBundle(...))` outbound wrap pattern. Branch-aware: a mask call inside an `if err == nil { ... }` success branch does NOT clear taint on the error branch.
+- Taint propagators (D-13): `fmt.Sprintf` family, `fmt.Errorf %w`, pkg/errors `Wrap`/`Wrapf`/`WithMessage`, `errors.Join` (Go 1.20+), hashicorp/go-multierror `Append`, uber-go/multierr `Append`/`Combine`, cockroachdb/errors `Wrap`/`Wrapf`/`WithMessage`/`WithSafeDetails`, eris `Wrap`/`Wrapf`, gin `Context.Set`/`GetString` round-trip, `context.WithValue` carrying taint at key, `recover()` inheriting taint from the matching panic site, type conversions and string concatenation.
+- Negative differentiators: route-template accessors recognized as compile-time-fixed and NOT tainted: gin `c.FullPath()`, echo `c.Path()`, chi `chi.RouteContext().RoutePattern()`, gorilla/mux `mux.CurrentRoute().GetPathTemplate()`, fiber `c.Route().Path`, iris `ctx.GetCurrentRoute().Tmpl()`.
+- New documentation: [docs/http_input_taint.md](docs/http_input_taint.md) covering source, sink, sanitizer, propagator, custom-helper indirection, examples, suppression patterns, and Tier 1 / Tier 2 / Tier 3 coverage matrix.
+
+### Changed
+
+- README.md Core Value tightened: replaces aspirational "every PCI DSS v4.0.1 violation is detected" with "Every detected PCI DSS v4.0.1 violation in a Go payment service codebase is mapped to the specific requirement number before the code ships." Phase 21 universality research showed exhaustive detection across all Go HTTP frameworks and loggers is a Tier-3 + Phase-25-YAML claim, not a v0.7 claim; the rephrased line claims mapping (which v0.7 delivers) without claiming exhaustive detection.
+- README.md "What pci-dss-mcp catches today" section added with explicit Tier 1 framework + logger coverage statement, Tier 2 v0.8 follow-up note, and Tier 3 Phase 25 YAML deferral.
+- docs/scan_pan_data.md: cross-link section pointing to docs/http_input_taint.md so readers landing on the PAN doc discover the HTTP-input rule family.
+- docs/severity.md: new HTTP Input Taint Scanner subsection listing severity per rule.
+- docs/pci-coverage.md: 6.2.4 and 10.2.1 rows updated with HTTP-INPUT-* depth notes (no coverage-percentage change; this is depth, not breadth).
+
+### Documentation
+
+- New: [docs/http_input_taint.md](docs/http_input_taint.md).
+- Updated: [docs/severity.md](docs/severity.md), [docs/requirement-mapping.md](docs/requirement-mapping.md), [docs/pci-coverage.md](docs/pci-coverage.md), [docs/scan_pan_data.md](docs/scan_pan_data.md), [README.md](README.md).
+
+### Iteration plan
+
+- Phase 21 V2.1 D-12 iteration plan closed: V2 was extended with universality supplements (D-16) covering 12 frameworks, 10 loggers, 6 error-wrap libraries, and a 10-service real-world stress test. No V3 D-XX rule amendment was needed; the supplements are list extensions to existing decisions. gRPC handlers deferred to Phase 21.2 (separate phase) as a clean v0.8 marketing scope.
+
 ## [0.6.3] - 2026-04-27
 
 ### Changed (BREAKING for callers passing mode="online" or mode="offline" to check_dependencies)

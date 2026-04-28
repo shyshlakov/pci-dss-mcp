@@ -52,3 +52,7 @@ See live golden output: [`testdata/vulnerable-payment-service/EXPECTED-FINDINGS.
 - `PAN-LITERAL` only fires on Luhn-valid 13-19 digit literals. Obfuscated literals (split across concatenations, base64, hex strings) are missed.
 - The `requirement_id` reported on each finding is dynamic (PAN field on a stored struct maps to 3.5.1; CVV field maps to 3.3.1). See `docs/requirement-mapping.md` for the resolution rules.
 - `PAN-TYPE` flags `string` declarations because `string` is immutable and cannot be zeroed; `[]byte` types are recommended for PAN buffers.
+
+## Related: HTTP input taint
+
+Raw HTTP framework input flowing into log sinks without a sanitizer barrier is detected by the `HTTP-INPUT-LOG` / `HTTP-INPUT-ERROR` / `HTTP-INPUT-PANIC` rules emitted by `httpinputscanner`. See [docs/http_input_taint.md](http_input_taint.md) for source / sink / sanitizer coverage, propagator and custom-helper indirection model, the Tier 1 / Tier 2 / Tier 3 framework and logger coverage matrix, and PCI DSS requirement mapping.

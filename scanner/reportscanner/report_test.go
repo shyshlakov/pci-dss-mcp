@@ -23,13 +23,13 @@ func newTestDB(t *testing.T) *pcidb.DB {
 	return db
 }
 
-func TestReportGenerator_NewHas11Scanners(t *testing.T) {
+func TestReportGenerator_NewHas12Scanners(t *testing.T) {
 	t.Parallel()
 	db := newTestDB(t)
 	gen := NewReportGenerator(db)
 
-	if len(gen.scanners) != 11 {
-		t.Errorf("NewReportGenerator has %d scanners, want 11", len(gen.scanners))
+	if len(gen.scanners) != 12 {
+		t.Errorf("NewReportGenerator has %d scanners, want 12", len(gen.scanners))
 	}
 }
 
@@ -86,8 +86,8 @@ func TestReportGenerator_EmptyDir(t *testing.T) {
 	}
 
 	// Metadata check.
-	if report.Metadata.ScannerCount != 11 {
-		t.Errorf("ScannerCount = %d, want 11", report.Metadata.ScannerCount)
+	if report.Metadata.ScannerCount != 12 {
+		t.Errorf("ScannerCount = %d, want 12", report.Metadata.ScannerCount)
 	}
 	if report.Metadata.GeneratedAt == "" {
 		t.Error("GeneratedAt should not be empty")
@@ -680,8 +680,8 @@ func TestGenerateWithOptions_IncludeTests(t *testing.T) {
 		t.Fatalf("GenerateWithOptions with includeTests=true error: %v", err)
 	}
 
-	if report.Metadata.ScannerCount != 11 {
-		t.Errorf("ScannerCount = %d, want 11", report.Metadata.ScannerCount)
+	if report.Metadata.ScannerCount != 12 {
+		t.Errorf("ScannerCount = %d, want 12", report.Metadata.ScannerCount)
 	}
 }
 
@@ -697,8 +697,8 @@ func TestGenerateWithOptions_DepScanMode(t *testing.T) {
 		t.Fatalf("GenerateWithOptions with depScanMode=auto error: %v", err)
 	}
 
-	if report.Metadata.ScannerCount != 11 {
-		t.Errorf("ScannerCount = %d, want 11", report.Metadata.ScannerCount)
+	if report.Metadata.ScannerCount != 12 {
+		t.Errorf("ScannerCount = %d, want 12", report.Metadata.ScannerCount)
 	}
 }
 

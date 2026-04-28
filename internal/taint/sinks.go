@@ -19,6 +19,7 @@ const (
 	SinkHTTPResponse                 //  stub (ERR-LEAK bridge later)
 	SinkLoggerCall                   //  stub (PAN-LOGGER bridge later)
 	SinkCryptoCall                   //  stub (CRYPTO-HARDCODED-KEY later)
+	TaintUserInput                   // additive taint kind for HTTP framework input flows; CONTEXT.md D-09
 )
 
 // SinkPattern describes a FlowsTo query: what kind of sink we are checking

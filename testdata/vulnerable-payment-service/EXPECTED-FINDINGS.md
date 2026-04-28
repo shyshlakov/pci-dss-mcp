@@ -7,13 +7,13 @@ total_intentional_violations: 157
 total_clean_patterns: 26
 total_rules_covered: 57
 expected_summary:
- critical: 49
- high: 89
- medium: 27
+ critical: 50
+ high: 91
+ medium: 52
  low: 0
- info: 59
-expected_active: 178
-expected_total_findings: 226
+ info: 66
+expected_active: 206
+expected_total_findings: 261
 expected_sbom_components: 40
 expected_sbom_format: cyclonedx-json
 expected_sbom_spec_version: "1.6"
@@ -62,17 +62,19 @@ fixture files change.
 
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 49 |
-| HIGH | 89 |
-| MEDIUM | 27 |
+| CRITICAL | 50 |
+| HIGH | 91 |
+| MEDIUM | 52 |
 | LOW | 0 |
-| INFO | 59 |
+| INFO | 66 |
 
 ## Violations
 
 | Rule ID | Severity | File | Line | Req ID | Related | Notes |
 |---------|----------|------|------|--------|---------|-------|
 | AUDIT-LOG-OK | INFO | internal/http/handler/tokens/tokenize.go | 11 |  |  | logrus structured fields PCI 10.2.1 partial coverage |
+| AUDIT-LOG-OK | INFO | internal/http_input/conditional_debug.go | 11 | 10.2.1 |  | structured slog.Info inside conditional debug branch |
+| AUDIT-LOG-OK | INFO | internal/http_input/json_struct_log.go | 15 | 10.2.1 |  | structured slog.Any LogJSONStruct |
 | AUDIT-NO-LOG | CRITICAL | clean/s2s_handler/generic_consensus_webhook.go | 12 |  |  | incidental AUDIT-NO-LOG on s2s fixture handler |
 | AUDIT-NO-LOG | CRITICAL | internal/auth/process.go | 5 |  |  | AuthorizeCharge handler no log calls |
 | AUDIT-NO-LOG | CRITICAL | internal/http/handler/callback/mastercard.go | 8 |  |  | S2S callback handler no log calls |
@@ -87,7 +89,9 @@ fixture files change.
 | AUDIT-NO-LOG | CRITICAL | internal/http/handler/tokens/metadata.go | 8 |  |  | CardMetadata handler no log calls |
 | AUDIT-NO-LOG | CRITICAL | internal/http/handler/webhook/bad_generic_webhook.go | 12 |  |  | incidental AUDIT-NO-LOG on webhook bad fixture |
 | AUDIT-NO-LOG | CRITICAL | internal/http/handler/webhook/bad_paypal_ipn.go | 12 |  |  | incidental AUDIT-NO-LOG on webhook bad fixture |
+| AUDIT-NO-LOG | CRITICAL | internal/http_input/error_taint.go | 12 | 10.2.1 |  | ConfirmCharge handler body has no log call (logging happens in AbortWithErrorLog helper) |
 | AUDIT-NO-LOG | HIGH | internal/billing/encode_map.go | 19 |  |  | EncodeHandler no log calls after fixture-shortcut removal |
+| AUDIT-NO-LOG | HIGH | internal/http_input/central_abort_log.go | 12 | 10.2.1 |  | GetMerchant handler body has no log call (logging happens in Abort helper) |
 | AUDIT-NO-LOG | HIGH | internal/payment/zeroing_init.go | 20 |  |  | incidental tier-2 AUDIT-NO-LOG on fixture |
 | AUDIT-NO-LOG | HIGH | internal/retention/zeroing_elseif.go | 7 |  |  | RED: incidental tier-2 AUDIT-NO-LOG on Z9 fixture |
 | AUDIT-NO-LOG | HIGH | internal/retention/zeroing_select.go | 10 |  |  | RED: incidental tier-2 AUDIT-NO-LOG on Z12 fixture |
@@ -165,6 +169,8 @@ fixture files change.
 | CSP-MISSING | INFO | internal/http/handler/tokens/detokenize.go | 8 |  |  | non-HTML handler informational note |
 | CSP-MISSING | INFO | internal/http/handler/tokens/exchange.go | 5 |  |  | non-HTML handler informational note |
 | CSP-MISSING | INFO | internal/http/handler/tokens/tokenize.go | 11 |  |  | non-HTML handler informational note |
+| CSP-MISSING | INFO | internal/http_input/conditional_debug.go | 11 | 6.4.3 |  | non-HTML handler informational note |
+| CSP-MISSING | INFO | internal/http_input/json_struct_log.go | 15 | 6.4.3 |  | non-HTML handler informational note |
 | CSP-MISSING | INFO | internal/payment/core.go | 19 |  |  | non-HTML handler informational note after fixture-shortcut removal |
 | CSP-MISSING | INFO | internal/payment/zeroing_init.go | 20 |  |  | non-HTML handler informational note (path-dep live-only) |
 | CSP-MISSING | INFO | internal/retention/zeroing_elseif.go | 7 |  |  | non-HTML handler informational note (path-dep live-only) |
@@ -205,6 +211,32 @@ fixture files change.
 | GORM-SENSITIVE-TAG | HIGH | internal/storage/postgres/model/token.go | 9 | 3.3.1 |  | Token CVV gorm column |
 | GORM-SENSITIVE-TAG | MEDIUM | internal/storage/postgres/model/token.go | 11 |  |  | exp_month gorm column (defense-in-depth) |
 | GORM-SENSITIVE-TAG | MEDIUM | internal/storage/postgres/model/token.go | 12 |  |  | exp_year gorm column (defense-in-depth) |
+| HTTP-INPUT-ERROR | MEDIUM | internal/http_input/central_abort_log.go | 30 | 6.2.4 |  | gap row P19: centralized Abort helper logs err.Error of wrapped chain |
+| HTTP-INPUT-ERROR | MEDIUM | internal/http_input/error_taint.go | 30 | 6.2.4 |  | gap row P5: AbortWithErrorLog logs err.Error of fmt.Errorf %w wrapping path param |
+| HTTP-INPUT-ERROR | MEDIUM | internal/http_input/errors_wrap_chain.go | 15 | 6.2.4 |  | gap row P21: errors-wrap chain final.Error logged after multi-level fmt.Errorf %w |
+| HTTP-INPUT-ERROR | MEDIUM | internal/http_input/multierror_wrap_log.go | 16 | 6.2.4 |  | gap row Phase21-U5: hashicorp/go-multierror Error string carries r.URL.Path through fmt.Errorf into slog.Error sink |
+| HTTP-INPUT-ERROR | MEDIUM | internal/http_input/struct_logger_field.go | 20 | 6.2.4 |  | gap row P12 err branch: h.log.Error read body failed err.Error |
+| HTTP-INPUT-ERROR | MEDIUM | internal/http_input/writer_writeback.go | 12 | 6.2.4 |  | gap row P22: raw path param written back to HTTP response writer |
+| HTTP-INPUT-ERROR | MEDIUM | internal/http_input/zerolog_ctx_log.go | 16 | 6.2.4 |  | gap row Phase21-U3: zerolog log.Ctx finalizer Send emits Err of fmt.Errorf %w wrapping path param |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/conditional_debug.go | 17 | 10.2.1 |  | gap row P7: conditional slog.Any inside if dbg branch |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/ctx_attrs_log.go | 15 | 10.2.1 |  | gap row P11: context-attached slog.With taint persists via ctx.Value |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/echo_path_log.go | 12 | 10.2.1 |  | gap row Phase21-U1: echo v4 c.Param to slog.String (cross-framework portability) |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/fiber_query_log.go | 10 | 10.2.1 |  | gap row Phase21-U2: fiber v2 c.Query into zerolog Event chain Str finalizer Msg (cross-framework + cross-logger portability) |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/header_log.go | 10 | 10.2.1 |  | gap row P2: net/http Header.Get to slog.String |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/json_struct_log.go | 20 | 10.2.1 |  | gap row P4: ShouldBindJSON struct then slog.Any whole struct |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/logrus_map_any_fields.go | 9 | 10.2.1 |  | gap row Phase21-U4: logrus.WithFields(map[string]any{...}) literal carrying URL.Path / Query / GetHeader |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/logrus_with_fields.go | 9 | 10.2.1 |  | gap row P16: logrus.WithFields sugar API with header / query / URL.Path |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/mask_bypass_err_path.go | 12 | 10.2.1 |  | gap row P13: error branch logs raw body (success branch is masked, no row) |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/mw_request_log.go | 14 | 10.2.1 |  | gap row P10: middleware access log baking URL.Path / headers via slog.Group |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/path_param_log.go | 11 | 10.2.1 |  | gap row P1: gin path param to slog.String |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/query_log.go | 10 | 10.2.1 |  | gap row P3: URL.Query.Get to slog.String |
+| HTTP-INPUT-LOG | HIGH | internal/http_input/route_pan_promotion.go | 11 | 10.2.1 |  | gap row P18: keyword promotion via pan ident - severity HIGH per D-03 promotion path |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/slog_with_chain.go | 10 | 10.2.1 |  | gap row P15: slog.With binds path param; taint persists across With() chain |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/sprintf_intermediate.go | 11 | 10.2.1 |  | gap row P20: fmt.Sprintf intermediate defeats naive substring match |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/struct_logger_field.go | 24 | 10.2.1 |  | gap row P12: struct-embedded slog.Logger field log of raw body |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/validator_value_log.go | 26 | 10.2.1 |  | gap row P17: validator fieldErr.Value flows into details map then slog.Any |
+| HTTP-INPUT-PANIC | MEDIUM | internal/http_input/defer_recovery_log.go | 13 | 10.2.1 |  | gap row P14: defer recover logs panic value via slog.Error |
+| HTTP-INPUT-PANIC | MEDIUM | internal/http_input/panic_taint.go | 9 | 10.2.1 |  | gap row P6: literal panic of path param reaches gin.Recovery sink |
 | META-CSP-ONLY | MEDIUM | templates/clean_checkout.html | 5 |  |  | meta CSP without HTTP header |
 | META-CSP-ONLY | MEDIUM | templates/meta_only.html | 5 |  |  | meta CSP without HTTP header |
 | META-CSP-UNSAFE | HIGH | templates/meta_unsafe.html | 5 |  |  | meta unsafe-inline directive |
@@ -220,6 +252,9 @@ fixture files change.
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/requests/tokenize.go | 4 |  |  | json-only DTO transit-only |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/requests/tokenize.go | 5 |  |  | json-only DTO transit-only |
 | PAN-KEYWORD | INFO | internal/http/handler/tokens/models/responses/exchange_token.go | 6 |  |  | response DTO transit-only |
+| PAN-KEYWORD | INFO | internal/http_input/json_struct_log.go | 10 | 3.5.1 |  | CardNumber field in JSON DTO (transit-only taint downgrade) |
+| PAN-KEYWORD | INFO | internal/http_input/json_struct_log.go | 11 | 3.3.1 | 3.3.1.2 | CVV field in JSON DTO (transit-only taint downgrade) |
+| PAN-KEYWORD | INFO | internal/http_input/validator_value_log.go | 13 | 3.5.1 |  | CardNumber field in validator subscribe DTO (transit-only) |
 | PAN-KEYWORD | INFO | internal/integration/stripe_client.go | 5 |  |  | F-28 D-03 adversarial guard: integration segment NOT excluded, transit-only struct downgraded by taint engine |
 | PAN-KEYWORD | HIGH | internal/retention/entry.go | 10 |  |  | RED: incidental tagless Expiry field on Z9-Z12 scoring helper |
 | PAN-KEYWORD | INFO | internal/service/tokens/model/model.go | 5 |  |  | negative evidence — tagless field |

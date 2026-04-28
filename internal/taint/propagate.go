@@ -112,6 +112,10 @@ type flowState struct {
 	visitedFuncs   map[*types.Func]bool
 	taintedReturns map[*types.Func]bool
 	sinks          map[*types.Func]bool
+	// ginCtxKeys tracks gin.Context.Set("k", tainted) so downstream
+	// Get / GetString / MustGet on the same key inherits taint within the
+	// same query frame. D-13.
+	ginCtxKeys map[string]bool
 }
 
 // dedupObjects removes already-visited objects from the worklist so the
@@ -194,11 +198,22 @@ func (e *TaintEngine) propagateInFile(pkg *packages.Package, f *ast.File, state 
 			}
 			return true
 
+		case *ast.BinaryExpr:
+			// USER_INPUT D-13: string concat propagator hook. The result is
+			// only consulted via isExprTainted later; this visit step exists
+			// so the per-BinaryExpr matcher contract is satisfied.
+			_ = propagateUserInputBinaryExpr(e, node, info, state)
+			return true
+
 		case *ast.CallExpr:
 			// R5 FIRST — sink hit check before we descend into args.
 			if e.checkSinkHit(pkg, node, state) {
 				hit = true
 				return false
+			}
+			// USER_INPUT propagator hook (Plan 21-01 Tasks 1-3).
+			if e.propagateUserInputCall(node, info, state) {
+				return true
 			}
 			// R3: tainted argument → taint callee parameter.
 			e.applyRule3(pkg, node, state)

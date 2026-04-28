@@ -41,6 +41,10 @@ test still asserts the rule_id exists in source).
 | GORM-ENCRYPT-OK | 3.5.1 |  | sqlscanner | metadata-only | dynamic emit — verified-OK marker assigned post-scan when a custom GORM column type's Value() body is verified to call AES-GCM / NaCl secretbox / ChaCha20 / a KMS helper |
 | GORM-NO-ENCRYPT-HOOK | 3.5.1 |  | sqlscanner | full | missing BeforeCreate/BeforeSave encrypt hook on a sensitive GORM column is a direct 3.5.1 violation |
 | GORM-SENSITIVE-TAG | 3.5.1 |  | sqlscanner | full | dynamic emit — PAN-classified gorm column primary 3.5.1; SAD-classified routes to 3.3.1 via sensitivedata.Classify |
+| HTTP-INPUT-ERROR | 6.2.4 |  | httpinputscanner | full | dynamic emit via fmtSeverityFinding helper; raw HTTP framework input baked into fmt.Errorf, written to ResponseWriter, or logged via err.Error() chain; 6.2.4 improper-error-handling violation |
+| HTTP-INPUT-LOG | 10.2.1 |  | httpinputscanner | full | dynamic emit; HTTP framework input flowing into a log sink without sanitizer barrier; PAN-keyword promotion adds 3.3.1 + 3.5.1 to related and HIGH severity |
+| HTTP-INPUT-PANIC | 10.2.1 |  | httpinputscanner | full | dynamic emit via fmtSeverityFinding helper; HTTP framework input reaching panic(...) or defer recover() re-log; recovery middleware will log the panic value, violating 10.2.1 audit content |
+| HTTP-INPUT-TAINT-OFF | 10.2.1 |  | httpinputscanner | metadata-only | INFO marker emitted when include_taint=false to explain why HTTP-INPUT-* rules did not fire |
 | META-CSP-ONLY | 6.4.3 |  | scriptscanner | full | meta-tag CSP is weaker than the HTTP-header CSP required by 6.4.3 |
 | META-CSP-UNSAFE | 6.4.3 |  | scriptscanner | full | meta-tag CSP with unsafe-* directives fails the 6.4.3 authorization clause |
 | NONCE-MISSING | 6.4.3 |  | scriptscanner | full | inline script without nonce violates the 6.4.3 script-authorization clause |

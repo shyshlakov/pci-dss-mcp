@@ -12,15 +12,11 @@ import (
 	"github.com/shyshlakov/pci-dss-mcp/scanner/triagescanner"
 )
 
-// triageFixtureBudgetBytes is the acceptance budget on the golden
-// because each finding embedded 20-30 lines of source via SurroundingCode;
-// after the same fixture lands in the ~150 KB range (109 findings ×
-// ~1.4 KB per finding = ResourceLink + Description + Suggestion + relative
-// EvidenceFiles, no inline source).
-//
-// has fewer findings than the all-rule fixture, so the per-call payload
-// shrinks proportionally.
-const triageFixtureBudgetBytes = 240 * 1024
+// triageFixtureBudgetBytes is the acceptance budget for the canonical
+// fixture triage payload. Each finding ships ResourceLink + Description +
+// Suggestion + relative EvidenceFiles (no inline source). Budget tracks
+// fixture growth; revisit when the fixture exceeds the threshold.
+const triageFixtureBudgetBytes = 280 * 1024
 
 // triageFixturePerFindingBudgetBytes guards against per-finding source
 // embedding regressions. A single finding should never carry more than ~2 KB
