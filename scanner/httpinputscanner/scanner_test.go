@@ -391,14 +391,21 @@ func F() {
 			}
 			st := newFileState(nil, f, info)
 			st.pkg = nil
-			ast.Inspect(f, func(n ast.Node) bool {
-				assign, ok := n.(*ast.AssignStmt)
-				if !ok {
-					return true
+			// Inject taint for the local identifier `t` (or `x`) so the
+			// classifyExpr fall-through reaches the verb-aware check with a
+			// tainted variable. Mimics what an upstream USER_INPUT source
+			// would seed in production.
+			seedCtx := UserInputContext{Identifier: "Authorization", Framework: "gin"}
+			for id, obj := range info.Defs {
+				if obj == nil {
+					continue
 				}
-				st.applyAssignSeed(assign)
-				return true
-			})
+				if id.Name == "t" || id.Name == "x" {
+					if v, ok := obj.(*types.Var); ok {
+						st.taintedIdents[v] = taintMeta{source: seedCtx}
+					}
+				}
+			}
 			var found *ast.CallExpr
 			ast.Inspect(f, func(n ast.Node) bool {
 				call, ok := n.(*ast.CallExpr)
