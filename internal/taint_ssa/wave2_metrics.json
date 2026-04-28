@@ -1,0 +1,27 @@
+{
+  "captured_at": "2026-04-28T10:58:01Z",
+  "git_commit": "6b94361",
+  "fixture": "vulnerable-payment-service",
+  "ssa_build_status": "success",
+  "ssa_build_wall_ms": 3953,
+  "rules": {
+    "CRYPTO-HARDCODED-KEY": {
+      "ast_findings": 14,
+      "ssa_findings": 1,
+      "ast_wall_ms": 57,
+      "ssa_wall_ms": 0
+    },
+    "PAN-LOGGER": {
+      "ast_findings": 1,
+      "ssa_findings": 1,
+      "ast_wall_ms": 2882,
+      "ssa_wall_ms": 0
+    }
+  },
+  "memory": {
+    "ast_peak_bytes": 573883144,
+    "ssa_peak_bytes": 625730280
+  },
+  "go_version": "go1.25.9",
+  "architecture": "darwin/arm64"
+}

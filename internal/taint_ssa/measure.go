@@ -43,6 +43,10 @@ type Metrics struct {
 	Architecture string                 `json:"architecture"`
 }
 
+func MeasureWave2(ctx context.Context, projectRoot string) (*Metrics, error) {
+	return MeasurePARITY(ctx, projectRoot)
+}
+
 // MeasurePARITY runs the SSA-based PAN-LOGGER and CRYPTO-HARDCODED-KEY
 // rules against projectRoot and emits Metrics. The AST-side numbers are
 // populated only when the caller supplies them via SetASTBaseline; the
