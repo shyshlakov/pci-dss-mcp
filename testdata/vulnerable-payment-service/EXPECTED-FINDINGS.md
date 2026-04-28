@@ -9,11 +9,11 @@ total_rules_covered: 57
 expected_summary:
  critical: 50
  high: 91
- medium: 47
+ medium: 52
  low: 0
  info: 66
-expected_active: 201
-expected_total_findings: 256
+expected_active: 206
+expected_total_findings: 261
 expected_sbom_components: 40
 expected_sbom_format: cyclonedx-json
 expected_sbom_spec_version: "1.6"
@@ -64,7 +64,7 @@ fixture files change.
 |----------|-------|
 | CRITICAL | 50 |
 | HIGH | 91 |
-| MEDIUM | 47 |
+| MEDIUM | 52 |
 | LOW | 0 |
 | INFO | 66 |
 
@@ -214,12 +214,17 @@ fixture files change.
 | HTTP-INPUT-ERROR | MEDIUM | internal/http_input/central_abort_log.go | 30 | 6.2.4 |  | gap row P19: centralized Abort helper logs err.Error of wrapped chain |
 | HTTP-INPUT-ERROR | MEDIUM | internal/http_input/error_taint.go | 30 | 6.2.4 |  | gap row P5: AbortWithErrorLog logs err.Error of fmt.Errorf %w wrapping path param |
 | HTTP-INPUT-ERROR | MEDIUM | internal/http_input/errors_wrap_chain.go | 15 | 6.2.4 |  | gap row P21: errors-wrap chain final.Error logged after multi-level fmt.Errorf %w |
+| HTTP-INPUT-ERROR | MEDIUM | internal/http_input/multierror_wrap_log.go | 16 | 6.2.4 |  | gap row Phase21-U5: hashicorp/go-multierror Error string carries r.URL.Path through fmt.Errorf into slog.Error sink |
 | HTTP-INPUT-ERROR | MEDIUM | internal/http_input/struct_logger_field.go | 20 | 6.2.4 |  | gap row P12 err branch: h.log.Error read body failed err.Error |
 | HTTP-INPUT-ERROR | MEDIUM | internal/http_input/writer_writeback.go | 12 | 6.2.4 |  | gap row P22: raw path param written back to HTTP response writer |
+| HTTP-INPUT-ERROR | MEDIUM | internal/http_input/zerolog_ctx_log.go | 16 | 6.2.4 |  | gap row Phase21-U3: zerolog log.Ctx finalizer Send emits Err of fmt.Errorf %w wrapping path param |
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/conditional_debug.go | 17 | 10.2.1 |  | gap row P7: conditional slog.Any inside if dbg branch |
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/ctx_attrs_log.go | 15 | 10.2.1 |  | gap row P11: context-attached slog.With taint persists via ctx.Value |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/echo_path_log.go | 12 | 10.2.1 |  | gap row Phase21-U1: echo v4 c.Param to slog.String (cross-framework portability) |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/fiber_query_log.go | 10 | 10.2.1 |  | gap row Phase21-U2: fiber v2 c.Query into zerolog Event chain Str finalizer Msg (cross-framework + cross-logger portability) |
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/header_log.go | 10 | 10.2.1 |  | gap row P2: net/http Header.Get to slog.String |
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/json_struct_log.go | 20 | 10.2.1 |  | gap row P4: ShouldBindJSON struct then slog.Any whole struct |
+| HTTP-INPUT-LOG | MEDIUM | internal/http_input/logrus_map_any_fields.go | 9 | 10.2.1 |  | gap row Phase21-U4: logrus.WithFields(map[string]any{...}) literal carrying URL.Path / Query / GetHeader |
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/logrus_with_fields.go | 9 | 10.2.1 |  | gap row P16: logrus.WithFields sugar API with header / query / URL.Path |
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/mask_bypass_err_path.go | 12 | 10.2.1 |  | gap row P13: error branch logs raw body (success branch is masked, no row) |
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/mw_request_log.go | 14 | 10.2.1 |  | gap row P10: middleware access log baking URL.Path / headers via slog.Group |
