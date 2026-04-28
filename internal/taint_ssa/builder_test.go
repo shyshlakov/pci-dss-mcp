@@ -24,11 +24,11 @@ func fixtureRoot(t *testing.T) string {
 
 func TestBuildProgram(t *testing.T) {
 	tt := []struct {
-		name      string
-		ctx       func() (context.Context, context.CancelFunc)
-		root      func(t *testing.T) string
-		wantErr   bool
-		assertOK  func(t *testing.T, p *Program)
+		name     string
+		ctx      func() (context.Context, context.CancelFunc)
+		root     func(t *testing.T) string
+		wantErr  bool
+		assertOK func(t *testing.T, p *Program)
 	}{
 		{
 			name: "valid fixture root",
@@ -128,4 +128,3 @@ func TestPlaceholderRecognizers(t *testing.T) {
 		t.Error("IsHTTPClientSink(nil) should be false")
 	}
 }
-

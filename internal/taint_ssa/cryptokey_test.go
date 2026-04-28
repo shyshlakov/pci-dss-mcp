@@ -23,9 +23,7 @@ func TestRunCryptoHardcodedKey(t *testing.T) {
 	for _, f := range findings {
 		t.Logf("  CRYPTO-HARDCODED-KEY %s:%d %s", f.File, f.Line, f.Description)
 	}
-	if len(findings) < 0 {
-		t.Errorf("findings slice has negative length")
-	}
+	_ = findings
 }
 
 func TestRunCryptoHardcodedKey_NilProgram(t *testing.T) {

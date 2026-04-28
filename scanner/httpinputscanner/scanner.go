@@ -3,13 +3,13 @@
 // 10.2.1 (audit log content) and 6.2.4 (error response leakage) checks.
 //
 // Detection rules:
-// - HTTP-INPUT-LOG: framework input reaches a log sink, no sanitizer barrier
-// - HTTP-INPUT-ERROR: framework input baked into fmt.Errorf or written via
-//   http.ResponseWriter, no sanitizer barrier
-// - HTTP-INPUT-PANIC: framework input reaches panic(...) or defer recover()
-//   re-log path
-// - HTTP-INPUT-TAINT-OFF: emitted as INFO when include_taint=false so callers
-//   understand why the rules above did not run
+//   - HTTP-INPUT-LOG: framework input reaches a log sink, no sanitizer barrier
+//   - HTTP-INPUT-ERROR: framework input baked into fmt.Errorf or written via
+//     http.ResponseWriter, no sanitizer barrier
+//   - HTTP-INPUT-PANIC: framework input reaches panic(...) or defer recover()
+//     re-log path
+//   - HTTP-INPUT-TAINT-OFF: emitted as INFO when include_taint=false so callers
+//     understand why the rules above did not run
 package httpinputscanner
 
 import (
@@ -387,6 +387,7 @@ func (st *fileState) applyLhsTaint(lhs ast.Expr, ctx UserInputContext) {
 
 // classifyExpr reports whether expr currently carries USER_INPUT taint and
 // returns the identifier/framework context that introduced it.
+// nolint:gocyclo // exhaustive AST shape dispatch over framework source / propagator / sanitizer cases
 func (st *fileState) classifyExpr(expr ast.Expr) (UserInputContext, bool) {
 	if expr == nil {
 		return UserInputContext{}, false
@@ -835,4 +836,3 @@ func isNamedType(t types.Type, pkgPath, typeName string) bool {
 	}
 	return obj.Pkg().Path() == pkgPath && obj.Name() == typeName
 }
-

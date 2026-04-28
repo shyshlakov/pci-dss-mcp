@@ -217,6 +217,7 @@ func fileHasPanicWithArg(f *ast.File) bool {
 // isArgTainted is a thin wrapper used by D-13 propagators. It re-implements
 // the small subset of expression unwrapping needed without an engine
 // reference (propagator hooks accept only flowState).
+// nolint:gocyclo // exhaustive AST shape dispatch for D-13 propagator coverage
 func isArgTainted(expr ast.Expr, info *types.Info, state *flowState) bool {
 	if expr == nil || info == nil || state == nil {
 		return false

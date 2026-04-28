@@ -75,9 +75,7 @@ func TestRunPANLogger(t *testing.T) {
 	for _, f := range findings {
 		t.Logf("  PAN-LOGGER %s:%d %s", f.File, f.Line, f.Description)
 	}
-	if len(findings) < 0 {
-		t.Errorf("findings slice has negative length")
-	}
+	_ = findings
 }
 
 func TestRunPANLogger_NilProgram(t *testing.T) {

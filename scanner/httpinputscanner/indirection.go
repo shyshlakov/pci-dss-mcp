@@ -3,9 +3,6 @@ package httpinputscanner
 import (
 	"go/ast"
 	"go/types"
-	"strings"
-
-	"github.com/shyshlakov/pci-dss-mcp/internal/taint"
 )
 
 // loggerInterfaceTypes lists the canonical Tier-1 logger types per D-16.1.
@@ -414,61 +411,3 @@ func (st *fileState) errIdentInTaintedErrors(id *ast.Ident) (UserInputContext, b
 	return UserInputContext{}, false
 }
 
-// recognizedAbortHelpers caches the result of isCentralizedAbortHelper per
-// *types.Func to keep the recognizer cheap on repeat lookups within a single
-// scanPackage call.
-type recognizedAbortHelpers map[*types.Func]bool
-
-// classifyAbortHelper returns true when fn is recognized as a centralized
-// abort helper. The result is cached in cache for amortized constant-time
-// lookups across multiple emission passes.
-func classifyAbortHelper(fn *types.Func, file *ast.File, info *types.Info, cache recognizedAbortHelpers) bool {
-	if fn == nil {
-		return false
-	}
-	if cache != nil {
-		if v, ok := cache[fn]; ok {
-			return v
-		}
-	}
-	v := isCentralizedAbortHelper(fn, file, info)
-	if cache != nil {
-		cache[fn] = v
-	}
-	return v
-}
-
-// joinPkgMethod returns "pkg.Method" for diagnostic logging.
-func joinPkgMethod(pkg, method string) string {
-	if pkg == "" {
-		return method
-	}
-	return strings.TrimPrefix(pkg, "github.com/") + "." + method
-}
-
-// describeAbortHelperEmission renders the description text for the D-14
-// indirection ERROR emission.
-func describeAbortHelperEmission(ctx UserInputContext, helper string) string {
-	src := ctx.Identifier
-	if src == "" {
-		src = "framework input"
-	}
-	fw := ctx.Framework
-	if fw == "" {
-		fw = "http"
-	}
-	return "Tainted error chain (originating from " + fw + " framework input " + quote(src) + ") flows into " + helper + " without sanitizer barrier."
-}
-
-func quote(s string) string {
-	return "\"" + s + "\""
-}
-
-// resolveCalleeFunc is a thin wrapper around taint.ResolveCallee that returns
-// nil-safe values so emission paths do not need to repeat nil checks.
-func resolveCalleeFunc(call *ast.CallExpr, info *types.Info) *types.Func {
-	if call == nil || info == nil {
-		return nil
-	}
-	return taint.ResolveCallee(info, call)
-}

@@ -442,8 +442,5 @@ func storeAddrAsValue(s *ssa.Store) ssa.Value {
 	if s == nil || s.Addr == nil {
 		return nil
 	}
-	if v, ok := s.Addr.(ssa.Value); ok {
-		return v
-	}
-	return nil
+	return s.Addr
 }
