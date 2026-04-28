@@ -94,9 +94,9 @@ Context affects confidence, not severity. Both high-confidence and low-confidenc
 
 | Rule ID | Severity | Requirement | Description |
 |---------|----------|-------------|-------------|
-| HTTP-INPUT-ERROR | MEDIUM | 6.2.4 | Framework input baked into `fmt.Errorf`, written to `http.ResponseWriter`, or surfaced through a centralized abort helper |
-| HTTP-INPUT-LOG | MEDIUM (HIGH on PAN keyword) | 10.2.1 (related 3.3.1, 3.5.1 on HIGH path) | Framework input flowing into a log sink without a sanitizer barrier; severity escalates when the source identifier name matches a PAN keyword (bin/card/pan/account/iban/cvv/pin/apikey) |
-| HTTP-INPUT-PANIC | MEDIUM | 10.2.1 (related 6.2.4) | Framework input reaching `panic(...)` or a `defer recover()` re-log path; recovery middleware will log the panic value |
+| HTTP-INPUT-ERROR | MEDIUM | 6.2.4 (dynamic -- see docs/requirement-mapping.md) | Framework input baked into `fmt.Errorf`, written to `http.ResponseWriter`, or surfaced through a centralized abort helper |
+| HTTP-INPUT-LOG | MEDIUM (HIGH on PAN keyword) | 10.2.1 or 3.3.1/3.5.1 on HIGH path (dynamic -- see docs/requirement-mapping.md) | Framework input flowing into a log sink without a sanitizer barrier; severity escalates when the source identifier name matches a PAN keyword (bin/card/pan/account/iban/cvv/pin/apikey) |
+| HTTP-INPUT-PANIC | MEDIUM | 10.2.1 or 6.2.4 (dynamic -- see docs/requirement-mapping.md) | Framework input reaching `panic(...)` or a `defer recover()` re-log path; recovery middleware will log the panic value |
 | HTTP-INPUT-TAINT-OFF | INFO | 10.2.1 | Marker emitted when `include_taint=false` to explain why HTTP-INPUT-* rules did not fire |
 
 ### Data Retention Scanner (check_data_retention)
