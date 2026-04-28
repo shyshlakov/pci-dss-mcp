@@ -14,14 +14,10 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+  test-macos:
+    name: test (macos-latest)
+    runs-on: macos-latest
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -41,25 +37,25 @@ jobs:
         run: make build
 
       - name: Test
-        env:
-          GOFLAGS: ${{ matrix.os == 'ubuntu-latest' && '-p=2' || '' }}
         run: make test
-
-      - name: docs-check (advisory)
-        if: matrix.os == 'ubuntu-latest'
-        run: make docs-check || true
 
       - name: Test fixture (golden regression)
         run: make test-fixture
 
-      - name: SBOM standards validation (CycloneDX 1.6)
-        if: matrix.os == 'ubuntu-latest'
-        run: make test-sbom-validate
-
-  coverage:
-    name: coverage
+  test-ubuntu:
+    name: test (ubuntu-latest, ${{ matrix.group.name }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - name: heavy-taint
+            packages: "./internal/taint/... ./internal/taint_ssa/..."
+          - name: scanner-heavy
+            packages: "./scanner/panscanner/... ./scanner/hybrid/... ./scanner/reportscanner/... ./scanner/triagescanner/..."
+          - name: rest
+            packages: ""
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -69,13 +65,101 @@ jobs:
         with:
           go-version: "1.25.9"
 
-      - name: Run tests with coverage
-        run: go test ./... -race -coverprofile=coverage.out -covermode=atomic -p=2
+      - name: Verify modules
+        run: go mod download && go mod verify
+
+      - name: Vet
+        if: matrix.group.name == 'rest'
+        run: make vet
+
+      - name: Build
+        if: matrix.group.name == 'rest'
+        run: make build
+
+      - name: Compute rest package list
+        if: matrix.group.name == 'rest'
+        run: |
+          rest=$(go list ./... | grep -v -E '^github.com/shyshlakov/pci-dss-mcp/internal/taint(_ssa)?(/|$)' | grep -v -E '^github.com/shyshlakov/pci-dss-mcp/scanner/(panscanner|hybrid|reportscanner|triagescanner)(/|$)' | tr '\n' ' ')
+          echo "REST_PKGS=$rest" >> "$GITHUB_ENV"
+
+      - name: Test (heavy-taint)
+        if: matrix.group.name == 'heavy-taint'
+        run: go test ${{ matrix.group.packages }} -count=1 -race -timeout=15m
+
+      - name: Test (scanner-heavy)
+        if: matrix.group.name == 'scanner-heavy'
+        run: go test ${{ matrix.group.packages }} -count=1 -race -timeout=15m
+
+      - name: Test (rest)
+        if: matrix.group.name == 'rest'
+        env:
+          GOFLAGS: -p=2
+        run: go test $REST_PKGS -count=1 -race -timeout=15m
+
+      - name: docs-check (advisory)
+        if: matrix.group.name == 'rest'
+        run: make docs-check || true
+
+      - name: Test fixture (golden regression)
+        if: matrix.group.name == 'rest'
+        run: make test-fixture
+
+      - name: SBOM standards validation (CycloneDX 1.6)
+        if: matrix.group.name == 'rest'
+        run: make test-sbom-validate
+
+  coverage:
+    name: coverage (${{ matrix.group.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - name: heavy-taint
+            packages: "./internal/taint/... ./internal/taint_ssa/..."
+          - name: scanner-heavy
+            packages: "./scanner/panscanner/... ./scanner/hybrid/... ./scanner/reportscanner/... ./scanner/triagescanner/..."
+          - name: rest
+            packages: ""
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.25.9"
+
+      - name: Verify modules
+        run: go mod download && go mod verify
+
+      - name: Compute rest package list
+        if: matrix.group.name == 'rest'
+        run: |
+          rest=$(go list ./... | grep -v -E '^github.com/shyshlakov/pci-dss-mcp/internal/taint(_ssa)?(/|$)' | grep -v -E '^github.com/shyshlakov/pci-dss-mcp/scanner/(panscanner|hybrid|reportscanner|triagescanner)(/|$)' | tr '\n' ' ')
+          echo "REST_PKGS=$rest" >> "$GITHUB_ENV"
+
+      - name: Run tests with coverage (heavy-taint)
+        if: matrix.group.name == 'heavy-taint'
+        run: go test ${{ matrix.group.packages }} -race -coverprofile=coverage.out -covermode=atomic
+
+      - name: Run tests with coverage (scanner-heavy)
+        if: matrix.group.name == 'scanner-heavy'
+        run: go test ${{ matrix.group.packages }} -race -coverprofile=coverage.out -covermode=atomic
+
+      - name: Run tests with coverage (rest)
+        if: matrix.group.name == 'rest'
+        env:
+          GOFLAGS: -p=2
+        run: go test $REST_PKGS -race -coverprofile=coverage.out -covermode=atomic
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
         with:
           files: ./coverage.out
+          flags: ${{ matrix.group.name }}
+          name: coverage-${{ matrix.group.name }}
           fail_ci_if_error: false
 
   fuzz-smoke:
