@@ -1,18 +1,18 @@
 ---
-fixture_version: 1.11
-last_updated: 2026-04-24
-phase: 20
+fixture_version: 1.12
+last_updated: 2026-04-28
+phase: 21.1
 plan: 01
-total_intentional_violations: 157
-total_clean_patterns: 26
+total_intentional_violations: 162
+total_clean_patterns: 28
 total_rules_covered: 57
 expected_summary:
- critical: 50
- high: 91
- medium: 52
+ critical: 51
+ high: 95
+ medium: 53
  low: 0
  info: 66
-expected_active: 206
+expected_active: 212
 expected_total_findings: 261
 expected_sbom_components: 40
 expected_sbom_format: cyclonedx-json
@@ -62,9 +62,9 @@ fixture files change.
 
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 50 |
-| HIGH | 91 |
-| MEDIUM | 52 |
+| CRITICAL | 51 |
+| HIGH | 95 |
+| MEDIUM | 53 |
 | LOW | 0 |
 | INFO | 66 |
 
@@ -216,8 +216,12 @@ fixture files change.
 | HTTP-INPUT-ERROR | MEDIUM | internal/http_input/errors_wrap_chain.go | 15 | 6.2.4 |  | gap row P21: errors-wrap chain final.Error logged after multi-level fmt.Errorf %w |
 | HTTP-INPUT-ERROR | MEDIUM | internal/http_input/multierror_wrap_log.go | 16 | 6.2.4 |  | gap row Phase21-U5: hashicorp/go-multierror Error string carries r.URL.Path through fmt.Errorf into slog.Error sink |
 | HTTP-INPUT-ERROR | MEDIUM | internal/http_input/struct_logger_field.go | 20 | 6.2.4 |  | gap row P12 err branch: h.log.Error read body failed err.Error |
+| HTTP-INPUT-ERROR | HIGH | internal/http_input/stringer_token_errorf.go | 17 | 6.2.4 | 8.6.2 | case 3 format-verb-aware Stringer through fmt.Errorf %v auth-secret keyword |
 | HTTP-INPUT-ERROR | MEDIUM | internal/http_input/writer_writeback.go | 12 | 6.2.4 |  | gap row P22: raw path param written back to HTTP response writer |
 | HTTP-INPUT-ERROR | MEDIUM | internal/http_input/zerolog_ctx_log.go | 16 | 6.2.4 |  | gap row Phase21-U3: zerolog log.Ctx finalizer Send emits Err of fmt.Errorf %w wrapping path param |
+| HTTP-INPUT-LOG | HIGH | internal/http_input/apikey_uuid_branch_log.go | 14 | 10.2.1 | 8.6.2 | case 2 err branch raw apiKey before uuid.Parse to slog.Error value attr - auth-secret keyword high |
+| HTTP-INPUT-LOG | HIGH | internal/http_input/apikey_uuid_branch_log.go | 18 | 10.2.1 | 8.6.2 | case 2 success branch post-validator UUID via api_key keyword - auth-secret override of sanitizer |
+| HTTP-INPUT-LOG | HIGH | internal/http_input/bytes_buffer_body_log.go | 17 | 10.2.1 | 3.3.1, 6.2.4 | case 4 io.Copy ReverseFlow + bytes.Buffer.String method-projector + body-source override fires HIGH (origin c.Request.Body, identifier no keyword) |
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/conditional_debug.go | 17 | 10.2.1 |  | gap row P7: conditional slog.Any inside if dbg branch |
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/ctx_attrs_log.go | 15 | 10.2.1 |  | gap row P11: context-attached slog.With taint persists via ctx.Value |
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/echo_path_log.go | 12 | 10.2.1 |  | gap row Phase21-U1: echo v4 c.Param to slog.String (cross-framework portability) |
@@ -234,7 +238,9 @@ fixture files change.
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/slog_with_chain.go | 10 | 10.2.1 |  | gap row P15: slog.With binds path param; taint persists across With() chain |
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/sprintf_intermediate.go | 11 | 10.2.1 |  | gap row P20: fmt.Sprintf intermediate defeats naive substring match |
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/struct_logger_field.go | 24 | 10.2.1 |  | gap row P12: struct-embedded slog.Logger field log of raw body |
+| HTTP-INPUT-LOG | CRITICAL | internal/http_input/validator_pan_value_log.go | 24 | 3.3.1 | 3.4.1, 8.6.2 | case 1 validator FieldError.Value any returns raw PAN/CVV - body decoded struct accessor through validator chain |
 | HTTP-INPUT-LOG | MEDIUM | internal/http_input/validator_value_log.go | 26 | 10.2.1 |  | gap row P17: validator fieldErr.Value flows into details map then slog.Any |
+| HTTP-INPUT-PANIC | MEDIUM | internal/http_input/gin_recovery_callback_log.go | 11 | 10.2.1 | 3.3.1 | case 5 gin.CustomRecoveryWithWriter callback recovered any auxiliary source |
 | HTTP-INPUT-PANIC | MEDIUM | internal/http_input/defer_recovery_log.go | 13 | 10.2.1 |  | gap row P14: defer recover logs panic value via slog.Error |
 | HTTP-INPUT-PANIC | MEDIUM | internal/http_input/panic_taint.go | 9 | 10.2.1 |  | gap row P6: literal panic of path param reaches gin.Recovery sink |
 | META-CSP-ONLY | MEDIUM | templates/clean_checkout.html | 5 |  |  | meta CSP without HTTP header |
@@ -356,6 +362,8 @@ fixture files change.
 | clean/webhook_signed/good_hmac_generic.go | B-22 T1 strong: hmac.Equal before json.Unmarshal — AUTH-WEBHOOK-VERIFIED INFO |
 | clean/webhook_signed/good_middleware_verified.go | B-22 middleware chain: VerifyWebhookSignatureMiddleware wrapper — AUTH-WEBHOOK-VERIFIED INFO |
 | clean/webhook_signed/webhook_with_local_helper.go | B-22 1-level recursion: local verifyStripeSignature helper with hmac.Equal — AUTH-WEBHOOK-VERIFIED INFO |
+| internal/http_input/uuid_post_validator_no_taint.go | case 6 negative differentiator: uuid.Parse sanitizer barrier + generic-ID class (widget_id) suppresses HTTP-INPUT-LOG emission per D-02 + D-03 |
+| internal/http_input/request_id_log_no_taint.go | case 7 negative differentiator: own-generated request_id (crypto/rand) has no HTTP framework source, no taint, zero findings |
 
 ## SBOM Generation (Phase 20)
 
