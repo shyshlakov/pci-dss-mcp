@@ -315,8 +315,8 @@ func main() {}
 	if out.Summary == nil {
 		t.Fatalf("expected SummaryResponse for default unfiltered call, got %+v", out)
 	}
-	if out.Summary.Metadata.ScannerCount != 11 {
-		t.Errorf("ScannerCount = %d, want 11", out.Summary.Metadata.ScannerCount)
+	if out.Summary.Metadata.ScannerCount != 12 {
+		t.Errorf("ScannerCount = %d, want 12", out.Summary.Metadata.ScannerCount)
 	}
 	if out.Summary.Summary.TotalRequirements == 0 {
 		t.Error("TotalRequirements should be > 0")
