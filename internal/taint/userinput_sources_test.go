@@ -241,3 +241,120 @@ func TestFrameworkInputSource_NilInfoSafe(t *testing.T) {
 		t.Fatalf("expected isFrameworkInputFieldRead=false on nil info")
 	}
 }
+
+func TestRecognizeRecoveryCallback_NilInfoSafe(t *testing.T) {
+	if got := RecognizeRecoveryCallback(nil, nil); got != nil {
+		t.Fatalf("expected nil on nil call, got %v", got)
+	}
+	if got := RecognizeRecoveryCallback(&ast.CallExpr{}, nil); got != nil {
+		t.Fatalf("expected nil on nil info, got %v", got)
+	}
+}
+
+func TestRecognizeRecoveryCallback_GinVariants(t *testing.T) {
+	tt := []struct {
+		name      string
+		method    string
+		wantCount int
+	}{
+		{name: "gin.CustomRecoveryWithWriter", method: "CustomRecoveryWithWriter", wantCount: 1},
+		{name: "gin.CustomRecovery", method: "CustomRecovery", wantCount: 1},
+		{name: "gin.RecoveryWithWriter (variadic, may have 1+ callbacks)", method: "RecoveryWithWriter", wantCount: 0},
+	}
+
+	engine := loadHTTPInputEngine(t)
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			method := tc.method
+			call, info := findCalleeBy(t, engine, func(fn *types.Func, sel *ast.SelectorExpr) bool {
+				return fn.Name() == method && fn.Pkg() != nil && fn.Pkg().Path() == "github.com/gin-gonic/gin"
+			})
+			if call == nil {
+				t.Skipf("no fixture call site for %s", method)
+			}
+			vars := RecognizeRecoveryCallback(call, info)
+			if tc.wantCount > 0 && len(vars) < tc.wantCount {
+				t.Fatalf("expected at least %d tainted vars, got %d", tc.wantCount, len(vars))
+			}
+			for _, v := range vars {
+				if v == nil {
+					t.Fatalf("got nil *types.Var in tainted slice")
+				}
+				// The recovered slot is the second positional param in the
+				// callback; its identifier name in well-formed call sites is
+				// typically "recovered" but we do not enforce that here -
+				// only that the index-1 binding resolves to a *types.Var.
+			}
+		})
+	}
+}
+
+func TestRecognizeRecoveryCallback_FirstParamNotTainted(t *testing.T) {
+	engine := loadHTTPInputEngine(t)
+	call, info := findCalleeBy(t, engine, func(fn *types.Func, sel *ast.SelectorExpr) bool {
+		if fn.Pkg() == nil || fn.Pkg().Path() != "github.com/gin-gonic/gin" {
+			return false
+		}
+		switch fn.Name() {
+		case "CustomRecoveryWithWriter", "CustomRecovery", "RecoveryWithWriter":
+			return true
+		}
+		return false
+	})
+	if call == nil {
+		t.Skip("no gin recovery callback call site in fixture")
+	}
+	vars := RecognizeRecoveryCallback(call, info)
+	for _, v := range vars {
+		if v == nil {
+			continue
+		}
+		vt := v.Type()
+		if ptr, ok := vt.(*types.Pointer); ok {
+			if named, ok := ptr.Elem().(*types.Named); ok {
+				if named.Obj() != nil && named.Obj().Name() == "Context" {
+					t.Fatalf("expected recovered (any) param, got *gin.Context (param index 0 leaked)")
+				}
+			}
+		}
+	}
+}
+
+func TestRecognizeRecoveryCallback_NonRecoveryCallNoMatch(t *testing.T) {
+	engine := loadHTTPInputEngine(t)
+	// Pick any non-recovery gin method (e.g. Param) - must produce nil.
+	call, info := findCalleeBy(t, engine, func(fn *types.Func, sel *ast.SelectorExpr) bool {
+		return fn.Name() == "Param" && fn.Pkg() != nil && fn.Pkg().Path() == "github.com/gin-gonic/gin"
+	})
+	if call == nil {
+		t.Skip("no gin.Context.Param call site")
+	}
+	if got := RecognizeRecoveryCallback(call, info); got != nil {
+		t.Fatalf("expected nil for non-recovery gin call, got %v", got)
+	}
+}
+
+func TestGinRecoveryCallbackTableShape(t *testing.T) {
+	wantMethods := map[string]bool{
+		"CustomRecoveryWithWriter": false,
+		"CustomRecovery":           false,
+		"RecoveryWithWriter":       false,
+	}
+	for _, spec := range ginRecoveryCallbacks {
+		if spec.PkgPath != "github.com/gin-gonic/gin" {
+			t.Errorf("unexpected pkg %q in ginRecoveryCallbacks", spec.PkgPath)
+		}
+		if spec.TaintedParamIndex != 1 {
+			t.Errorf("expected TaintedParamIndex=1 for %s, got %d", spec.Method, spec.TaintedParamIndex)
+		}
+		if _, ok := wantMethods[spec.Method]; !ok {
+			t.Errorf("unexpected method %q in ginRecoveryCallbacks", spec.Method)
+		}
+		wantMethods[spec.Method] = true
+	}
+	for m, found := range wantMethods {
+		if !found {
+			t.Errorf("missing ginRecoveryCallbacks entry for %s", m)
+		}
+	}
+}
