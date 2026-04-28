@@ -410,4 +410,3 @@ func (st *fileState) errIdentInTaintedErrors(id *ast.Ident) (UserInputContext, b
 	}
 	return UserInputContext{}, false
 }
-
