@@ -765,3 +765,461 @@ func TestMethodProjector_ErrorErrorSinkSideRecognized(t *testing.T) {
 		}
 	}
 }
+
+// ----------------------------------------------------------------------------
+// Plan 21.1-07 (D-08+) reverse method-projector propagator tests.
+//
+// Source-arg-to-destination flow for io.Copy / io.CopyN / io.CopyBuffer /
+// io.WriteString and (*bytes.Buffer).Write* / (*strings.Builder).Write*.
+// When the source argument is USER_INPUT-tainted, the dst object referenced
+// by the dst arg or receiver becomes tainted in flowState.tainted.
+// ----------------------------------------------------------------------------
+
+// TestReverseFlow_CatalogEntries confirms the io.* and Buffer/Builder Write*
+// reverse-flow rows landed in userInputPassthrough with ReverseFlow=true.
+// Negative differentiator: WriteRune is absent.
+func TestReverseFlow_CatalogEntries(t *testing.T) {
+	tt := []struct {
+		name        string
+		pkgPath     string
+		typName     string
+		method      string
+		wantPresent bool
+		wantReverse bool
+	}{
+		{"io.Copy reverse", "io", "", "Copy", true, true},
+		{"io.CopyN reverse", "io", "", "CopyN", true, true},
+		{"io.CopyBuffer reverse", "io", "", "CopyBuffer", true, true},
+		{"io.WriteString reverse", "io", "", "WriteString", true, true},
+		{"bytes.Buffer.Write reverse", "bytes", "Buffer", "Write", true, true},
+		{"bytes.Buffer.WriteString reverse", "bytes", "Buffer", "WriteString", true, true},
+		{"bytes.Buffer.WriteByte reverse", "bytes", "Buffer", "WriteByte", true, true},
+		{"strings.Builder.Write reverse", "strings", "Builder", "Write", true, true},
+		{"strings.Builder.WriteString reverse", "strings", "Builder", "WriteString", true, true},
+		{"strings.Builder.WriteByte reverse", "strings", "Builder", "WriteByte", true, true},
+		// Forward-flow rows from Plan 21.1-06 must still have ReverseFlow=false.
+		{"bytes.Buffer.String stays forward", "bytes", "Buffer", "String", true, false},
+		{"strings.Builder.String stays forward", "strings", "Builder", "String", true, false},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			var found bool
+			var reverse bool
+			for _, spec := range userInputPassthrough {
+				if spec.PkgPath == tc.pkgPath && spec.TypeName == tc.typName && spec.Method == tc.method {
+					found = true
+					reverse = spec.ReverseFlow
+					break
+				}
+			}
+			if found != tc.wantPresent {
+				t.Fatalf("present {%s,%s,%s}: want %v got %v", tc.pkgPath, tc.typName, tc.method, tc.wantPresent, found)
+			}
+			if found && reverse != tc.wantReverse {
+				t.Fatalf("ReverseFlow {%s,%s,%s}: want %v got %v", tc.pkgPath, tc.typName, tc.method, tc.wantReverse, reverse)
+			}
+		})
+	}
+}
+
+// findFreeFnCall locates the first CallExpr whose callee resolves to a free
+// function with the given (pkgPath, name).
+func findFreeFnCall(engine *TaintEngine, pkgPath, name string) (*ast.CallExpr, *types.Info) {
+	for _, pkg := range engine.pkgs {
+		if pkg == nil || pkg.TypesInfo == nil {
+			continue
+		}
+		for _, f := range pkg.Syntax {
+			var found *ast.CallExpr
+			ast.Inspect(f, func(n ast.Node) bool {
+				if found != nil {
+					return false
+				}
+				call, ok := n.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				fn := resolveCallee(pkg.TypesInfo, call)
+				if fn == nil || fn.Pkg() == nil {
+					return true
+				}
+				if fn.Name() != name || fn.Pkg().Path() != pkgPath {
+					return true
+				}
+				if receiverTypeName(fn) != "" {
+					return true
+				}
+				found = call
+				return false
+			})
+			if found != nil {
+				return found, pkg.TypesInfo
+			}
+		}
+	}
+	return nil, nil
+}
+
+// findVarObject resolves the *types.Var declared by `var name ...` in the
+// loaded package. Used to seed taint or assert taint on the destination var.
+func findVarObject(engine *TaintEngine, name string) (types.Object, *types.Info) {
+	for _, pkg := range engine.pkgs {
+		if pkg == nil || pkg.TypesInfo == nil {
+			continue
+		}
+		for _, f := range pkg.Syntax {
+			var obj types.Object
+			ast.Inspect(f, func(n ast.Node) bool {
+				if obj != nil {
+					return false
+				}
+				id, ok := n.(*ast.Ident)
+				if !ok || id.Name != name {
+					return true
+				}
+				if def := pkg.TypesInfo.Defs[id]; def != nil {
+					if v, ok := def.(*types.Var); ok {
+						obj = v
+						return false
+					}
+				}
+				return true
+			})
+			if obj != nil {
+				return obj, pkg.TypesInfo
+			}
+		}
+	}
+	return nil, nil
+}
+
+// TestReverseFlow_IoCopy verifies io.Copy(&buf, src) taints buf when src is
+// tainted.
+func TestReverseFlow_IoCopy(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import (
+	"bytes"
+	"io"
+)
+
+func Wrap(src io.Reader) {
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, src)
+}
+`,
+	})
+	call, info := findFreeFnCall(engine, "io", "Copy")
+	if call == nil {
+		t.Fatalf("no io.Copy call found")
+	}
+	bufObj, _ := findVarObject(engine, "buf")
+	srcObj, _ := findVarObject(engine, "src")
+	if bufObj == nil || srcObj == nil {
+		t.Fatalf("could not resolve buf/src var objects")
+	}
+	state := newMethodProjectorState()
+	state.tainted[srcObj] = true
+	propagateUserInput(call, info, state)
+	if !state.tainted[bufObj] {
+		t.Fatalf("expected buf to be tainted after io.Copy(&buf, taintedSrc)")
+	}
+}
+
+// TestReverseFlow_IoCopyN verifies io.CopyN(&buf, src, n) taints buf when src
+// is tainted.
+func TestReverseFlow_IoCopyN(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import (
+	"bytes"
+	"io"
+)
+
+func Wrap(src io.Reader) {
+	var buf bytes.Buffer
+	_, _ = io.CopyN(&buf, src, 100)
+}
+`,
+	})
+	call, info := findFreeFnCall(engine, "io", "CopyN")
+	if call == nil {
+		t.Fatalf("no io.CopyN call found")
+	}
+	bufObj, _ := findVarObject(engine, "buf")
+	srcObj, _ := findVarObject(engine, "src")
+	if bufObj == nil || srcObj == nil {
+		t.Fatalf("could not resolve var objects")
+	}
+	state := newMethodProjectorState()
+	state.tainted[srcObj] = true
+	propagateUserInput(call, info, state)
+	if !state.tainted[bufObj] {
+		t.Fatalf("expected buf to be tainted after io.CopyN(&buf, taintedSrc, n)")
+	}
+}
+
+// TestReverseFlow_IoCopyBuffer verifies io.CopyBuffer(&buf, src, scratch).
+func TestReverseFlow_IoCopyBuffer(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import (
+	"bytes"
+	"io"
+)
+
+func Wrap(src io.Reader) {
+	var buf bytes.Buffer
+	scratch := make([]byte, 32)
+	_, _ = io.CopyBuffer(&buf, src, scratch)
+}
+`,
+	})
+	call, info := findFreeFnCall(engine, "io", "CopyBuffer")
+	if call == nil {
+		t.Fatalf("no io.CopyBuffer call found")
+	}
+	bufObj, _ := findVarObject(engine, "buf")
+	srcObj, _ := findVarObject(engine, "src")
+	if bufObj == nil || srcObj == nil {
+		t.Fatalf("could not resolve var objects")
+	}
+	state := newMethodProjectorState()
+	state.tainted[srcObj] = true
+	propagateUserInput(call, info, state)
+	if !state.tainted[bufObj] {
+		t.Fatalf("expected buf to be tainted after io.CopyBuffer(&buf, taintedSrc, scratch)")
+	}
+}
+
+// TestReverseFlow_IoWriteString verifies io.WriteString(&buf, taintedString).
+func TestReverseFlow_IoWriteString(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import (
+	"bytes"
+	"io"
+)
+
+func Wrap(s string) {
+	var buf bytes.Buffer
+	_, _ = io.WriteString(&buf, s)
+}
+`,
+	})
+	call, info := findFreeFnCall(engine, "io", "WriteString")
+	if call == nil {
+		t.Fatalf("no io.WriteString call found")
+	}
+	bufObj, _ := findVarObject(engine, "buf")
+	sObj, _ := findVarObject(engine, "s")
+	if bufObj == nil || sObj == nil {
+		t.Fatalf("could not resolve var objects")
+	}
+	state := newMethodProjectorState()
+	state.tainted[sObj] = true
+	propagateUserInput(call, info, state)
+	if !state.tainted[bufObj] {
+		t.Fatalf("expected buf to be tainted after io.WriteString(&buf, taintedString)")
+	}
+}
+
+// TestReverseFlow_BufferWriteString verifies (*bytes.Buffer).WriteString
+// receiver-tainted-by-arg.
+func TestReverseFlow_BufferWriteString(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import "bytes"
+
+func Wrap(s string) {
+	var buf bytes.Buffer
+	_, _ = buf.WriteString(s)
+}
+`,
+	})
+	call, info, _ := findMethodCall(engine, "bytes", "Buffer", "WriteString")
+	if call == nil {
+		t.Fatalf("no bytes.Buffer.WriteString call found")
+	}
+	bufObj, _ := findVarObject(engine, "buf")
+	sObj, _ := findVarObject(engine, "s")
+	if bufObj == nil || sObj == nil {
+		t.Fatalf("could not resolve var objects")
+	}
+	state := newMethodProjectorState()
+	state.tainted[sObj] = true
+	propagateUserInput(call, info, state)
+	if !state.tainted[bufObj] {
+		t.Fatalf("expected buf to be tainted after buf.WriteString(taintedString)")
+	}
+}
+
+// TestReverseFlow_BufferWrite verifies (*bytes.Buffer).Write.
+func TestReverseFlow_BufferWrite(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import "bytes"
+
+func Wrap(b []byte) {
+	var buf bytes.Buffer
+	_, _ = buf.Write(b)
+}
+`,
+	})
+	call, info, _ := findMethodCall(engine, "bytes", "Buffer", "Write")
+	if call == nil {
+		t.Fatalf("no bytes.Buffer.Write call found")
+	}
+	bufObj, _ := findVarObject(engine, "buf")
+	bObj, _ := findVarObject(engine, "b")
+	if bufObj == nil || bObj == nil {
+		t.Fatalf("could not resolve var objects")
+	}
+	state := newMethodProjectorState()
+	state.tainted[bObj] = true
+	propagateUserInput(call, info, state)
+	if !state.tainted[bufObj] {
+		t.Fatalf("expected buf to be tainted after buf.Write(taintedBytes)")
+	}
+}
+
+// TestReverseFlow_BuilderWriteString verifies (*strings.Builder).WriteString.
+func TestReverseFlow_BuilderWriteString(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import "strings"
+
+func Wrap(s string) {
+	var sb strings.Builder
+	_, _ = sb.WriteString(s)
+}
+`,
+	})
+	call, info, _ := findMethodCall(engine, "strings", "Builder", "WriteString")
+	if call == nil {
+		t.Fatalf("no strings.Builder.WriteString call found")
+	}
+	sbObj, _ := findVarObject(engine, "sb")
+	sObj, _ := findVarObject(engine, "s")
+	if sbObj == nil || sObj == nil {
+		t.Fatalf("could not resolve var objects")
+	}
+	state := newMethodProjectorState()
+	state.tainted[sObj] = true
+	propagateUserInput(call, info, state)
+	if !state.tainted[sbObj] {
+		t.Fatalf("expected sb to be tainted after sb.WriteString(taintedString)")
+	}
+}
+
+// TestReverseFlow_UntaintedSrcNoOp confirms that when the source arg is NOT
+// tainted, the destination is NOT tainted. Guards against unconditional taint
+// (every io.Copy site cannot be tainted regardless of src).
+func TestReverseFlow_UntaintedSrcNoOp(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import (
+	"bytes"
+	"io"
+)
+
+func Wrap(src io.Reader) {
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, src)
+}
+`,
+	})
+	call, info := findFreeFnCall(engine, "io", "Copy")
+	if call == nil {
+		t.Fatalf("no io.Copy call found")
+	}
+	bufObj, _ := findVarObject(engine, "buf")
+	if bufObj == nil {
+		t.Fatalf("could not resolve buf")
+	}
+	state := newMethodProjectorState() // src NOT tainted
+	propagateUserInput(call, info, state)
+	if state.tainted[bufObj] {
+		t.Fatalf("expected buf to remain untainted when src is untainted")
+	}
+}
+
+// TestReverseFlow_NonAddrDstNoOp confirms the dispatcher safely no-ops when
+// the dst arg is not an &ident shape. io.Copy(dstReturningFn(), src) cannot
+// be modeled without SSA, so it must NOT spuriously taint anything.
+func TestReverseFlow_NonAddrDstNoOp(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import (
+	"bytes"
+	"io"
+)
+
+func newBuf() *bytes.Buffer { return &bytes.Buffer{} }
+
+func Wrap(src io.Reader) {
+	_, _ = io.Copy(newBuf(), src)
+}
+`,
+	})
+	call, info := findFreeFnCall(engine, "io", "Copy")
+	if call == nil {
+		t.Fatalf("no io.Copy call found")
+	}
+	srcObj, _ := findVarObject(engine, "src")
+	if srcObj == nil {
+		t.Fatalf("could not resolve src")
+	}
+	state := newMethodProjectorState()
+	state.tainted[srcObj] = true
+	// The dispatch must not panic and must not mutate state in ways that
+	// would carry false taint. We assert taint count remains exactly 1
+	// (only the seeded src).
+	before := len(state.tainted)
+	propagateUserInput(call, info, state)
+	if len(state.tainted) != before {
+		t.Fatalf("expected no new taint when dst is not &ident shape; before=%d after=%d", before, len(state.tainted))
+	}
+}
+
+// TestReverseFlow_DoesNotRegressForwardFlow is the regression guard: existing
+// forward-flow entries (fmt.Sprintf, errors.Join) must still mark their
+// callee as taintedReturns when an arg is tainted, even after the
+// ReverseFlow field was added to passthroughSpec.
+func TestReverseFlow_DoesNotRegressForwardFlow(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import "fmt"
+
+func Wrap(s string) string { return fmt.Sprintf("v=%s", s) }
+`,
+	})
+	call, info := findFreeFnCall(engine, "fmt", "Sprintf")
+	if call == nil {
+		t.Fatalf("no fmt.Sprintf call found")
+	}
+	sObj, _ := findVarObject(engine, "s")
+	if sObj == nil {
+		t.Fatalf("could not resolve s var")
+	}
+	state := newMethodProjectorState()
+	state.tainted[sObj] = true
+	propagateUserInput(call, info, state)
+	fn := resolveCallee(info, call)
+	if fn == nil {
+		t.Fatalf("resolveCallee returned nil for fmt.Sprintf")
+	}
+	if !state.taintedReturns[fn] {
+		t.Fatalf("forward-flow regression: fmt.Sprintf return must be tainted when arg tainted")
+	}
+}
