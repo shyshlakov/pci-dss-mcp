@@ -257,3 +257,101 @@ func receiverTypeName(fn *types.Func) string {
 	}
 	return ""
 }
+
+// ginRecoveryCallbackSpec describes a gin recovery middleware entry point
+// whose callback parameter at TaintedParamIndex carries USER_INPUT auxiliary
+// taint (D-21.1-04). The callback is the gin.RecoveryFunc value
+// `func(c *Context, err any)` and the err slot (index 1) holds handler-
+// derived panic values - request body, path, headers, form data.
+type ginRecoveryCallbackSpec struct {
+	PkgPath           string
+	Method            string
+	CallbackArgIndex  int
+	IsVariadic        bool
+	TaintedParamIndex int
+	Framework         string
+}
+
+var ginRecoveryCallbacks = []ginRecoveryCallbackSpec{
+	{
+		PkgPath:           "github.com/gin-gonic/gin",
+		Method:            "CustomRecoveryWithWriter",
+		CallbackArgIndex:  1,
+		IsVariadic:        false,
+		TaintedParamIndex: 1,
+		Framework:         "gin",
+	},
+	{
+		PkgPath:           "github.com/gin-gonic/gin",
+		Method:            "CustomRecovery",
+		CallbackArgIndex:  0,
+		IsVariadic:        false,
+		TaintedParamIndex: 1,
+		Framework:         "gin",
+	},
+	{
+		PkgPath:           "github.com/gin-gonic/gin",
+		Method:            "RecoveryWithWriter",
+		CallbackArgIndex:  1,
+		IsVariadic:        true,
+		TaintedParamIndex: 1,
+		Framework:         "gin",
+	},
+}
+
+// RecognizeRecoveryCallback inspects call. If call resolves to a
+// ginRecoveryCallbacks entry, returns the (recovered) *types.Var bindings
+// from each *ast.FuncLit callback argument that should be marked
+// USER_INPUT-tainted. Returns nil when call does not match.
+//
+// Pointer-identity match against *types.Func via resolveCallee prevents
+// shadow-package spoofing (T-21.01-01 mitigation). Identifier-passed
+// callbacks (`gin.CustomRecovery(myRecoveryFn)`) are an acknowledged
+// limitation - only FuncLit args at the source site contribute bindings.
+func RecognizeRecoveryCallback(call *ast.CallExpr, info *types.Info) []*types.Var {
+	if call == nil || info == nil {
+		return nil
+	}
+	fn := resolveCallee(info, call)
+	if fn == nil || fn.Pkg() == nil {
+		return nil
+	}
+	pkgPath := fn.Pkg().Path()
+	method := fn.Name()
+	for _, spec := range ginRecoveryCallbacks {
+		if spec.PkgPath != pkgPath || spec.Method != method {
+			continue
+		}
+		if spec.CallbackArgIndex >= len(call.Args) {
+			return nil
+		}
+		var argSlice []ast.Expr
+		if spec.IsVariadic {
+			argSlice = call.Args[spec.CallbackArgIndex:]
+		} else {
+			argSlice = []ast.Expr{call.Args[spec.CallbackArgIndex]}
+		}
+		var tainted []*types.Var
+		for _, a := range argSlice {
+			fl, ok := a.(*ast.FuncLit)
+			if !ok || fl.Type == nil || fl.Type.Params == nil {
+				continue
+			}
+			absIdx := 0
+			for _, fld := range fl.Type.Params.List {
+				for _, name := range fld.Names {
+					if absIdx == spec.TaintedParamIndex {
+						if obj, found := info.Defs[name]; found {
+							if v, ok := obj.(*types.Var); ok {
+								tainted = append(tainted, v)
+							}
+						}
+					}
+					absIdx++
+				}
+			}
+		}
+		return tainted
+	}
+	return nil
+}
