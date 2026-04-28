@@ -84,6 +84,96 @@ func isPassthroughCall(call *ast.CallExpr, info *types.Info) bool {
 	return false
 }
 
+// formatValidatorTable lists stdlib + popular library parsers that constrain
+// their output to a known format that physically cannot carry PAN/CVV/auth-secret
+// content. When a USER_INPUT-tainted value passes through, the returned value
+// is no longer tainted on the success path.
+//
+// Branch-aware semantics fall out naturally because the dispatcher is consulted
+// inside classifyExpr: assignments of the form `id, err := uuid.Parse(s)` see
+// the RHS classified as untainted and therefore never seed `id`. The raw
+// argument `s` keeps its taint, so `if err != nil { log("invalid", "value", s) }`
+// still fires.
+//
+// url.Parse and ParseRequestURI are deliberately omitted: the engine has no
+// per-field taint state, so a whole-value sanitizer would falsely clear
+// URL.RawQuery / URL.Fragment which carry raw substrings. Existing
+// isFrameworkInputFieldRead / classifyHTTPRequestField already recognize those
+// fields as separate sources, so per-field semantics already work for the URL
+// case.
+//
+// Recognition is by *types.Func pointer identity resolved against the loaded
+// module - a malicious package named "uuid" with a Parse free function cannot
+// spoof the google/uuid recognition because it resolves to a different
+// *types.Func.
+var formatValidatorTable = []passthroughSpec{
+	{PkgPath: "github.com/google/uuid", Method: "Parse"},
+	{PkgPath: "github.com/google/uuid", Method: "MustParse"},
+	{PkgPath: "github.com/google/uuid", Method: "ParseBytes"},
+
+	{PkgPath: "github.com/gofrs/uuid", Method: "FromString"},
+	{PkgPath: "github.com/gofrs/uuid", Method: "FromBytes"},
+	{PkgPath: "github.com/gofrs/uuid", TypeName: "UUID", Method: "Parse"},
+
+	{PkgPath: "time", Method: "Parse"},
+	{PkgPath: "time", Method: "ParseInLocation"},
+	{PkgPath: "time", Method: "ParseDuration"},
+
+	{PkgPath: "strconv", Method: "Atoi"},
+	{PkgPath: "strconv", Method: "ParseInt"},
+	{PkgPath: "strconv", Method: "ParseUint"},
+	{PkgPath: "strconv", Method: "ParseFloat"},
+	{PkgPath: "strconv", Method: "ParseBool"},
+
+	{PkgPath: "net", Method: "ParseIP"},
+	{PkgPath: "net", Method: "ParseCIDR"},
+
+	{PkgPath: "net/netip", Method: "ParseAddr"},
+	{PkgPath: "net/netip", Method: "ParseAddrPort"},
+	{PkgPath: "net/netip", Method: "ParsePrefix"},
+
+	{PkgPath: "net/mail", Method: "ParseAddress"},
+	{PkgPath: "net/mail", Method: "ParseAddressList"},
+}
+
+// isFormatValidatorSanitizer reports whether call resolves to a
+// formatValidatorTable entry. On match, the call's return value is treated as
+// a sanitized format-bound value and classifyExpr returns false.
+func isFormatValidatorSanitizer(call *ast.CallExpr, info *types.Info) bool {
+	if call == nil || info == nil {
+		return false
+	}
+	fn := taint.ResolveCallee(info, call)
+	return matchFormatValidator(fn)
+}
+
+// matchFormatValidator dispatches a resolved *types.Func against
+// formatValidatorTable using PkgPath + receiver-type-name + method-name as the
+// match tuple. Free-function entries (TypeName == "") do not match resolved
+// methods and method entries (TypeName != "") only match the matching
+// receiver. Public for testing - end-to-end tests prefer isFormatValidatorSanitizer.
+func matchFormatValidator(fn *types.Func) bool {
+	if fn == nil || fn.Pkg() == nil {
+		return false
+	}
+	pkgPath := fn.Pkg().Path()
+	method := fn.Name()
+	recv := taint.ReceiverTypeName(fn)
+	for _, spec := range formatValidatorTable {
+		if spec.PkgPath != pkgPath || spec.Method != method {
+			continue
+		}
+		if spec.TypeName != "" && spec.TypeName != recv {
+			continue
+		}
+		if spec.TypeName == "" && recv != "" {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
 // sanitizerNameRegex matches identifier names that suggest masking / redaction
 // behavior. Used by isFunctionShapeMasker for the function-shape recognizer
 // per D-04 V2.
