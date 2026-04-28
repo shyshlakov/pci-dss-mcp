@@ -211,6 +211,20 @@ func (e *TaintEngine) propagateInFile(pkg *packages.Package, f *ast.File, state 
 				hit = true
 				return false
 			}
+			// D-21.1-04: gin recovery callback auxiliary source. The
+			// `recovered any` slot of CustomRecoveryWithWriter / CustomRecovery
+			// / RecoveryWithWriter callbacks carries handler-derived panic
+			// values; mark each FuncLit's index-1 *types.Var as tainted so
+			// downstream reads inside the callback body inherit USER_INPUT
+			// taint via existing R1/R7 propagation. RecognizeRecoveryCallback
+			// is a no-op for any non-recovery call.
+			for _, v := range RecognizeRecoveryCallback(node, info) {
+				if v == nil {
+					continue
+				}
+				state.tainted[v] = true
+				state.depth[v] = 0
+			}
 			// USER_INPUT propagator hook (Plan 21-01 Tasks 1-3).
 			if e.propagateUserInputCall(node, info, state) {
 				return true
