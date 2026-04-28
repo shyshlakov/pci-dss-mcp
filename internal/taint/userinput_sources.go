@@ -202,6 +202,41 @@ func isFrameworkInputFieldRead(sel *ast.SelectorExpr, info *types.Info) (UserInp
 	return UserInputSource{}, false
 }
 
+// RecognizeFrameworkInputCall is the exported entry-point for scanners that
+// need to identify a CallExpr as a USER_INPUT framework source without going
+// through the engine's flow worklist. Returns the resolved UserInputSource on
+// match. Mirrors isFrameworkInputSource - same underlying matcher.
+func RecognizeFrameworkInputCall(call *ast.CallExpr, info *types.Info) (UserInputSource, bool) {
+	return isFrameworkInputSource(call, info)
+}
+
+// RecognizeFrameworkInputFieldRead is the exported entry-point for the
+// SelectorExpr branch (URL.Path / URL.RawQuery / URL.RawPath).
+func RecognizeFrameworkInputFieldRead(sel *ast.SelectorExpr, info *types.Info) (UserInputSource, bool) {
+	return isFrameworkInputFieldRead(sel, info)
+}
+
+// IsRouteTemplateAccessor is the exported negative-list check (D-16.5). Used
+// by scanners to filter out compile-time route-template reads such as
+// gin.Context.FullPath / chi.RouteContext.RoutePattern.
+func IsRouteTemplateAccessor(call *ast.CallExpr, info *types.Info) bool {
+	return isRouteTemplateAccessor(call, info)
+}
+
+// ResolveCallee returns the *types.Func for a CallExpr, or nil when the
+// callee cannot be resolved (interface dispatch, builtin, etc.). Re-exported
+// so scanners performing intra-procedural taint walks can match by pointer
+// identity against framework / sanitizer / sink catalogs.
+func ResolveCallee(info *types.Info, call *ast.CallExpr) *types.Func {
+	return resolveCallee(info, call)
+}
+
+// ReceiverTypeName is the exported helper for scanners that need to resolve
+// the unqualified receiver type name on a method.
+func ReceiverTypeName(fn *types.Func) string {
+	return receiverTypeName(fn)
+}
+
 // receiverTypeName returns the unqualified receiver type name of a method, or
 // "" for a free function. Pointer receivers are unwrapped so *gin.Context and
 // gin.Context both yield "Context".

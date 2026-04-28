@@ -191,6 +191,27 @@ func GetOrInit(ctx context.Context, projectRoot string) *TaintEngine {
 	return engine
 }
 
+// LoadedPackages returns the loaded *packages.Package slice for callers that
+// need to walk typed AST themselves (e.g. scanner/httpinputscanner intra-procedural
+// USER_INPUT analysis). Returns nil when the engine is nil or load failed so
+// callers can fall back without panicking.
+func (e *TaintEngine) LoadedPackages() []*packages.Package {
+	if e == nil || !e.loadOK {
+		return nil
+	}
+	return e.pkgs
+}
+
+// LookupLoadedPackage returns the loaded *packages.Package for importPath, or
+// nil when the engine has not loaded that package. Walks the same Imports
+// closure as the internal sink resolver.
+func (e *TaintEngine) LookupLoadedPackage(importPath string) *packages.Package {
+	if e == nil || !e.loadOK {
+		return nil
+	}
+	return findLoadedPackage(e.pkgs, importPath)
+}
+
 // Reset clears the package-level engine cache AND re-arms the warn-once
 // latch, so unit tests remain hermetic under -race. Called from test cleanup
 // and (optionally) by long-running MCP servers that want to pick up source
