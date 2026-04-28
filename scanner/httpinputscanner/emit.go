@@ -84,10 +84,13 @@ func (st *fileState) emitLogFindings() []scanner.Finding {
 		if emittedAt[c.emitPos] {
 			continue
 		}
+		severity, shouldEmit := computeSeverity(c.ctx)
+		if !shouldEmit {
+			continue
+		}
 		emittedAt[c.emitPos] = true
 		pos := st.pkg.Fset.Position(c.emitPos)
-		severity := computeSeverity(c.ctx)
-		related := relatedRequirementsForLog(severity)
+		related := relatedRequirementsForLog(severity, c.ctx)
 		desc := describeLog(c.ctx, c.sink.Name)
 		f := fmtSeverityFinding(
 			"HTTP-INPUT-LOG",

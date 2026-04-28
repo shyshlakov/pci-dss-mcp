@@ -79,22 +79,27 @@ func TestScannerIdentity(t *testing.T) {
 
 func TestPanKeywordSeverity(t *testing.T) {
 	tt := []struct {
-		name string
-		ctx  UserInputContext
-		want scanner.Severity
+		name           string
+		ctx            UserInputContext
+		wantSeverity   scanner.Severity
+		wantShouldEmit bool
 	}{
-		{name: "pan promotes to HIGH", ctx: UserInputContext{Identifier: "pan"}, want: scanner.SeverityHigh},
-		{name: "card promotes to HIGH", ctx: UserInputContext{Identifier: "card_number"}, want: scanner.SeverityHigh},
-		{name: "cvv promotes to HIGH", ctx: UserInputContext{Identifier: "cvv"}, want: scanner.SeverityHigh},
-		{name: "iban promotes to HIGH", ctx: UserInputContext{Identifier: "IBAN"}, want: scanner.SeverityHigh},
-		{name: "bin stays MEDIUM", ctx: UserInputContext{Identifier: "bin"}, want: scanner.SeverityMedium},
-		{name: "user stays MEDIUM", ctx: UserInputContext{Identifier: "user"}, want: scanner.SeverityMedium},
-		{name: "empty stays MEDIUM", ctx: UserInputContext{Identifier: ""}, want: scanner.SeverityMedium},
+		{name: "pan promotes to HIGH", ctx: UserInputContext{Identifier: "pan"}, wantSeverity: scanner.SeverityHigh, wantShouldEmit: true},
+		{name: "card promotes to HIGH", ctx: UserInputContext{Identifier: "card_number"}, wantSeverity: scanner.SeverityHigh, wantShouldEmit: true},
+		{name: "cvv promotes to HIGH", ctx: UserInputContext{Identifier: "cvv"}, wantSeverity: scanner.SeverityHigh, wantShouldEmit: true},
+		{name: "iban promotes to HIGH", ctx: UserInputContext{Identifier: "IBAN"}, wantSeverity: scanner.SeverityHigh, wantShouldEmit: true},
+		{name: "bin stays MEDIUM", ctx: UserInputContext{Identifier: "bin"}, wantSeverity: scanner.SeverityMedium, wantShouldEmit: true},
+		{name: "user stays MEDIUM", ctx: UserInputContext{Identifier: "user"}, wantSeverity: scanner.SeverityMedium, wantShouldEmit: true},
+		{name: "empty stays MEDIUM", ctx: UserInputContext{Identifier: ""}, wantSeverity: scanner.SeverityMedium, wantShouldEmit: true},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := computeSeverity(tc.ctx); got != tc.want {
-				t.Fatalf("computeSeverity(%q) = %q, want %q", tc.ctx.Identifier, got, tc.want)
+			gotSev, gotEmit := computeSeverity(tc.ctx)
+			if gotEmit != tc.wantShouldEmit {
+				t.Fatalf("computeSeverity(%q) shouldEmit = %v, want %v", tc.ctx.Identifier, gotEmit, tc.wantShouldEmit)
+			}
+			if gotEmit && gotSev != tc.wantSeverity {
+				t.Fatalf("computeSeverity(%q) = %q, want %q", tc.ctx.Identifier, gotSev, tc.wantSeverity)
 			}
 		})
 	}

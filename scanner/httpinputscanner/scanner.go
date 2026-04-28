@@ -226,9 +226,14 @@ type taintMeta struct {
 
 // UserInputContext captures the textual identifier (path slot name, header
 // name, query parameter name) that introduced taint into the current frame.
+// SourceIsBodyDecoder marks taint flows that originated at a body-decoder
+// source (ShouldBindJSON, BodyParser, c.Request.Body read) so the severity
+// classifier can apply the body-source HIGH override even when the field
+// identifier itself does not match any keyword class.
 type UserInputContext struct {
-	Identifier string
-	Framework  string
+	Identifier          string
+	Framework           string
+	SourceIsBodyDecoder bool
 }
 
 func newFileState(pkg *packages.Package, file *ast.File, info *types.Info) *fileState {
@@ -558,8 +563,9 @@ func (st *fileState) seedBodyDecoderFields(call *ast.CallExpr, src taint.UserInp
 		return
 	}
 	ctx := UserInputContext{
-		Identifier: named.Obj().Name(),
-		Framework:  src.Framework,
+		Identifier:          named.Obj().Name(),
+		Framework:           src.Framework,
+		SourceIsBodyDecoder: src.IsBodyDecoder,
 	}
 	for i := 0; i < stType.NumFields(); i++ {
 		f := stType.Field(i)
@@ -762,7 +768,9 @@ func classifyHTTPRequestField(sel *ast.SelectorExpr, info *types.Info) (UserInpu
 		return UserInputContext{}, false
 	}
 	switch sel.Sel.Name {
-	case "Body", "Form", "PostForm", "MultipartForm":
+	case "Body":
+		return UserInputContext{Identifier: sel.Sel.Name, Framework: "net/http", SourceIsBodyDecoder: true}, true
+	case "Form", "PostForm", "MultipartForm":
 		return UserInputContext{Identifier: sel.Sel.Name, Framework: "net/http"}, true
 	}
 	return UserInputContext{}, false
