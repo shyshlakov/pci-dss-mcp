@@ -1,6 +1,6 @@
 # pci-dss-mcp
 
-> Static analysis MCP server that detects PCI DSS v4.0.1 violations in Go payment service codebases. Every finding maps to a specific PCI DSS requirement number.
+> Static analysis MCP server for Go payment service codebases. Every detected PCI DSS v4.0.1 violation in a Go payment service codebase is mapped to the specific requirement number before the code ships.
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/shyshlakov/pci-dss-mcp?v=2)](https://goreportcard.com/report/github.com/shyshlakov/pci-dss-mcp)
 [![License: MIT](https://img.shields.io/github/license/shyshlakov/pci-dss-mcp)](LICENSE)
@@ -13,6 +13,10 @@
 ## What it does
 
 pci-dss-mcp is a stdio MCP server that runs 12 scanners, an orchestrator, and an AI triage engine over a Go payment service codebase. Each finding carries a `requirement_id` mapped to a specific PCI DSS v4.0.1 line item; see [docs/requirement-mapping.md](docs/requirement-mapping.md) for the canonical rule-to-requirement table and [testdata/vulnerable-payment-service/EXPECTED-FINDINGS.md](testdata/vulnerable-payment-service/EXPECTED-FINDINGS.md) for live golden output.
+
+### What pci-dss-mcp catches today
+
+- **HTTP framework input flow into log / error / panic sinks.** Tier 1 frameworks (gin, chi, gorilla/mux, net/http (Go 1.22+), echo v4, fiber v2) and Tier 1 loggers (log/slog, logrus, zap, zerolog, logr, klog, hclog) ship in v0.7. Tier 2 (kratos, apex/log, charmbracelet/log) lands in v0.8. Tier 3 (fasthttp, beego, iris, httprouter, project-internal) is user-configurable via Phase 25 YAML once shipped. See [docs/http_input_taint.md](docs/http_input_taint.md).
 
 ### What pci-dss-mcp is NOT
 
