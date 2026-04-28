@@ -36,7 +36,7 @@ var userInputSourceLibrary = []frameworkSourceSpec{
 	{PkgPath: "github.com/gin-gonic/gin", TypeName: "Context", Method: "GetString", Framework: "gin"},
 	{PkgPath: "github.com/gin-gonic/gin", TypeName: "Context", Method: "Get", Framework: "gin"},
 	{PkgPath: "github.com/gin-gonic/gin", TypeName: "Context", Method: "MustGet", Framework: "gin"},
-	// gin body decoders — first by-pointer struct argument's fields become tainted.
+	// gin body decoders - first by-pointer struct argument's fields become tainted.
 	{PkgPath: "github.com/gin-gonic/gin", TypeName: "Context", Method: "ShouldBindJSON", Framework: "gin", IsBodyDecoder: true},
 	{PkgPath: "github.com/gin-gonic/gin", TypeName: "Context", Method: "ShouldBindXML", Framework: "gin", IsBodyDecoder: true},
 	{PkgPath: "github.com/gin-gonic/gin", TypeName: "Context", Method: "ShouldBindYAML", Framework: "gin", IsBodyDecoder: true},
@@ -84,7 +84,7 @@ var userInputSourceLibrary = []frameworkSourceSpec{
 	{PkgPath: "github.com/gofiber/fiber/v2", TypeName: "Ctx", Method: "Get", Framework: "fiber"},
 	{PkgPath: "github.com/gofiber/fiber/v2", TypeName: "Ctx", Method: "BodyParser", Framework: "fiber", IsBodyDecoder: true},
 
-	// validator (interface) — FieldError.Value() returns the user-supplied value.
+	// validator (interface) - FieldError.Value() returns the user-supplied value.
 	{PkgPath: "github.com/go-playground/validator/v10", TypeName: "FieldError", Method: "Value", Framework: "validator"},
 }
 
@@ -104,7 +104,7 @@ var routeTemplateNegativeList = []frameworkSourceSpec{
 // on match; zero value and false otherwise. The route-template negative list
 // is checked first and short-circuits.
 //
-// Recognition is via the call's *types.Func identity — a fake gin-named
+// Recognition is via the call's *types.Func identity - a fake gin-named
 // package in the analyzed module would resolve to a different *types.Func
 // pointer and therefore not match (T-21.01-05 mitigation).
 func isFrameworkInputSource(call *ast.CallExpr, info *types.Info) (UserInputSource, bool) {

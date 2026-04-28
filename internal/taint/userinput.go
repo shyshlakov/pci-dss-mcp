@@ -121,7 +121,7 @@ func (e *TaintEngine) lookupUserInputFunc(src UserInputSource) *types.Func {
 // "no USER_INPUT handling applied, continue with default rules".
 //
 // In Plan 21-01 we always return false so existing PAN/CVV/SAD propagation
-// still runs alongside USER_INPUT seeding — both kinds share the same
+// still runs alongside USER_INPUT seeding - both kinds share the same
 // state.tainted map and that is intentional for Plan 21-02 sink integration.
 func (e *TaintEngine) propagateUserInputCall(call *ast.CallExpr, info *types.Info, state *flowState) (handled bool) {
 	if call == nil || info == nil || state == nil {
@@ -142,7 +142,7 @@ func (e *TaintEngine) propagateUserInputCall(call *ast.CallExpr, info *types.Inf
 
 // seedCallReturn marks the call expression's result type as USER_INPUT-tainted.
 // We do this by tainting the *ast.CallExpr-bound Type info via state.tainted
-// keyed on the synthetic "call result" — but state.tainted keys are
+// keyed on the synthetic "call result" - but state.tainted keys are
 // types.Object, so we approximate by tainting the receiver of any LHS that
 // consumes this call (handled by R1) AND by setting the callee in
 // taintedReturns so isExprTainted picks it up via R4.
@@ -174,7 +174,7 @@ func seedBodyDecoderFields(call *ast.CallExpr, info *types.Info, state *flowStat
 	if t == nil {
 		return
 	}
-	// Dereference pointer wrappers — body decoders commonly receive *T.
+	// Dereference pointer wrappers - body decoders commonly receive *T.
 	if ptr, ok := t.(*types.Pointer); ok {
 		t = ptr.Elem()
 	}
