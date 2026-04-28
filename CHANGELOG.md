@@ -5,6 +5,8 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## [0.7.0] - 2026-04-28
+
 ### Added
 
 - HTTP input taint tracking: three new rule IDs detect raw framework input flowing into log, error, and panic sinks without a sanitizer barrier:
