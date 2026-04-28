@@ -1,6 +1,6 @@
 # PCI DSS v4.0.1 Coverage Map
 
-pci-dss-mcp checks **15 of ~250** PCI DSS v4.0.1 requirements across 11 user-facing scanners + 1 internal sqlscanner (~6.0%). This covers Requirements 3, 4, 6, 8, 10, and 11.
+pci-dss-mcp checks **15 of ~250** PCI DSS v4.0.1 requirements across 11 user-facing scanners + 1 internal sqlscanner + 1 internal httpinputscanner (~6.0%). This covers Requirements 3, 4, 6, 8, 10, and 11.
 
 ## Covered Requirements
 
@@ -11,7 +11,7 @@ pci-dss-mcp checks **15 of ~250** PCI DSS v4.0.1 requirements across 11 user-fac
 | 3.4.1 | PAN Displayed with Masking | scan_pan_data | PAN variables in HTTP responses, format strings |
 | 3.5.1 | PAN Rendered Unreadable in Storage | scan_pan_data, (report-only) sqlscanner | PAN variables in logs and responses; PAN columns in SQL schemas without encryption; string-typed PAN fields (can't be zeroed); missing memory zeroing |
 | 4.2.1 | Strong Cryptography During Transmission | check_encryption, check_tls_config | Plain HTTP URLs, InsecureSkipVerify, weak TLS versions, weak ciphers |
-| 6.2.4 | Secure Software Development | check_encryption, check_error_handling | Hardcoded keys, weak hashes, error details leaked to responses |
+| 6.2.4 | Secure Software Development | check_encryption, check_error_handling, httpinputscanner | Hardcoded keys, weak hashes, error details leaked to responses; HTTP framework input baked into errors (HTTP-INPUT-ERROR) and recovery-path panic re-log (HTTP-INPUT-PANIC related) |
 | 6.3.2 | Inventory of Bespoke and Custom Software | sbomscanner (via reportscanner.sbom_inventory.go) | CycloneDX 1.6 SBOM emission. See [generate_sbom.md](generate_sbom.md). |
 | 6.3.3 | Security Patches Applied | check_dependencies | Known CVEs in go.mod dependencies via OSV.dev |
 | 6.4.3 | Payment Page Script Management | check_payment_page_scripts | Missing CSP headers, unsafe-inline/eval, missing SRI/nonce |
@@ -19,7 +19,7 @@ pci-dss-mcp checks **15 of ~250** PCI DSS v4.0.1 requirements across 11 user-fac
 | 8.3.6 | Password Complexity Requirements | check_auth_strength | Password length checks below 12 characters |
 | 8.4.2 | MFA for Administrative Access | check_auth_strength | Payment routes without MFA middleware |
 | 8.6.2 | Passwords/Passphrases Not Hard-Coded | check_auth_strength, check_secrets_in_configs | Hardcoded passwords in source code; secrets in .env/.yaml/.json/.toml; known provider prefixes; connection-string credentials |
-| 10.2.1 | Audit Logs Capture Details | audit_log_coverage | Payment handlers without audit logging, unstructured logging (fmt/log instead of slog) |
+| 10.2.1 | Audit Logs Capture Details | audit_log_coverage, httpinputscanner | Payment handlers without audit logging, unstructured logging (fmt/log instead of slog); raw HTTP input flow into log sinks (HTTP-INPUT-LOG, HTTP-INPUT-PANIC) |
 | 11.6.1 | Change Detection for Payment Pages | check_payment_page_scripts | File integrity monitoring requirement flagged |
 
 ## Accuracy and Limitations
