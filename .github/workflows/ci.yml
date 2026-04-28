@@ -17,6 +17,7 @@ jobs:
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -40,6 +41,8 @@ jobs:
         run: make build
 
       - name: Test
+        env:
+          GOFLAGS: ${{ matrix.os == 'ubuntu-latest' && '-p=2' || '' }}
         run: make test
 
       - name: docs-check (advisory)
@@ -56,6 +59,7 @@ jobs:
   coverage:
     name: coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -66,7 +70,7 @@ jobs:
           go-version: "1.25.9"
 
       - name: Run tests with coverage
-        run: go test ./... -race -coverprofile=coverage.out -covermode=atomic
+        run: go test ./... -race -coverprofile=coverage.out -covermode=atomic -p=2
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
