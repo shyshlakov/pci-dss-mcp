@@ -115,16 +115,83 @@ func (e *TaintEngine) lookupUserInputFunc(src UserInputSource) *types.Func {
 }
 
 // propagateUserInputCall is the per-CallExpr hook invoked from
-// propagateInFile. Tasks 2/3 fill in source recognition and propagator rules;
-// in Plan 21-01 the body is intentionally a no-op so the FlowsTo regression
-// guard is preserved.
+// propagateInFile. It seeds USER_INPUT taint at recognized framework input
+// accessors (Task 2) and applies D-13 propagator rules (Task 3). Returning
+// true means "fully handled, skip default processing"; returning false means
+// "no USER_INPUT handling applied, continue with default rules".
 //
-// Returning true means "this call site has been fully handled by the
-// USER_INPUT pipeline and the caller may skip default processing"; returning
-// false means "no USER_INPUT handling applied, continue with default rules".
+// In Plan 21-01 we always return false so existing PAN/CVV/SAD propagation
+// still runs alongside USER_INPUT seeding — both kinds share the same
+// state.tainted map and that is intentional for Plan 21-02 sink integration.
 func (e *TaintEngine) propagateUserInputCall(call *ast.CallExpr, info *types.Info, state *flowState) (handled bool) {
-	_ = call
-	_ = info
-	_ = state
+	if call == nil || info == nil || state == nil {
+		return false
+	}
+	src, ok := isFrameworkInputSource(call, info)
+	if !ok {
+		// Task 3 propagator catalog is a no-op until Task 3 commits.
+		return propagateUserInput(call, info, state)
+	}
+	if src.IsBodyDecoder {
+		seedBodyDecoderFields(call, info, state)
+		return false
+	}
+	seedCallReturn(call, info, state)
 	return false
+}
+
+// seedCallReturn marks the call expression's result type as USER_INPUT-tainted.
+// We do this by tainting the *ast.CallExpr-bound Type info via state.tainted
+// keyed on the synthetic "call result" — but state.tainted keys are
+// types.Object, so we approximate by tainting the receiver of any LHS that
+// consumes this call (handled by R1) AND by setting the callee in
+// taintedReturns so isExprTainted picks it up via R4.
+func seedCallReturn(call *ast.CallExpr, info *types.Info, state *flowState) {
+	fn := resolveCallee(info, call)
+	if fn == nil {
+		return
+	}
+	state.taintedReturns[fn] = true
+}
+
+// seedBodyDecoderFields handles ShouldBindJSON-shape body decoders: the first
+// argument is by-pointer to a user struct; every field of that struct
+// becomes USER_INPUT-tainted after the call.
+func seedBodyDecoderFields(call *ast.CallExpr, info *types.Info, state *flowState) {
+	if len(call.Args) == 0 {
+		return
+	}
+	arg := call.Args[0]
+	// Unwrap & if present.
+	if u, ok := arg.(*ast.UnaryExpr); ok {
+		arg = u.X
+	}
+	tv, ok := info.Types[arg]
+	if !ok {
+		return
+	}
+	t := tv.Type
+	if t == nil {
+		return
+	}
+	// Dereference pointer wrappers — body decoders commonly receive *T.
+	if ptr, ok := t.(*types.Pointer); ok {
+		t = ptr.Elem()
+	}
+	named, ok := t.(*types.Named)
+	if !ok {
+		return
+	}
+	st, ok := named.Underlying().(*types.Struct)
+	if !ok {
+		return
+	}
+	for i := 0; i < st.NumFields(); i++ {
+		f := st.Field(i)
+		if f == nil {
+			continue
+		}
+		state.tainted[f] = true
+		state.depth[f] = 0
+	}
 }
