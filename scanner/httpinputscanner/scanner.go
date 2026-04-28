@@ -405,6 +405,15 @@ func (st *fileState) classifyExpr(expr ast.Expr) (UserInputContext, bool) {
 		if isSanitizerCall(e, st.info) {
 			return UserInputContext{}, false
 		}
+		// Format-validator sanitizers (uuid.Parse, time.Parse, strconv.Atoi,
+		// net.ParseIP, mail.ParseAddress, etc.) constrain output to a known
+		// format that physically cannot carry PAN/CVV/auth-secret content.
+		// The success branch is naturally cleared because the assignment LHS
+		// is never seeded; the raw argument keeps its taint so the error
+		// branch still fires on `log("invalid", "value", raw)`.
+		if isFormatValidatorSanitizer(e, st.info) {
+			return UserInputContext{}, false
+		}
 		// `someErr.Error()` - the .Error() method on error returns a string
 		// whose content is the wrapped error's text. If the receiver is
 		// USER_INPUT-tainted, the result string carries the same taint.
