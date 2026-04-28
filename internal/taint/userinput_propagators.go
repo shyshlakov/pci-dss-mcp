@@ -68,6 +68,27 @@ var userInputPassthrough = []passthroughSpec{
 
 	// context.WithValue - value arg propagates into returned context.
 	{PkgPath: "context", Method: "WithValue"},
+
+	// ---- Plan 21.1-06 (D-07) forward method-projectors ------------------
+	// Receiver-to-result flow: when the receiver is USER_INPUT-tainted, the
+	// returned value inherits taint. The dispatcher checks SelectorExpr.X
+	// taint via isArgTainted on the receiver expression for spec.TypeName!=""
+	// rows where no positional arg is tainted.
+	//
+	// (*url.URL).String INTENTIONALLY ABSENT - engine has no per-field
+	// taint state and modeling URL.String as whole-value would conflict
+	// with isFrameworkInputFieldRead which already taints URL.RawQuery /
+	// URL.RawPath as separate sources. Deferred to a future SSA-based
+	// engine.
+	//
+	// (error).Error INTENTIONALLY ABSENT - builtin interface methods
+	// resolve with fn.Pkg() == nil and the dispatcher early-returns at
+	// line "fn.Pkg() == nil". httpinputscanner/error_sinks.go covers the
+	// dominant slog.Error("k", err.Error()) sink pattern via direct AST
+	// shape recognition.
+	{PkgPath: "bytes", TypeName: "Buffer", Method: "String"},
+	{PkgPath: "bytes", TypeName: "Buffer", Method: "Bytes"},
+	{PkgPath: "strings", TypeName: "Builder", Method: "String"},
 }
 
 // propagateUserInput is the per-CallExpr dispatcher for D-13 propagators. It
@@ -107,6 +128,20 @@ func propagateUserInput(call *ast.CallExpr, info *types.Info, state *flowState) 
 			if isArgTainted(a, info, state) {
 				state.taintedReturns[fn] = true
 				return false
+			}
+		}
+		// Plan 21.1-06 forward method-projector: when the spec is keyed by
+		// receiver type (TypeName != "") and no positional arg is tainted,
+		// also inspect the receiver expression. (*bytes.Buffer).String /
+		// .Bytes and (*strings.Builder).String inherit USER_INPUT taint
+		// from the receiver, not from the args. The selector form
+		// `recv.Method(...)` parses as CallExpr{Fun: SelectorExpr{X: recv}}.
+		if spec.TypeName != "" {
+			if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+				if isArgTainted(sel.X, info, state) {
+					state.taintedReturns[fn] = true
+					return false
+				}
 			}
 		}
 		return false
