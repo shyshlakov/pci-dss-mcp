@@ -193,10 +193,74 @@ func (st *fileState) emitErrorFindings() []scanner.Finding {
 		findings = append(findings, f)
 		return true
 	})
+
+	// D-14 indirection pass: logger Error methods on a recognized logger
+	// receiver type that pass `<errIdent>.Error()` as a DIRECT positional
+	// argument (NOT wrapped in slog.String / zap.Error / etc.) where errIdent
+	// resolves to a value seeded by seedUserInputErrors. This is the
+	// struct_logger_field.go:20 pattern: receiver h.log : *slog.Logger,
+	// args ["read body failed", "err", err.Error()], err from
+	// io.ReadAll(r.Body) where r.Body is USER_INPUT-tainted.
+	ast.Inspect(st.file, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		if !directLoggerErrorReceiver(call, st.info) {
+			return true
+		}
+		errIdents := directErrErrorIdents(call)
+		if len(errIdents) == 0 {
+			return true
+		}
+		var ctx UserInputContext
+		var matched bool
+		for _, id := range errIdents {
+			if got, ok := st.errIdentInTaintedErrors(id); ok {
+				ctx = got
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return true
+		}
+		if st.callInSanitizedBranch(call) {
+			return true
+		}
+		emitPos := emissionPos(call)
+		if emittedAt[emitPos] {
+			return true
+		}
+		emittedAt[emitPos] = true
+		pos := st.pkg.Fset.Position(emitPos)
+		desc := describeError(ctx, "logger.Error chain (D-14 indirection)")
+		f := fmtSeverityFinding(
+			"HTTP-INPUT-ERROR",
+			"6.2.4",
+			triageHintError,
+			desc,
+			"Do not log raw error chains derived from request body or path parameters. Log a correlated request_id instead and return a generic error response.",
+			scanner.SeverityMedium,
+			nil,
+			pos,
+			st.codeSnippet(pos),
+		)
+		findings = append(findings, f)
+		return true
+	})
+
 	return findings
 }
 
 // emitPanicFindings walks the file for HTTP-INPUT-PANIC sinks.
+//
+// Dedup invariant: when a function contains BOTH a bare panic(arg) site AND
+// a defer recover() re-log sink, we emit ONLY the defer recover() sink. The
+// recovery middleware that logs the panic value is the actual leak vector;
+// the bare panic is the cause but the same finding family already covers it.
+// Without this dedup, defer_recovery_log.go would emit twice (line 13 +
+// line 20) and inflate the MEDIUM count.
 func (st *fileState) emitPanicFindings() []scanner.Finding {
 	var findings []scanner.Finding
 	if st.pkg == nil || st.pkg.Fset == nil {
@@ -226,6 +290,9 @@ func (st *fileState) emitPanicFindings() []scanner.Finding {
 		findings = append(findings, f)
 	}
 
+	deferSinks := st.collectDeferRecoverSinks()
+	deferRecoverFuncs := st.functionsContainingDeferRecover()
+
 	ast.Inspect(st.file, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)
 		if !ok {
@@ -239,11 +306,18 @@ func (st *fileState) emitPanicFindings() []scanner.Finding {
 		if !hasTaint {
 			return true
 		}
+		// Dedup: skip bare panic() if its enclosing function ALSO has a
+		// defer recover() re-log sink. The defer-recover finding (emitted
+		// below) is the canonical sink for the recovery-leak family.
+		if id, ok := call.Fun.(*ast.Ident); ok && id.Name == "panic" {
+			if fn := enclosingFuncDecl(st.file, call.Pos()); fn != nil && deferRecoverFuncs[fn] {
+				return true
+			}
+		}
 		emit(call, sink, ctx)
 		return true
 	})
 
-	deferSinks := st.collectDeferRecoverSinks()
 	if len(deferSinks) > 0 && st.packageHasPanicSite() {
 		for _, ds := range deferSinks {
 			call, ok := ds.PanicValueExpr.(*ast.CallExpr)
@@ -255,6 +329,77 @@ func (st *fileState) emitPanicFindings() []scanner.Finding {
 		}
 	}
 	return findings
+}
+
+// functionsContainingDeferRecover returns the set of *ast.FuncDecl in this
+// file whose body contains at least one `defer func(){ ... recover() ... }()`
+// statement with a logger re-log call inside. The set is used by the panic
+// emitter to dedup bare panic() emissions when the enclosing function ALSO
+// has a defer-recover sink.
+func (st *fileState) functionsContainingDeferRecover() map[*ast.FuncDecl]bool {
+	out := map[*ast.FuncDecl]bool{}
+	if st.file == nil {
+		return out
+	}
+	for _, decl := range st.file.Decls {
+		fd, ok := decl.(*ast.FuncDecl)
+		if !ok || fd.Body == nil {
+			continue
+		}
+		var hasDeferRecoverLog bool
+		ast.Inspect(fd.Body, func(n ast.Node) bool {
+			if hasDeferRecoverLog {
+				return false
+			}
+			def, ok := n.(*ast.DeferStmt)
+			if !ok {
+				return true
+			}
+			if !funcLitContainsRecover(def.Call) {
+				return true
+			}
+			lit, ok := def.Call.Fun.(*ast.FuncLit)
+			if !ok {
+				return true
+			}
+			ast.Inspect(lit.Body, func(inner ast.Node) bool {
+				if hasDeferRecoverLog {
+					return false
+				}
+				c, ok := inner.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				if isLoggerCallInsideRecover(c, st.info) {
+					hasDeferRecoverLog = true
+					return false
+				}
+				return true
+			})
+			return true
+		})
+		if hasDeferRecoverLog {
+			out[fd] = true
+		}
+	}
+	return out
+}
+
+// enclosingFuncDecl returns the FuncDecl enclosing pos in file, or nil.
+func enclosingFuncDecl(file *ast.File, pos token.Pos) *ast.FuncDecl {
+	if file == nil {
+		return nil
+	}
+	for _, decl := range file.Decls {
+		fd, ok := decl.(*ast.FuncDecl)
+		if !ok || fd.Body == nil {
+			continue
+		}
+		if fd.Body.Lbrace <= pos && pos <= fd.Body.Rbrace {
+			return fd
+		}
+	}
+	return nil
 }
 
 // packageHasPanicSite reports whether any file in the same package contains a

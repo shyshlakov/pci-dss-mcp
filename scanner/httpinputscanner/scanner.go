@@ -163,6 +163,10 @@ func (s *HTTPInputScanner) scanPackage(pkg *packages.Package) ([]scanner.Finding
 		// becomes tainted on the second pass).
 		state.propagateCrossProcedural()
 		state.propagateCrossProcedural()
+		// D-14 one-hop callee-param heuristic: seed err identifiers when
+		// their RHS is a stdlib infrastructure call carrying USER_INPUT
+		// tainted args (e.g. io.ReadAll(r.Body)).
+		state.seedUserInputErrors()
 		state.collectSanitizers()
 		state.collectPanicSites()
 		findings = append(findings, state.emitLogFindings()...)
@@ -197,6 +201,13 @@ type fileState struct {
 	// tainted (intra-file - covers Maskify/Sprintf/Errorf etc.).
 	taintedReturns map[*types.Func]taintMeta
 
+	// taintedErrors tracks error-typed identifiers seeded by the D-14
+	// one-hop callee-param heuristic - typically err from `io.ReadAll(r.Body)`
+	// where the call's args contain USER_INPUT-tainted exprs. This map is
+	// SEPARATE from taintedIdents to avoid corrupting general taint flow:
+	// only the dedicated D-14 emission path reads it.
+	taintedErrors map[types.Object]taintMeta
+
 	// sanitizerBlocks marks ast.BlockStmt nodes whose suffix has applied a
 	// sanitizer. Used for branch-aware analysis - the success branch can
 	// clear taint while the error branch still emits.
@@ -228,6 +239,7 @@ func newFileState(pkg *packages.Package, file *ast.File, info *types.Info) *file
 		taintedIdents:   map[types.Object]taintMeta{},
 		taintedFields:   map[*types.Var]taintMeta{},
 		taintedReturns:  map[*types.Func]taintMeta{},
+		taintedErrors:   map[types.Object]taintMeta{},
 		sanitizerBlocks: map[*ast.BlockStmt]bool{},
 	}
 }
