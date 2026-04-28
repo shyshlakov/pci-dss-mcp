@@ -429,6 +429,15 @@ func (st *fileState) classifyExpr(expr ast.Expr) (UserInputContext, bool) {
 				}
 			}
 		}
+		// Verb-aware fmt.Errorf / fmt.Sprintf: when the literal format string
+		// has %s/%v/%w at a position whose arg static type implements
+		// fmt.Stringer AND that arg is tainted, propagate. Runs BEFORE the
+		// uniform passthrough so Stringer-typed args route through this path
+		// and surface the receiver's identifier context for severity. Variable
+		// format strings fall through to the existing uniform passthrough.
+		if ctx, ok := classifyFmtVerbStringer(e, st.info, st); ok {
+			return ctx, true
+		}
 		// Pass-through helper (fmt.Sprintf / Errorf / errors.Wrap / multierror.Append etc.).
 		if isPassthroughCall(e, st.info) {
 			for _, a := range e.Args {
