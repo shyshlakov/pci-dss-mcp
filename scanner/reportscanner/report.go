@@ -16,6 +16,7 @@ import (
 	"github.com/shyshlakov/pci-dss-mcp/scanner/cryptoscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/depscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/errorscanner"
+	"github.com/shyshlakov/pci-dss-mcp/scanner/httpinputscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/panscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/retentionscanner"
 	"github.com/shyshlakov/pci-dss-mcp/scanner/scriptscanner"
@@ -31,7 +32,7 @@ type ReportGenerator struct {
 	db       *pcidb.DB
 }
 
-// NewReportGenerator creates a report generator with all 11 scanners.
+// NewReportGenerator creates a report generator with all 12 scanners.
 func NewReportGenerator(db *pcidb.DB) *ReportGenerator {
 	return &ReportGenerator{
 		scanners: []scanner.Scanner{
@@ -42,6 +43,7 @@ func NewReportGenerator(db *pcidb.DB) *ReportGenerator {
 			secretscanner.New(),
 			authscanner.New(),
 			auditscanner.New(),
+			httpinputscanner.New(),
 			retentionscanner.New(),
 			sqlscanner.New(),
 			scriptscanner.New(),
