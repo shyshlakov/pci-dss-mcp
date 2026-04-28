@@ -2,6 +2,7 @@ package httpinputscanner
 
 import (
 	"go/ast"
+	"go/importer"
 	"go/parser"
 	"go/token"
 	"go/types"
@@ -101,12 +102,214 @@ func F() {
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	// The body of the if should be the inner-most block at the position of the
-	// inner `_ = 1` assign statement.
 	pos := f.Decls[0].(*ast.FuncDecl).Body.List[0].(*ast.IfStmt).Body.List[0].Pos()
 	block := enclosingBlock(f, pos)
 	if block == nil {
 		t.Fatal("enclosingBlock returned nil for inner assign")
 	}
 	_ = types.IsInterface
+}
+
+func TestFormatValidatorTableCoverage(t *testing.T) {
+	tt := []struct {
+		pkg    string
+		typ    string
+		method string
+	}{
+		{pkg: "github.com/google/uuid", method: "Parse"},
+		{pkg: "github.com/google/uuid", method: "MustParse"},
+		{pkg: "github.com/google/uuid", method: "ParseBytes"},
+
+		{pkg: "github.com/gofrs/uuid", method: "FromString"},
+		{pkg: "github.com/gofrs/uuid", method: "FromBytes"},
+		{pkg: "github.com/gofrs/uuid", typ: "UUID", method: "Parse"},
+
+		{pkg: "time", method: "Parse"},
+		{pkg: "time", method: "ParseInLocation"},
+		{pkg: "time", method: "ParseDuration"},
+
+		{pkg: "strconv", method: "Atoi"},
+		{pkg: "strconv", method: "ParseInt"},
+		{pkg: "strconv", method: "ParseUint"},
+		{pkg: "strconv", method: "ParseFloat"},
+		{pkg: "strconv", method: "ParseBool"},
+
+		{pkg: "net", method: "ParseIP"},
+		{pkg: "net", method: "ParseCIDR"},
+
+		{pkg: "net/netip", method: "ParseAddr"},
+		{pkg: "net/netip", method: "ParseAddrPort"},
+		{pkg: "net/netip", method: "ParsePrefix"},
+
+		{pkg: "net/mail", method: "ParseAddress"},
+		{pkg: "net/mail", method: "ParseAddressList"},
+	}
+	for _, tc := range tt {
+		t.Run(tc.pkg+"/"+tc.typ+"/"+tc.method, func(t *testing.T) {
+			found := false
+			for _, spec := range formatValidatorTable {
+				if spec.PkgPath == tc.pkg && spec.TypeName == tc.typ && spec.Method == tc.method {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Fatalf("formatValidatorTable missing %s.%s.%s", tc.pkg, tc.typ, tc.method)
+			}
+		})
+	}
+}
+
+func TestFormatValidatorTableExcludesURL(t *testing.T) {
+	for _, spec := range formatValidatorTable {
+		if spec.PkgPath == "net/url" {
+			t.Fatalf("formatValidatorTable must not include net/url entries (found %s.%s)", spec.PkgPath, spec.Method)
+		}
+	}
+}
+
+func TestFormatValidatorTableExcludesGenericConversions(t *testing.T) {
+	forbidden := []struct {
+		pkg    string
+		method string
+	}{
+		{pkg: "strings", method: "ToLower"},
+		{pkg: "strings", method: "TrimSpace"},
+		{pkg: "strings", method: "ReplaceAll"},
+		{pkg: "regexp", method: "FindString"},
+	}
+	for _, f := range forbidden {
+		for _, spec := range formatValidatorTable {
+			if spec.PkgPath == f.pkg && spec.Method == f.method {
+				t.Fatalf("formatValidatorTable must not include %s.%s (out of scope)", f.pkg, f.method)
+			}
+		}
+	}
+}
+
+func TestIsFormatValidatorSanitizerNilGuards(t *testing.T) {
+	if isFormatValidatorSanitizer(nil, nil) {
+		t.Fatal("isFormatValidatorSanitizer(nil, nil) returned true")
+	}
+	info := &types.Info{}
+	if isFormatValidatorSanitizer(nil, info) {
+		t.Fatal("isFormatValidatorSanitizer(nil, info) returned true")
+	}
+}
+
+func TestMatchFormatValidatorSynthetic(t *testing.T) {
+	tt := []struct {
+		name     string
+		pkgPath  string
+		typeName string
+		method   string
+		want     bool
+	}{
+		{name: "google/uuid.Parse", pkgPath: "github.com/google/uuid", method: "Parse", want: true},
+		{name: "google/uuid.MustParse", pkgPath: "github.com/google/uuid", method: "MustParse", want: true},
+		{name: "google/uuid.ParseBytes", pkgPath: "github.com/google/uuid", method: "ParseBytes", want: true},
+
+		{name: "gofrs/uuid.FromString", pkgPath: "github.com/gofrs/uuid", method: "FromString", want: true},
+		{name: "gofrs/uuid.FromBytes", pkgPath: "github.com/gofrs/uuid", method: "FromBytes", want: true},
+		{name: "gofrs/uuid.UUID.Parse", pkgPath: "github.com/gofrs/uuid", typeName: "UUID", method: "Parse", want: true},
+
+		{name: "time.Parse", pkgPath: "time", method: "Parse", want: true},
+		{name: "time.ParseInLocation", pkgPath: "time", method: "ParseInLocation", want: true},
+		{name: "time.ParseDuration", pkgPath: "time", method: "ParseDuration", want: true},
+
+		{name: "strconv.Atoi", pkgPath: "strconv", method: "Atoi", want: true},
+		{name: "strconv.ParseInt", pkgPath: "strconv", method: "ParseInt", want: true},
+		{name: "strconv.ParseUint", pkgPath: "strconv", method: "ParseUint", want: true},
+		{name: "strconv.ParseFloat", pkgPath: "strconv", method: "ParseFloat", want: true},
+		{name: "strconv.ParseBool", pkgPath: "strconv", method: "ParseBool", want: true},
+
+		{name: "net.ParseIP", pkgPath: "net", method: "ParseIP", want: true},
+		{name: "net.ParseCIDR", pkgPath: "net", method: "ParseCIDR", want: true},
+
+		{name: "net/netip.ParseAddr", pkgPath: "net/netip", method: "ParseAddr", want: true},
+		{name: "net/netip.ParseAddrPort", pkgPath: "net/netip", method: "ParseAddrPort", want: true},
+		{name: "net/netip.ParsePrefix", pkgPath: "net/netip", method: "ParsePrefix", want: true},
+
+		{name: "net/mail.ParseAddress", pkgPath: "net/mail", method: "ParseAddress", want: true},
+		{name: "net/mail.ParseAddressList", pkgPath: "net/mail", method: "ParseAddressList", want: true},
+
+		{name: "negative_url.Parse", pkgPath: "net/url", method: "Parse", want: false},
+		{name: "negative_url.ParseRequestURI", pkgPath: "net/url", method: "ParseRequestURI", want: false},
+		{name: "negative_strings.ToLower", pkgPath: "strings", method: "ToLower", want: false},
+		{name: "negative_strings.TrimSpace", pkgPath: "strings", method: "TrimSpace", want: false},
+		{name: "negative_fmt.Sprintf", pkgPath: "fmt", method: "Sprintf", want: false},
+		{name: "negative_attacker_uuid_pkg", pkgPath: "github.com/attacker/uuid", method: "Parse", want: false},
+		{name: "negative_method_with_unexpected_recv", pkgPath: "github.com/google/uuid", typeName: "Other", method: "Parse", want: false},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			fn := makeSyntheticFormatValidatorFunc(tc.pkgPath, tc.typeName, tc.method)
+			got := matchFormatValidator(fn)
+			if got != tc.want {
+				t.Fatalf("matchFormatValidator(%s.%s.%s) = %v, want %v", tc.pkgPath, tc.typeName, tc.method, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestIsFormatValidatorSanitizerEndToEnd(t *testing.T) {
+	src := `package main
+
+import (
+	"strconv"
+)
+
+func F(s string) {
+	_, _ = strconv.Atoi(s)
+}
+`
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "p.go", src, 0)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	conf := types.Config{Importer: importer.Default()}
+	info := &types.Info{
+		Types:      map[ast.Expr]types.TypeAndValue{},
+		Defs:       map[*ast.Ident]types.Object{},
+		Uses:       map[*ast.Ident]types.Object{},
+		Selections: map[*ast.SelectorExpr]*types.Selection{},
+	}
+	if _, err := conf.Check("main", fset, []*ast.File{f}, info); err != nil {
+		t.Skipf("typecheck (env-dependent, fixture-style skip): %v", err)
+	}
+	var found *ast.CallExpr
+	ast.Inspect(f, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+			if id, ok := sel.X.(*ast.Ident); ok && id.Name == "strconv" && sel.Sel.Name == "Atoi" {
+				found = call
+				return false
+			}
+		}
+		return true
+	})
+	if found == nil {
+		t.Fatal("could not locate strconv.Atoi call")
+	}
+	if !isFormatValidatorSanitizer(found, info) {
+		t.Fatal("strconv.Atoi(s) call should be recognized as a format-validator sanitizer")
+	}
+}
+
+func makeSyntheticFormatValidatorFunc(pkgPath, typeName, method string) *types.Func {
+	pkg := types.NewPackage(pkgPath, lastSegment(pkgPath))
+	var sig *types.Signature
+	if typeName != "" {
+		recvName := types.NewTypeName(0, pkg, typeName, nil)
+		recvType := types.NewNamed(recvName, types.NewStruct(nil, nil), nil)
+		recv := types.NewVar(0, pkg, "u", types.NewPointer(recvType))
+		sig = types.NewSignatureType(recv, nil, nil, types.NewTuple(), types.NewTuple(), false)
+	} else {
+		sig = types.NewSignatureType(nil, nil, nil, types.NewTuple(), types.NewTuple(), false)
+	}
+	return types.NewFunc(0, pkg, method, sig)
 }
