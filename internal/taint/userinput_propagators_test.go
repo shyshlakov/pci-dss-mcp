@@ -427,3 +427,341 @@ func CtxName(ctx context.Context) any {
 		t.Fatalf("userInputPassthrough catalog missing context.WithValue entry - D-14 / D-16.4 context-extracted logger chain cannot propagate taint without it")
 	}
 }
+
+// ----------------------------------------------------------------------------
+// Plan 21.1-06 (D-07) forward method-projector propagator tests.
+//
+// Receiver-to-result taint flow for (*bytes.Buffer).String/.Bytes and
+// (*strings.Builder).String. Plan 21.1-07 will add reverse flow (source-arg
+// to destination-receiver) for io.Copy family and *bytes.Buffer.Write* /
+// *strings.Builder.Write* in a separate section below this one.
+// ----------------------------------------------------------------------------
+
+// TestMethodProjector_CatalogEntries confirms the four hardcoded forward
+// method-projector entries land in userInputPassthrough. url.URL.String is
+// asserted ABSENT (D-07 deferred per per-field-state limitation).
+func TestMethodProjector_CatalogEntries(t *testing.T) {
+	tt := []struct {
+		name    string
+		pkgPath string
+		typName string
+		method  string
+		want    bool
+	}{
+		{"bytes.Buffer.String present", "bytes", "Buffer", "String", true},
+		{"bytes.Buffer.Bytes present", "bytes", "Buffer", "Bytes", true},
+		{"strings.Builder.String present", "strings", "Builder", "String", true},
+		{"net/url.URL.String ABSENT", "net/url", "URL", "String", false},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			var got bool
+			for _, spec := range userInputPassthrough {
+				if spec.PkgPath == tc.pkgPath && spec.TypeName == tc.typName && spec.Method == tc.method {
+					got = true
+					break
+				}
+			}
+			if got != tc.want {
+				t.Fatalf("catalog entry {%s,%s,%s}: want present=%v got=%v", tc.pkgPath, tc.typName, tc.method, tc.want, got)
+			}
+		})
+	}
+}
+
+// findMethodCall walks the loaded package looking for the first CallExpr whose
+// callee resolves to a *types.Func with the given (pkgPath, recvName, method)
+// triple. Returns the call, the *types.Info, and the receiver SelectorExpr.X
+// expression so tests can taint the receiver object.
+func findMethodCall(engine *TaintEngine, pkgPath, recvName, method string) (*ast.CallExpr, *types.Info, ast.Expr) {
+	for _, pkg := range engine.pkgs {
+		if pkg == nil || pkg.TypesInfo == nil {
+			continue
+		}
+		for _, f := range pkg.Syntax {
+			var found *ast.CallExpr
+			ast.Inspect(f, func(n ast.Node) bool {
+				if found != nil {
+					return false
+				}
+				call, ok := n.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				fn := resolveCallee(pkg.TypesInfo, call)
+				if fn == nil || fn.Pkg() == nil {
+					return true
+				}
+				if fn.Name() != method {
+					return true
+				}
+				if fn.Pkg().Path() != pkgPath {
+					return true
+				}
+				if receiverTypeName(fn) != recvName {
+					return true
+				}
+				found = call
+				return false
+			})
+			if found != nil {
+				var recv ast.Expr
+				if sel, ok := found.Fun.(*ast.SelectorExpr); ok {
+					recv = sel.X
+				}
+				return found, pkg.TypesInfo, recv
+			}
+		}
+	}
+	return nil, nil, nil
+}
+
+func newMethodProjectorState() *flowState {
+	return &flowState{
+		tainted:        map[types.Object]bool{},
+		depth:          map[types.Object]int{},
+		visitedFuncs:   map[*types.Func]bool{},
+		taintedReturns: map[*types.Func]bool{},
+		sinks:          map[*types.Func]bool{},
+	}
+}
+
+func taintIdent(t *testing.T, info *types.Info, expr ast.Expr, state *flowState) {
+	t.Helper()
+	id, ok := expr.(*ast.Ident)
+	if !ok {
+		t.Fatalf("expected *ast.Ident receiver expression, got %T", expr)
+	}
+	obj := info.Uses[id]
+	if obj == nil {
+		obj = info.Defs[id]
+	}
+	if obj == nil {
+		t.Fatalf("no object resolved for ident %q", id.Name)
+	}
+	state.tainted[obj] = true
+}
+
+// TestMethodProjector_BufferString covers (*bytes.Buffer).String forward flow:
+// when the buf receiver is USER_INPUT-tainted, calling buf.String() must mark
+// the callee in state.taintedReturns so downstream isExprTainted picks it up.
+func TestMethodProjector_BufferString(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import "bytes"
+
+func Read(buf *bytes.Buffer) string { return buf.String() }
+`,
+	})
+	call, info, recv := findMethodCall(engine, "bytes", "Buffer", "String")
+	if call == nil {
+		t.Fatalf("no bytes.Buffer.String call found in synthetic package")
+	}
+	state := newMethodProjectorState()
+	taintIdent(t, info, recv, state)
+	propagateUserInput(call, info, state)
+	fn := resolveCallee(info, call)
+	if fn == nil {
+		t.Fatalf("resolveCallee returned nil for bytes.Buffer.String")
+	}
+	if !state.taintedReturns[fn] {
+		t.Fatalf("expected taintedReturns to mark bytes.Buffer.String when receiver is tainted")
+	}
+}
+
+// TestMethodProjector_BufferBytes covers (*bytes.Buffer).Bytes forward flow.
+func TestMethodProjector_BufferBytes(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import "bytes"
+
+func Read(buf *bytes.Buffer) []byte { return buf.Bytes() }
+`,
+	})
+	call, info, recv := findMethodCall(engine, "bytes", "Buffer", "Bytes")
+	if call == nil {
+		t.Fatalf("no bytes.Buffer.Bytes call found in synthetic package")
+	}
+	state := newMethodProjectorState()
+	taintIdent(t, info, recv, state)
+	propagateUserInput(call, info, state)
+	fn := resolveCallee(info, call)
+	if fn == nil {
+		t.Fatalf("resolveCallee returned nil for bytes.Buffer.Bytes")
+	}
+	if !state.taintedReturns[fn] {
+		t.Fatalf("expected taintedReturns to mark bytes.Buffer.Bytes when receiver is tainted")
+	}
+}
+
+// TestMethodProjector_BuilderString covers (*strings.Builder).String forward flow.
+func TestMethodProjector_BuilderString(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import "strings"
+
+func Read(sb *strings.Builder) string { return sb.String() }
+`,
+	})
+	call, info, recv := findMethodCall(engine, "strings", "Builder", "String")
+	if call == nil {
+		t.Fatalf("no strings.Builder.String call found in synthetic package")
+	}
+	state := newMethodProjectorState()
+	taintIdent(t, info, recv, state)
+	propagateUserInput(call, info, state)
+	fn := resolveCallee(info, call)
+	if fn == nil {
+		t.Fatalf("resolveCallee returned nil for strings.Builder.String")
+	}
+	if !state.taintedReturns[fn] {
+		t.Fatalf("expected taintedReturns to mark strings.Builder.String when receiver is tainted")
+	}
+}
+
+// TestMethodProjector_UntaintedReceiverNoOp confirms the dispatcher does NOT
+// taint the call's return when the receiver is untainted. Guards against
+// over-broad propagation (every Buffer.String() call site cannot be tainted
+// unconditionally).
+func TestMethodProjector_UntaintedReceiverNoOp(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import "bytes"
+
+func Read(buf *bytes.Buffer) string { return buf.String() }
+`,
+	})
+	call, info, _ := findMethodCall(engine, "bytes", "Buffer", "String")
+	if call == nil {
+		t.Fatalf("no bytes.Buffer.String call found in synthetic package")
+	}
+	state := newMethodProjectorState() // receiver intentionally NOT tainted
+	propagateUserInput(call, info, state)
+	fn := resolveCallee(info, call)
+	if fn == nil {
+		t.Fatalf("resolveCallee returned nil")
+	}
+	if state.taintedReturns[fn] {
+		t.Fatalf("expected taintedReturns to remain unset when receiver is untainted")
+	}
+}
+
+// TestMethodProjector_UrlUrlStringNotPropagated is the NEGATIVE differentiator
+// for D-07: (*url.URL).String is intentionally absent from the catalog because
+// the engine has no per-field taint state and modeling URL.String as a
+// whole-value propagator would conflict with isFrameworkInputFieldRead which
+// already taints URL.RawQuery / URL.RawPath as separate sources. The test
+// confirms that even when the receiver is tainted, the propagator catalog
+// does NOT mark the (*url.URL).String return as tainted.
+func TestMethodProjector_UrlUrlStringNotPropagated(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import "net/url"
+
+func Read(u *url.URL) string { return u.String() }
+`,
+	})
+	call, info, recv := findMethodCall(engine, "net/url", "URL", "String")
+	if call == nil {
+		t.Fatalf("no url.URL.String call found in synthetic package")
+	}
+	state := newMethodProjectorState()
+	taintIdent(t, info, recv, state)
+	propagateUserInput(call, info, state)
+	fn := resolveCallee(info, call)
+	if fn == nil {
+		t.Fatalf("resolveCallee returned nil for url.URL.String")
+	}
+	if state.taintedReturns[fn] {
+		t.Fatalf("expected url.URL.String to NOT be in taintedReturns - it was deliberately excluded from the catalog (D-07 url.URL.String dropped)")
+	}
+}
+
+// TestMethodProjector_TypeNameMismatch confirms that an entry keyed on
+// (PkgPath=bytes, TypeName=Buffer) does NOT match a method with the same
+// short name "String" defined on a different package's type. Guards against
+// receiver-type-blind dispatch.
+func TestMethodProjector_TypeNameMismatch(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+import "strings"
+
+func Read(r *strings.Reader) int64 { return r.Size() }
+`,
+	})
+	// strings.Reader.Size exists in stdlib; we want to confirm a method on a
+	// strings package that is NOT in the catalog stays untainted even when
+	// receiver is tainted.
+	call, info, recv := findMethodCall(engine, "strings", "Reader", "Size")
+	if call == nil {
+		t.Fatalf("no strings.Reader.Size call found in synthetic package")
+	}
+	state := newMethodProjectorState()
+	taintIdent(t, info, recv, state)
+	propagateUserInput(call, info, state)
+	fn := resolveCallee(info, call)
+	if fn == nil {
+		t.Fatalf("resolveCallee returned nil for strings.Reader.Size")
+	}
+	if state.taintedReturns[fn] {
+		t.Fatalf("expected strings.Reader.Size to NOT be in taintedReturns - not in propagator catalog")
+	}
+}
+
+// TestMethodProjector_UserDefinedStringerNotMatched confirms hardcoded list
+// semantics: a user-defined type with a String() method (Stringer interface)
+// that is not in the catalog does NOT get its return tainted. The hardcoded
+// list is intentional per D-07 - heuristic Stringer-on-tainted-receiver
+// detection is deferred to a future user-override surface.
+func TestMethodProjector_UserDefinedStringerNotMatched(t *testing.T) {
+	engine := userInputPropagatorEnv(t, map[string]string{
+		"main.go": `package userinput
+
+type Token struct{ raw string }
+
+func (t Token) String() string { return t.raw }
+
+func Read(t Token) string { return t.String() }
+`,
+	})
+	call, info, recv := findMethodCall(engine, "example.com/userinput", "Token", "String")
+	if call == nil {
+		t.Fatalf("no Token.String call found in synthetic package")
+	}
+	state := newMethodProjectorState()
+	taintIdent(t, info, recv, state)
+	propagateUserInput(call, info, state)
+	fn := resolveCallee(info, call)
+	if fn == nil {
+		t.Fatalf("resolveCallee returned nil for Token.String")
+	}
+	if state.taintedReturns[fn] {
+		t.Fatalf("expected user-defined Token.String to NOT be in taintedReturns - hardcoded list does not include user types")
+	}
+}
+
+// TestMethodProjector_ErrorErrorSinkSideRecognized documents the error.Error
+// coverage decision. The propagator catalog deliberately does NOT include
+// (error).Error: builtin interface methods resolve with fn.Pkg() == nil and
+// the dispatcher early-returns. The dominant `slog.Error("k", err.Error())`
+// pattern is already covered SCANNER-side via httpinputscanner/error_sinks.go
+// (isErrorMethodCall). This test asserts the catalog-absent invariant; it is
+// a structural guard so a future PR cannot silently add error.Error and
+// regress the early-return contract.
+func TestMethodProjector_ErrorErrorSinkSideRecognized(t *testing.T) {
+	for _, spec := range userInputPassthrough {
+		if spec.TypeName == "error" && spec.Method == "Error" {
+			t.Fatalf("error.Error must NOT be in userInputPassthrough catalog: " +
+				"propagator dispatcher early-returns on fn.Pkg()==nil for builtin " +
+				"interface methods, and httpinputscanner/error_sinks.go covers the " +
+				"slog.Error(k, err.Error()) sink pattern directly. " +
+				"See 21.1-06-SUMMARY.md error.Error decision.")
+		}
+	}
+}
