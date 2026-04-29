@@ -216,6 +216,13 @@ type fileState struct {
 	// hasPanicSite is true when this file (or its package) contains a
 	// panic(arg) call. Used by D-19 conservative recovery emission.
 	hasPanicSite bool
+
+	// fileHasGinRecoveryCallbackSink is true when this file installs a gin
+	// recovery callback (CustomRecoveryWithWriter / CustomRecovery /
+	// RecoveryWithWriter) whose body re-logs the recovered value. Used by
+	// emitPanicFindings to suppress bare panic emissions in the same file
+	// because the recovery callback PANIC finding already covers them.
+	fileHasGinRecoveryCallbackSink bool
 }
 
 // taintMeta carries provenance for a tainted value so severity computation can
@@ -461,11 +468,20 @@ func (st *fileState) classifyExpr(expr ast.Expr) (UserInputContext, bool) {
 	}
 	switch e := expr.(type) {
 	case *ast.CallExpr:
-		// Source recognition first.
-		if src, ok := taint.RecognizeFrameworkInputCall(e, st.info); ok && !src.IsBodyDecoder {
+		// Source recognition first. Body-decoder calls (ShouldBindJSON,
+		// BodyParser) are skipped here because their seeding happens via
+		// seedBodyDecoderFields - the call's return is err, not user input.
+		// The validator framework is the exception: FieldError.Value() is a
+		// use-site accessor that returns the user-supplied bound-struct
+		// field value, so it must surface here. The IsBodyDecoder flag on
+		// the validator spec carries the body-decoder origin signal forward
+		// (Plan 21.1-09 RC-6 sub-issue 6b) without changing the semantic
+		// that body-decoder source calls are seed-only.
+		if src, ok := taint.RecognizeFrameworkInputCall(e, st.info); ok && (!src.IsBodyDecoder || src.Framework == "validator") {
 			return UserInputContext{
-				Identifier: firstStringLiteralArg(e),
-				Framework:  src.Framework,
+				Identifier:          firstStringLiteralArg(e),
+				Framework:           src.Framework,
+				SourceIsBodyDecoder: src.IsBodyDecoder,
 			}, true
 		}
 		// Sanitizer wrappers clear taint regardless of arg taint.
