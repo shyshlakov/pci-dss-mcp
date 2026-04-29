@@ -54,6 +54,13 @@ var passthroughLibrary = []passthroughSpec{
 
 	{PkgPath: "strings", Method: "Join"},
 	{PkgPath: "context", Method: "WithValue"},
+
+	// Plan 21.1-06 forward method-projectors. When the receiver carries
+	// USER_INPUT taint, the returned string/bytes inherits it. Mirrors the
+	// internal/taint engine catalog at userinput_propagators.go:96-98.
+	{PkgPath: "bytes", TypeName: "Buffer", Method: "String"},
+	{PkgPath: "bytes", TypeName: "Buffer", Method: "Bytes"},
+	{PkgPath: "strings", TypeName: "Builder", Method: "String"},
 }
 
 // isPassthroughCall reports whether call is a recognized USER_INPUT
@@ -82,6 +89,61 @@ func isPassthroughCall(call *ast.CallExpr, info *types.Info) bool {
 		return true
 	}
 	return false
+}
+
+// isReceiverTypedPassthrough reports whether call resolves to a passthrough
+// spec whose TypeName != "". Used by classifyExpr to know that the receiver
+// (SelectorExpr.X) - not the positional args - carries the taint signal.
+// Mirrors Plan 21.1-06 forward method-projector logic from internal/taint/
+// userinput_propagators.go:204-211.
+func isReceiverTypedPassthrough(call *ast.CallExpr, info *types.Info) bool {
+	if call == nil || info == nil {
+		return false
+	}
+	fn := taint.ResolveCallee(info, call)
+	if fn == nil || fn.Pkg() == nil {
+		return false
+	}
+	pkgPath := fn.Pkg().Path()
+	method := fn.Name()
+	recv := taint.ReceiverTypeName(fn)
+	for _, spec := range passthroughLibrary {
+		if spec.PkgPath != pkgPath || spec.Method != method {
+			continue
+		}
+		if spec.TypeName != "" && spec.TypeName == recv {
+			return true
+		}
+	}
+	return false
+}
+
+// reverseFlowSourceArg reports whether call is one of the io.Copy / io.CopyN
+// / io.CopyBuffer / io.WriteString reverse-flow propagators and returns the
+// destination expression and the source argument so caller can seed the
+// destination *types.Var when the source is tainted. Returns (nil, nil,
+// false) for non-matching calls. Mirrors Plan 21.1-07 reverse-flow seeding
+// (internal/taint/userinput_propagators.go:115-125).
+func reverseFlowSourceArg(call *ast.CallExpr, info *types.Info) (dst ast.Expr, src ast.Expr, ok bool) {
+	if call == nil || info == nil {
+		return nil, nil, false
+	}
+	fn := taint.ResolveCallee(info, call)
+	if fn == nil || fn.Pkg() == nil {
+		return nil, nil, false
+	}
+	if fn.Pkg().Path() != "io" {
+		return nil, nil, false
+	}
+	switch fn.Name() {
+	case "Copy", "CopyN", "CopyBuffer", "WriteString":
+	default:
+		return nil, nil, false
+	}
+	if len(call.Args) < 2 {
+		return nil, nil, false
+	}
+	return call.Args[0], call.Args[1], true
 }
 
 // formatValidatorTable lists stdlib + popular library parsers that constrain
