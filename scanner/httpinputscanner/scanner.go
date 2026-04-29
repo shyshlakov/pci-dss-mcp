@@ -271,6 +271,16 @@ func (st *fileState) collectSources() {
 			if src, ok := taint.RecognizeFrameworkInputCall(node, st.info); ok && src.IsBodyDecoder {
 				st.seedBodyDecoderFields(node, src)
 			}
+			// Plan 21.1-07 reverse-flow seeding: io.Copy / io.CopyN /
+			// io.CopyBuffer / io.WriteString with a tainted source arg
+			// taints the destination *types.Var. Mirrors the engine catalog
+			// at internal/taint/userinput_propagators.go:115-125.
+			if dst, src, ok := reverseFlowSourceArg(node, st.info); ok {
+				if ctx, tainted := st.classifyExpr(src); tainted {
+					ctx.BodyBufferChain = true
+					st.seedReverseFlowDest(dst, ctx)
+				}
+			}
 			// panic(arg) site - record for D-19 emission.
 			if id, ok := node.Fun.(*ast.Ident); ok && id.Name == "panic" && len(node.Args) > 0 {
 				st.hasPanicSite = true
@@ -278,6 +288,40 @@ func (st *fileState) collectSources() {
 		}
 		return true
 	})
+}
+
+// seedReverseFlowDest taints the *types.Var referenced by a reverse-flow
+// destination expression. Recognizes the &ident shape (UnaryExpr with
+// Op=AND) used by io.Copy(&buf, src) and the bare ident shape used when
+// the destination is already a pointer or interface value. Other shapes
+// (composite literals, function returns) silently no-op per recall-bias.
+func (st *fileState) seedReverseFlowDest(dstExpr ast.Expr, ctx UserInputContext) {
+	var ident *ast.Ident
+	switch x := dstExpr.(type) {
+	case *ast.UnaryExpr:
+		if x.Op != token.AND {
+			return
+		}
+		if id, ok := x.X.(*ast.Ident); ok {
+			ident = id
+		}
+	case *ast.Ident:
+		ident = x
+	case *ast.ParenExpr:
+		st.seedReverseFlowDest(x.X, ctx)
+		return
+	}
+	if ident == nil {
+		return
+	}
+	obj := st.info.ObjectOf(ident)
+	if obj == nil {
+		return
+	}
+	if _, ok := obj.(*types.Var); !ok {
+		return
+	}
+	st.taintedIdents[obj] = taintMeta{source: ctx}
 }
 
 // applyAssignSeed handles `x := c.Param("bin")`, `x = r.URL.Path`, and the
@@ -451,6 +495,18 @@ func (st *fileState) classifyExpr(expr ast.Expr) (UserInputContext, bool) {
 			for _, a := range e.Args {
 				if ctx, ok := st.classifyExpr(a); ok {
 					return ctx, true
+				}
+			}
+			// Plan 21.1-06 forward method-projector: when the spec is keyed
+			// by receiver type (TypeName != "") and no positional arg is
+			// tainted, inspect the receiver expression. (*bytes.Buffer).String /
+			// .Bytes and (*strings.Builder).String inherit USER_INPUT taint
+			// from the receiver, not from the args.
+			if isReceiverTypedPassthrough(e, st.info) {
+				if sel, ok := e.Fun.(*ast.SelectorExpr); ok {
+					if ctx, tainted := st.classifyExpr(sel.X); tainted {
+						return ctx, true
+					}
 				}
 			}
 		}

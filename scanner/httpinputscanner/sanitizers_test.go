@@ -313,3 +313,182 @@ func makeSyntheticFormatValidatorFunc(pkgPath, typeName, method string) *types.F
 	}
 	return types.NewFunc(0, pkg, method, sig)
 }
+
+func TestPassthroughLibraryReceiverProjectors(t *testing.T) {
+	want := []struct {
+		pkg  string
+		typ  string
+		meth string
+	}{
+		{pkg: "bytes", typ: "Buffer", meth: "String"},
+		{pkg: "bytes", typ: "Buffer", meth: "Bytes"},
+		{pkg: "strings", typ: "Builder", meth: "String"},
+	}
+	for _, w := range want {
+		t.Run(w.pkg+"."+w.typ+"."+w.meth, func(t *testing.T) {
+			found := false
+			for _, spec := range passthroughLibrary {
+				if spec.PkgPath == w.pkg && spec.TypeName == w.typ && spec.Method == w.meth {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Fatalf("passthroughLibrary missing %s.%s.%s", w.pkg, w.typ, w.meth)
+			}
+		})
+	}
+}
+
+func TestReverseFlowSourceArgRecognition(t *testing.T) {
+	tt := []struct {
+		name string
+		src  string
+		want bool
+	}{
+		{
+			name: "io.Copy(&buf, src) recognized",
+			src: `package main
+import (
+	"bytes"
+	"io"
+)
+func F(r io.Reader) { var buf bytes.Buffer; io.Copy(&buf, r) }
+`,
+			want: true,
+		},
+		{
+			name: "io.WriteString(&buf, s) recognized",
+			src: `package main
+import (
+	"io"
+	"strings"
+)
+func F() { var b strings.Builder; io.WriteString(&b, "x") }
+`,
+			want: true,
+		},
+		{
+			name: "io.ReadAll NOT recognized",
+			src: `package main
+import (
+	"io"
+)
+func F(r io.Reader) ([]byte, error) { return io.ReadAll(r) }
+`,
+			want: false,
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "x.go", tc.src, 0)
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			conf := types.Config{Importer: importer.Default()}
+			info := &types.Info{
+				Types:      map[ast.Expr]types.TypeAndValue{},
+				Defs:       map[*ast.Ident]types.Object{},
+				Uses:       map[*ast.Ident]types.Object{},
+				Selections: map[*ast.SelectorExpr]*types.Selection{},
+			}
+			if _, err := conf.Check("x", fset, []*ast.File{f}, info); err != nil {
+				t.Skipf("typecheck (env-dependent): %v", err)
+			}
+			var found *ast.CallExpr
+			ast.Inspect(f, func(n ast.Node) bool {
+				if found != nil {
+					return false
+				}
+				call, ok := n.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+					if id, ok := sel.X.(*ast.Ident); ok && id.Name == "io" {
+						found = call
+						return false
+					}
+				}
+				return true
+			})
+			if found == nil {
+				t.Fatal("did not locate io.* call")
+			}
+			_, _, ok := reverseFlowSourceArg(found, info)
+			if ok != tc.want {
+				t.Fatalf("reverseFlowSourceArg ok = %v, want %v", ok, tc.want)
+			}
+		})
+	}
+}
+
+func TestIsReceiverTypedPassthroughDispatch(t *testing.T) {
+	tt := []struct {
+		name string
+		src  string
+		want bool
+	}{
+		{
+			name: "buf.String() on bytes.Buffer is receiver-typed passthrough",
+			src: `package main
+import "bytes"
+func F() { var buf bytes.Buffer; _ = buf.String() }
+`,
+			want: true,
+		},
+		{
+			name: "fmt.Sprintf is NOT receiver-typed passthrough (free fn)",
+			src: `package main
+import "fmt"
+func F() { _ = fmt.Sprintf("x %d", 1) }
+`,
+			want: false,
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "x.go", tc.src, 0)
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			conf := types.Config{Importer: importer.Default()}
+			info := &types.Info{
+				Types:      map[ast.Expr]types.TypeAndValue{},
+				Defs:       map[*ast.Ident]types.Object{},
+				Uses:       map[*ast.Ident]types.Object{},
+				Selections: map[*ast.SelectorExpr]*types.Selection{},
+			}
+			if _, err := conf.Check("x", fset, []*ast.File{f}, info); err != nil {
+				t.Skipf("typecheck (env-dependent): %v", err)
+			}
+			var found *ast.CallExpr
+			ast.Inspect(f, func(n ast.Node) bool {
+				if found != nil {
+					return false
+				}
+				call, ok := n.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+					name := sel.Sel.Name
+					if name == "String" || name == "Sprintf" {
+						found = call
+						return false
+					}
+				}
+				return true
+			})
+			if found == nil {
+				t.Fatal("did not locate target call")
+			}
+			got := isReceiverTypedPassthrough(found, info)
+			if got != tc.want {
+				t.Fatalf("isReceiverTypedPassthrough = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
