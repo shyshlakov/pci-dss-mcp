@@ -50,13 +50,27 @@ type TaintEngine struct {
 	sinkObjects map[SinkKind][]sinkTarget
 }
 
-// Package-level cache: one TaintEngine per absolute project root. We cache
-// even failed engines (loadOK=false) so that a broken project does not cause
-// us to re-run packages.Load on every subsequent scanner call — the 30s
-// timeout budget would otherwise be paid over and over.
+// loadEntry serializes concurrent GetOrInit callers for the same projectRoot
+// behind a sync.Once. Without this, parallel test goroutines that hit the
+// same root race past the cache check, fire packages.Load N times in
+// parallel, saturate x/tools' GOMAXPROCS-bounded cpuLimit semaphore, and
+// deadlock on the bounded chan-send in parseFile (packages.go:1377). One
+// timed-out Load leaks a goroutine that holds a cpuLimit slot forever; N
+// concurrent timed-out Loads compound until subsequent Load calls hang
+// forever waiting for the never-released slots.
+type loadEntry struct {
+	once   sync.Once
+	engine *TaintEngine // nil for failed loads; set inside once.Do
+}
+
+// Package-level cache: one loadEntry per absolute project root. The entry
+// is created on first request and the underlying engine is built exactly
+// once via entry.once.Do regardless of caller concurrency. Failed engines
+// keep the entry with engine=nil so a broken project does not re-pay the
+// 90 s timeout on every call.
 var (
 	engineMu    sync.Mutex
-	engineCache = map[string]*TaintEngine{}
+	engineCache = map[string]*loadEntry{}
 	warnOnce    sync.Once
 )
 
@@ -95,20 +109,29 @@ func GetOrInit(ctx context.Context, projectRoot string) *TaintEngine {
 		return nil
 	}
 
-	// Fast path: cached engine (either healthy or permanently failed).
+	// Get-or-create the per-root load entry under engineMu. Concurrent callers
+	// for the same absRoot share one entry and serialize on entry.once,
+	// preventing thundering-herd packages.Load calls that would race the
+	// global x/tools cpuLimit semaphore.
 	engineMu.Lock()
-	if cached, ok := engineCache[absRoot]; ok {
-		engineMu.Unlock()
-		if cached != nil && cached.loadOK {
-			return cached
-		}
-		return nil
+	entry, ok := engineCache[absRoot]
+	if !ok {
+		entry = &loadEntry{}
+		engineCache[absRoot] = entry
 	}
 	engineMu.Unlock()
 
-	// Slow path: first load for this project root. Hold the load under a
-	// per-call timeout so a pathological module cannot hang the scanner.
-	// 90 s budget (explicit literal form for plan-grep compliance).
+	entry.once.Do(func() {
+		entry.engine = doLoad(ctx, absRoot)
+	})
+
+	return entry.engine
+}
+
+// doLoad runs the slow-path packages.Load under a 90 s timeout. Returns a
+// healthy *TaintEngine, or nil for any failure mode. Called exactly once per
+// projectRoot via the loadEntry sync.Once.
+func doLoad(ctx context.Context, absRoot string) *TaintEngine {
 	loadCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	_ = loadTimeout // keep the named constant referenced for future callers
 	defer cancel()
@@ -122,12 +145,14 @@ func GetOrInit(ctx context.Context, projectRoot string) *TaintEngine {
 		Tests: false,
 	}
 
-	// Wrap packages.Load in a goroutine + select so the 90s loadCtx actually
+	// Wrap packages.Load in a goroutine + select so the 90 s loadCtx actually
 	// returns control to the caller. Context alone is insufficient because
 	// x/tools' parseFiles errgroup workers block on a bounded cpuLimit channel
 	// (packages.go:1377) that does not honor ctx.Done, so on a recursive-parse
 	// deadlock the Load call never returns even after cancel(). We accept a
 	// worker-goroutine leak as the cost of guaranteed bounded scanner latency.
+	// The sync.Once-per-root in GetOrInit prevents this leak from compounding
+	// across concurrent callers for the same root.
 	type loadResult struct {
 		pkgs []*packages.Package
 		err  error
@@ -161,12 +186,6 @@ func GetOrInit(ctx context.Context, projectRoot string) *TaintEngine {
 	// and (b) no package with nil Types/TypesInfo — the latter signals a hard
 	// typecheck failure that would make propagation unreliable.
 	engine.loadOK = loadErr == nil && len(pkgs) > 0 && !containsHardErrors(pkgs)
-
-	// Cache the engine regardless of loadOK so a broken project does not
-	// re-pay the 90 s timeout on every call.
-	engineMu.Lock()
-	engineCache[absRoot] = engine
-	engineMu.Unlock()
 
 	if !engine.loadOK {
 		reason := "typecheck errors"
@@ -218,7 +237,7 @@ func (e *TaintEngine) LookupLoadedPackage(importPath string) *packages.Package {
 // changes mid-process.
 func Reset() {
 	engineMu.Lock()
-	engineCache = map[string]*TaintEngine{}
+	engineCache = map[string]*loadEntry{}
 	warnOnce = sync.Once{}
 	engineMu.Unlock()
 }
