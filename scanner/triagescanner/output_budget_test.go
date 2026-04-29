@@ -16,7 +16,11 @@ import (
 // fixture triage payload. Each finding ships ResourceLink + Description +
 // Suggestion + relative EvidenceFiles (no inline source). Budget tracks
 // fixture growth; revisit when the fixture exceeds the threshold.
-const triageFixtureBudgetBytes = 280 * 1024
+//
+// Phase 21.1 added 12 new http_input fixture files plus the CRITICAL tier
+// for validator_pan_value_log, growing the triage payload past the prior
+// 280 KB ceiling. Raised to 290 KB (~8 KB headroom).
+const triageFixtureBudgetBytes = 290 * 1024
 
 // triageFixturePerFindingBudgetBytes guards against per-finding source
 // embedding regressions. A single finding should never carry more than ~2 KB
