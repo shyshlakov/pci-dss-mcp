@@ -3,6 +3,7 @@ package httpinputscanner
 import (
 	"go/ast"
 	"go/types"
+	"strings"
 
 	"github.com/shyshlakov/pci-dss-mcp/internal/taint"
 )
@@ -43,6 +44,17 @@ func isErrorSink(call *ast.CallExpr, info *types.Info) (errorSinkInfo, bool) {
 	// the downstream log/error site, not on fmt.Errorf itself.
 	if pkgPath == "fmt" && method == "Errorf" {
 		return errorSinkInfo{}, false
+	}
+
+	// (*gin.Context).AbortWithError(code, err) - gin's documented error
+	// abort path. ArgsToCheck includes both args; anyArgTainted will find
+	// the err arg if it carries USER_INPUT taint via the verb-aware
+	// Stringer / fmt.Errorf chain.
+	if pkgPath == "github.com/gin-gonic/gin" && recv == "Context" && method == "AbortWithError" {
+		return errorSinkInfo{
+			Name:        "(*gin.Context).AbortWithError",
+			ArgsToCheck: call.Args,
+		}, true
 	}
 
 	// fmt.Fprintf(w, fmt, taint) - first arg must be io.Writer-shaped.
@@ -291,6 +303,108 @@ func matchInterfaceWriterWrite(call *ast.CallExpr, info *types.Info) (bool, erro
 		Name:        "(http.ResponseWriter).Write",
 		ArgsToCheck: call.Args,
 	}
+}
+
+// errorSinkAuthSecretTypeNames is the broader keyword set used for matching
+// Stringer-receiver TYPE names in HTTP-INPUT-ERROR sinks. It retains
+// {token, authorization, auth} which Plan 21.1-09 dropped from the
+// source-side authSecretKeywords because path-slot literal "token" /
+// "Authorization" path-slot would have falsely promoted log sinks. In an
+// error chain the Stringer receiver type name (e.g. `Token`) is a stronger
+// signal: the developer chose to model an auth-secret value as a typed
+// struct AND embedded its String() in an error message. PCI requirement
+// 8.6.2 covers leakage of system / application authentication artifacts.
+var errorSinkAuthSecretTypeNames = []string{
+	"apikey", "api_key", "password", "secret", "bearer",
+	"token", "authorization", "auth",
+}
+
+// classifyErrorSinkStringerReceiver walks the err-typed args of a recognized
+// error sink (typically a fmt.Errorf chain) looking for a Stringer-typed
+// sub-argument. When found, the receiver's type name is matched against
+// errorSinkAuthSecretTypeNames. Returns severityClassAuthSecret on match.
+func classifyErrorSinkStringerReceiver(args []ast.Expr, info *types.Info) severityClass {
+	if info == nil {
+		return severityClassNone
+	}
+	for _, arg := range args {
+		if c := classifyStringerReceiverIn(arg, info); c != severityClassNone {
+			return c
+		}
+	}
+	return severityClassNone
+}
+
+// classifyStringerReceiverIn descends into expr looking for Stringer-typed
+// arguments and returns severityClassAuthSecret when the receiver type name
+// matches errorSinkAuthSecretTypeNames. Walks into fmt.Errorf / fmt.Sprintf
+// arg lists.
+func classifyStringerReceiverIn(expr ast.Expr, info *types.Info) severityClass {
+	if expr == nil {
+		return severityClassNone
+	}
+	if call, ok := expr.(*ast.CallExpr); ok {
+		fn := taint.ResolveCallee(info, call)
+		if fn != nil && fn.Pkg() != nil && fn.Pkg().Path() == "fmt" {
+			switch fn.Name() {
+			case "Errorf", "Sprintf":
+				for _, a := range call.Args[1:] {
+					if c := classifyStringerArgType(a, info); c != severityClassNone {
+						return c
+					}
+				}
+			}
+		}
+		return severityClassNone
+	}
+	return classifyStringerArgType(expr, info)
+}
+
+// classifyStringerArgType inspects expr's static type. If it implements
+// fmt.Stringer, the named receiver type's name is matched against
+// errorSinkAuthSecretTypeNames.
+func classifyStringerArgType(expr ast.Expr, info *types.Info) severityClass {
+	tv, ok := info.Types[expr]
+	if !ok {
+		return severityClassNone
+	}
+	t := tv.Type
+	if t == nil {
+		return severityClassNone
+	}
+	if !implementsStringer(t) {
+		return severityClassNone
+	}
+	name := namedTypeName(t)
+	if name == "" {
+		return severityClassNone
+	}
+	norm := normalizeIdentifier(name)
+	for _, kw := range errorSinkAuthSecretTypeNames {
+		if strings.Contains(norm, kw) {
+			return severityClassAuthSecret
+		}
+	}
+	return severityClassNone
+}
+
+// namedTypeName returns the unqualified named-type name of t, or "" when t
+// is not a named type. Pointer receivers are unwrapped.
+func namedTypeName(t types.Type) string {
+	if t == nil {
+		return ""
+	}
+	if ptr, ok := t.(*types.Pointer); ok {
+		t = ptr.Elem()
+	}
+	named, ok := t.(*types.Named)
+	if !ok {
+		return ""
+	}
+	if named.Obj() == nil {
+		return ""
+	}
+	return named.Obj().Name()
 }
 
 // zerologErrArgs walks the receiver chain of a zerolog Event finalizer call
