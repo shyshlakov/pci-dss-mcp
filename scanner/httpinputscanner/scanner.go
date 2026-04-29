@@ -230,10 +230,18 @@ type taintMeta struct {
 // source (ShouldBindJSON, BodyParser, c.Request.Body read) so the severity
 // classifier can apply the body-source HIGH override even when the field
 // identifier itself does not match any keyword class.
+//
+// BodyBufferChain marks the io.Copy / io.WriteString reverse-flow seeding
+// path: the destination object received body content via a stdlib reverse
+// propagator AND a forward projector (bytes.Buffer.String / strings.Builder
+// .String) returns it. This narrower flag distinguishes the bytes_buffer
+// body-write pattern from plain body field reads that pass through stdlib
+// helpers like io.ReadAll.
 type UserInputContext struct {
 	Identifier          string
 	Framework           string
 	SourceIsBodyDecoder bool
+	BodyBufferChain     bool
 }
 
 func newFileState(pkg *packages.Package, file *ast.File, info *types.Info) *fileState {
