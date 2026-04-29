@@ -37,6 +37,8 @@ jobs:
         run: make build
 
       - name: Test
+        env:
+          GOFLAGS: -p=2
         run: make test
 
       - name: Test fixture (golden regression)
