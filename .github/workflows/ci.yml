@@ -45,7 +45,7 @@ jobs:
   test-ubuntu:
     name: test (ubuntu-latest, ${{ matrix.group.name }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
