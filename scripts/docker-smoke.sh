@@ -4,11 +4,11 @@ set -euo pipefail
 IMAGE="${IMAGE:-${1:-pci-dss-mcp:local}}"
 FIXTURE_HOST="${FIXTURE_HOST:-$(pwd)/testdata/vulnerable-payment-service}"
 
-EXPECTED_CRITICAL=50
-EXPECTED_HIGH=91
-EXPECTED_MEDIUM=52
+EXPECTED_CRITICAL=51
+EXPECTED_HIGH=95
+EXPECTED_MEDIUM=53
 EXPECTED_LOW=0
-EXPECTED_INFO=66
+EXPECTED_INFO=69
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker CLI not found on PATH" >&2
