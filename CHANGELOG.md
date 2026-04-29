@@ -5,6 +5,8 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+## [0.7.1] - 2026-04-29
+
 ### Changed
 
 - HTTP-INPUT-LOG severity now classified by source identifier name and sink-key literal. Three-class taxonomy: PAN/CHD keywords (pan, primaryaccountnumber, cardnumber, iban, cvv, cvc, securitycode, accountnumber) and auth-secret keywords (apikey, token, password, secret, bearer, auth) emit HIGH. Generic correlation-ID names (request_id, trace_id, widget_id, tenant_id, merchant_id, correlation_id, span_id) suppress emission entirely. Default body / header sources emit MEDIUM. Sink-side classification covers the slog variadic shape `slog.Info(msg, "api_key", val)`, the slog/zap attribute-builder shape `slog.String("api_key", val)`, and the zerolog Event-chain shape `Info().Str("api_key", val).Msg(...)`. The sink-key class overrides source-side sanitizer-clear when it signals auth-secret or PAN/CHD context. HTTP-INPUT-ERROR and HTTP-INPUT-PANIC severity policy unchanged in this release except for the Stringer-receiver type-name promotion noted below.
