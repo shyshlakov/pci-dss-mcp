@@ -54,7 +54,7 @@ var authSecretKeywords = []string{
 
 // genericIDKeywords SUPPRESS HTTP-INPUT-LOG entirely. Server-validated
 // correlation IDs are recommended observability practice. Adversarial
-// mis-naming (an api_key labelled "widget_id") is an accepted false-negative
+// mis-naming (an api_key labeled "widget_id") is an accepted false-negative
 // trade: source-code access is required to mis-name, downstream review catches
 // it, and a future user-override mechanism allows project-specific tightening.
 var genericIDKeywords = []string{
