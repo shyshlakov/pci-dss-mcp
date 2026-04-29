@@ -2,11 +2,11 @@
 PCI DSS v4.0.1 Compliance Report
 Target: <SCAN_ROOT>
 Generated: <TS>
-Duration: <DUR> | Files: 1244 | Lines: 21361
+Duration: <DUR> | Files: 1314 | Lines: 22721
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-50 CRITICAL, 90 HIGH, 52 MEDIUM findings
-(0 LOW, 66 INFO informational findings not shown)
+51 CRITICAL, 94 HIGH, 53 MEDIUM findings
+(0 LOW, 69 INFO informational findings not shown)
 
 --- Requirement 3: Protect Stored Account Data ---
 
@@ -15,6 +15,12 @@ Duration: <DUR> | Files: 1244 | Lines: 21361
   Sensitive cardholder data 'cardNumber' passed to logging function slog.Info
   Fix: Remove sensitive data from log output. Log a masked or tokenized reference instead.
   Also satisfies: 3.4.1, 10.2.1
+
+[CRITICAL] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/http_input/validator_pan_value_log.go:24
+  Raw validator framework input "framework input" reaches log sink slog.Error without sanitizer barrier.
+  Fix: Apply a sanitizer (mask, redact, sanitize) before logging or replace the value with an own-generated identifier (request_id, internal user_id).
+  Also satisfies: 3.4.1, 8.6.2
 
 [CRITICAL] 3.2.1 -- Data Retention and Disposal
   <SCAN_ROOT>/internal/auth/process.go:5
@@ -359,6 +365,12 @@ Duration: <DUR> | Files: 1244 | Lines: 21361
   Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
   Also satisfies: 3.3.1.2
 
+[INFO] 3.3.1 -- SAD Not Retained After Authorization
+  <SCAN_ROOT>/internal/http_input/validator_pan_value_log.go:12
+  Struct field 'CVV' (json: 'cvv') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
+  Fix: Verify if this field contains actual cardholder data. Use tokenized references if so.
+  Also satisfies: 3.3.1.2
+
 [INFO] 3.5.1 -- PAN Rendered Unreadable in Storage
   <SCAN_ROOT>/internal/http_input/validator_value_log.go:13
   Struct field 'CardNumber' (json: 'card_number') may expose cardholder data (taint: transit-only, non-persistent memory per PCI SSC FAQ)
@@ -624,6 +636,12 @@ Duration: <DUR> | Files: 1244 | Lines: 21361
   Webhook handler ProcessPaymentHookCallback parses request body via json.Unmarshal without prior signature verification. Forged-payload risk per PCI 6.2.4.
   Fix: Verify request signature (HMAC, JWS, RSA, or brand SDK ConstructEvent) BEFORE body parse. Use crypto/hmac.Equal or subtle.ConstantTimeCompare for comparison.
 
+[HIGH] 6.2.4 -- Software Engineering Techniques
+  <SCAN_ROOT>/internal/http_input/stringer_token_errorf.go:17
+  Raw gin framework input "Authorization" is baked into (*gin.Context).AbortWithError response/error chain without sanitizer barrier.
+  Fix: Do not bake raw client input into error responses or HTTP write-backs. Return a generic message and log a correlated request_id instead.
+  Also satisfies: 8.6.2
+
 [HIGH] 6.4.3 -- Payment Page Script Management
   <SCAN_ROOT>/internal/http/handler/checkout/checkout.go:8
   No Content-Security-Policy header found in payment handler body or same-file helpers of RenderCheckout. PCI DSS 6.4.3 is mandatory since April 1, 2025. Verify CSP is set via middleware, reverse proxy, or CDN. If not present anywhere -- direct violation of 6.4.3.
@@ -817,6 +835,11 @@ Duration: <DUR> | Files: 1244 | Lines: 21361
 [INFO] 6.4.3 -- Payment Page Script Management
   <SCAN_ROOT>/internal/http_input/json_struct_log.go:15
   Could not determine response type for payment handler LogJSONStruct -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
+  Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
+
+[INFO] 6.4.3 -- Payment Page Script Management
+  <SCAN_ROOT>/internal/http_input/validator_pan_value_log.go:15
+  Could not determine response type for payment handler ValidatorPanValueLog -- verify CSP if this serves HTML. PCI DSS 6.4.3 requires CSP for browser-rendered pages.
   Fix: Add Content-Security-Policy header in handler or middleware. Minimal policy: script-src 'self'
 
 [INFO] 6.4.3 -- Payment Page Script Management
@@ -1231,6 +1254,24 @@ Duration: <DUR> | Files: 1244 | Lines: 21361
   Fix: Add structured logging (slog, zap, zerolog) with required fields per PCI DSS 10.2.1.
 
 [HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http_input/apikey_uuid_branch_log.go:14
+  Raw gin framework input "apiKey" reaches log sink slog.Error without sanitizer barrier.
+  Fix: Apply a sanitizer (mask, redact, sanitize) before logging or replace the value with an own-generated identifier (request_id, internal user_id).
+  Also satisfies: 8.6.2
+
+[HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http_input/apikey_uuid_branch_log.go:18
+  Raw http framework input "framework input" reaches log sink slog.Info without sanitizer barrier.
+  Fix: Apply a sanitizer (mask, redact, sanitize) before logging or replace the value with an own-generated identifier (request_id, internal user_id).
+  Also satisfies: 8.6.2
+
+[HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http_input/bytes_buffer_body_log.go:17
+  Raw net/http framework input "Body" reaches log sink slog.Error without sanitizer barrier.
+  Fix: Apply a sanitizer (mask, redact, sanitize) before logging or replace the value with an own-generated identifier (request_id, internal user_id).
+  Also satisfies: 3.3.1, 6.2.4
+
+[HIGH] 10.2.1 -- Audit Logs Enabled for All System Components
   <SCAN_ROOT>/internal/http_input/route_pan_promotion.go:12
   Raw gin framework input "pan" reaches log sink slog.String without sanitizer barrier.
   Fix: Apply a sanitizer (mask, redact, sanitize) before logging or replace the value with an own-generated identifier (request_id, internal user_id).
@@ -1260,6 +1301,12 @@ Duration: <DUR> | Files: 1244 | Lines: 21361
   <SCAN_ROOT>/internal/http_input/fiber_query_log.go:10
   Raw fiber framework input "token" reaches log sink zerolog.Str without sanitizer barrier.
   Fix: Apply a sanitizer (mask, redact, sanitize) before logging or replace the value with an own-generated identifier (request_id, internal user_id).
+
+[MEDIUM] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http_input/gin_recovery_callback_log.go:11
+  Raw gin framework input "recovered" reaches gin recovery callback re-log; recovery middleware will log the value.
+  Fix: Validate or sanitize input before panicking. Recovery middleware logs the panic argument; raw client input ends up in audit trails.
+  Also satisfies: 3.3.1
 
 [MEDIUM] 10.2.1 -- Audit Logs Enabled for All System Components
   <SCAN_ROOT>/internal/http_input/header_log.go:10
@@ -1339,6 +1386,11 @@ Duration: <DUR> | Files: 1244 | Lines: 21361
 [INFO] 10.2.1 -- Audit Logs Enabled for All System Components
   <SCAN_ROOT>/internal/http_input/json_struct_log.go:15
   Structured audit logging detected in payment handler LogJSONStruct. Verify log captures required PCI DSS 10.2.1 fields: user_id, timestamp, event_type, outcome, affected_resource. Not verifiable statically if using logger.With() context pattern.
+  Fix: Review log statements to ensure all PCI DSS 10.2.1 required fields are captured.
+
+[INFO] 10.2.1 -- Audit Logs Enabled for All System Components
+  <SCAN_ROOT>/internal/http_input/validator_pan_value_log.go:15
+  Structured audit logging detected in payment handler ValidatorPanValueLog. Verify log captures required PCI DSS 10.2.1 fields: user_id, timestamp, event_type, outcome, affected_resource. Not verifiable statically if using logger.With() context pattern.
   Fix: Review log statements to ensure all PCI DSS 10.2.1 required fields are captured.
 
 --- Requirement 11: Test Security of Systems and Networks Regularly ---
