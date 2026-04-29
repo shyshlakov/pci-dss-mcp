@@ -8,7 +8,7 @@ pci-dss-mcp checks **15 of ~250** PCI DSS v4.0.1 requirements across 11 user-fac
 |-------------|-------|---------|-----------|
 | 3.2.1 | Account Data Storage Minimized | check_data_retention | Redis/DB storage without TTL, config without retention policy, SAD memory zeroing (RET-ZERO-BEFORE-AUTH / DEFER-ONLY / AFTER-RESPONSE) |
 | 3.3.1 | SAD Not Retained After Authorization | scan_pan_data, check_data_retention | SAD variables (CVV/CVC/PIN/track) in logs and source; SAD column storage patterns; SAD memory zeroing issues |
-| 3.4.1 | PAN Displayed with Masking | scan_pan_data | PAN variables in HTTP responses, format strings |
+| 3.4.1 | PAN Displayed with Masking | scan_pan_data, httpinputscanner | PAN variables in HTTP responses, format strings; HTTP-INPUT-LOG CRITICAL PAN-validation profile (validator.FieldError.Value() directly logged when bound struct has PAN-tagged field) related-reqs include 3.4.1 |
 | 3.5.1 | PAN Rendered Unreadable in Storage | scan_pan_data, (report-only) sqlscanner | PAN variables in logs and responses; PAN columns in SQL schemas without encryption; string-typed PAN fields (can't be zeroed); missing memory zeroing |
 | 4.2.1 | Strong Cryptography During Transmission | check_encryption, check_tls_config | Plain HTTP URLs, InsecureSkipVerify, weak TLS versions, weak ciphers |
 | 6.2.4 | Secure Software Development | check_encryption, check_error_handling, httpinputscanner | Hardcoded keys, weak hashes, error details leaked to responses; HTTP framework input baked into errors (HTTP-INPUT-ERROR) and recovery-path panic re-log (HTTP-INPUT-PANIC related) |
@@ -18,7 +18,7 @@ pci-dss-mcp checks **15 of ~250** PCI DSS v4.0.1 requirements across 11 user-fac
 | 8.3.1 | Unique IDs for All Users | check_auth_strength | Weak password policy, MFA absence, byte-vs-char length checks (related to AUTH-HARDCODED-PWD) |
 | 8.3.6 | Password Complexity Requirements | check_auth_strength | Password length checks below 12 characters |
 | 8.4.2 | MFA for Administrative Access | check_auth_strength | Payment routes without MFA middleware |
-| 8.6.2 | Passwords/Passphrases Not Hard-Coded | check_auth_strength, check_secrets_in_configs | Hardcoded passwords in source code; secrets in .env/.yaml/.json/.toml; known provider prefixes; connection-string credentials |
+| 8.6.2 | Passwords/Passphrases Not Hard-Coded | check_auth_strength, check_secrets_in_configs, httpinputscanner | Hardcoded passwords in source code; secrets in .env/.yaml/.json/.toml; known provider prefixes; connection-string credentials; raw HTTP input on auth-secret-named sources flowing into log sinks (HTTP-INPUT-LOG auth-secret class) or error sinks via Stringer-receiver type name (HTTP-INPUT-ERROR) |
 | 10.2.1 | Audit Logs Capture Details | audit_log_coverage, httpinputscanner | Payment handlers without audit logging, unstructured logging (fmt/log instead of slog); raw HTTP input flow into log sinks (HTTP-INPUT-LOG, HTTP-INPUT-PANIC) |
 | 11.6.1 | Change Detection for Payment Pages | check_payment_page_scripts | File integrity monitoring requirement flagged |
 

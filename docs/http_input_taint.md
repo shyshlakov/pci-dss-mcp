@@ -374,6 +374,168 @@ the universality research, none of the 10 surveyed open-source Go services
 that DO log raw input is a payment processor; Vault demonstrates the
 production discipline expected of a fintech codebase.
 
+## Severity-aware emission (Phase 21.1)
+
+HTTP-INPUT-LOG severity is determined by the source identifier name (slog field
+name, struct field name, or path slot name) and, for sink-side classification,
+the kv-pair key literal at the sink call. The taxonomy has four classes:
+
+| Class | Keywords (substring match, case-insensitive, separators stripped) | Severity | Related PCI DSS |
+|-------|--------------------------------------------------------------------|----------|-----------------|
+| PAN/CHD | pan, primaryaccountnumber, cardnumber, iban, cvv, cvc, securitycode, accountnumber | HIGH | 3.3.1, 3.5.1 |
+| Auth secret | apikey, token, password, secret, bearer, auth | HIGH | 8.6.2 |
+| Generic ID | requestid, traceid, widgetid, tenantid, merchantid, correlationid, spanid | suppressed | n/a |
+| Other (body / header / unknown) | none of the above | MEDIUM | n/a |
+
+Generic-ID class suppresses HTTP-INPUT-LOG entirely. Server-validated
+correlation IDs are recommended observability practice. Attacker-controlled
+mis-naming (an api_key labelled `widget_id`) is acknowledged as an accepted
+false-negative trade per scanner recall-bias policy. The AI triage layer
+catches downstream review and Phase 25 YAML rules allow user override.
+
+Severity-aware emission applies to HTTP-INPUT-LOG only. HTTP-INPUT-ERROR and
+HTTP-INPUT-PANIC retain the Phase 21 default severity (MEDIUM unless PAN
+keyword promotes to HIGH). HTTP-INPUT-ERROR additionally promotes to HIGH +
+[8.6.2] when the error argument's Stringer-typed receiver type name matches
+the auth-secret keyword set ({token, authorization, auth}); the receiver type
+name is a stronger signal than path-slot literals because the developer chose
+to model auth-secret data as a typed struct.
+
+### CRITICAL severity tier (Phase 21.1)
+
+A new CRITICAL tier fires when the HTTP-INPUT-LOG sink directly receives a
+`validator.FieldError.Value()` invocation AND the bound struct (the JSON
+target of an upstream `c.ShouldBindJSON(&r)` or `Decoder.Decode(&r)`) has at
+least one field whose `validate` or `json` tag matches a PAN/CHD keyword.
+This is the PAN-validation profile: when a payment-shape struct fails
+validation, the validator framework exposes the user-supplied field value
+through `FieldError.Value()`, and logging it at the validation-failure site
+leaks PAN. Related-reqs profile is `[3.4.1, 8.6.2]`. The direct-arg gate
+distinguishes high-confidence single-hop chains from indirect chains (e.g.
+map hop) which fall back to MEDIUM.
+
+The PAN-validation profile is detected by an `Identifier="pan-validator"`
+label on the source spec. Triage payloads consume this label to surface the
+profile in the AI clustering output.
+
+### Sink-side keyword classification (Phase 21.1)
+
+Beyond source-identifier matching, the engine also classifies the kv-pair
+key literal at the sink call site. The slog variadic shape
+`slog.Info(msg, "api_key", val)`, the slog/zap attribute-builder shape
+`slog.String("api_key", val)`, and the zerolog Event-chain shape
+`Info().Str("api_key", val).Msg(...)` all surface a string-literal key at a
+known argument position. When that literal matches the auth-secret or
+PAN/CHD keyword set, the sink-side classification overrides the source-side
+sanitizer-clear path (a uuid.Parse-cleared value still fires HIGH if the
+sink key signals auth-secret context). Variable-key positions
+(`slog.Info(msg, k1, val)` where `k1` is a non-literal) are skipped per
+recall-bias policy; SSA territory.
+
+## Format-validator sanitizers (Phase 21.1)
+
+Stdlib parsers that constrain output to a known format physically incapable
+of carrying PAN / CVV / auth-secret content. On the success branch
+(`if err == nil { use(parsed) }`), the parsed value is no longer
+USER_INPUT-tainted.
+
+| Function | Output constraint |
+|----------|-------------------|
+| `uuid.Parse` / `MustParse` / `ParseBytes` (google/uuid) | UUID v1-v7 hex |
+| `uuid.FromString` / `FromBytes` / `(*UUID).Parse` (gofrs/uuid) | UUID v1-v7 hex |
+| `time.Parse` / `ParseInLocation` / `ParseDuration` | RFC 3339 / configured layout |
+| `strconv.Atoi` / `ParseInt` / `ParseUint` / `ParseFloat` / `ParseBool` | Numeric / bool |
+| `net.ParseIP` / `ParseCIDR` | IPv4 / IPv6 |
+| `net/netip.ParseAddr` / `ParseAddrPort` / `ParsePrefix` | IP address |
+| `net/mail.ParseAddress` / `ParseAddressList` | RFC 5322 mail-shaped |
+
+`net/url.Parse` and `ParseRequestURI` are NOT modeled as sanitizers. The
+engine has no per-field taint state, so a whole-value sanitizer would
+falsely clear `URL.RawQuery` / `Fragment` taint (a real leak vector).
+Existing field-read sources for `URL.Path` / `RawQuery` / `RawPath` give
+correct partial-sanitizer semantics naturally.
+
+Auth-secret keyword override: when the downstream sink's source identifier
+or sink-key literal matches the auth-secret class (apikey / token / etc.),
+the sanitizer is BYPASSED and the rule fires HIGH. Format constraint does
+not prevent the value from BEING the secret; the field name signals the
+sensitive context regardless.
+
+## gin recovery middleware as USER_INPUT auxiliary source (Phase 21.1)
+
+The `recovered any` callback parameter (index 1) of these gin middleware
+constructors is recognized as a USER_INPUT taint source:
+
+- `gin.CustomRecoveryWithWriter(io.Writer, func(c *Context, recovered any))`
+- `gin.CustomRecovery(func(c, recovered any))`
+- `gin.RecoveryWithWriter(io.Writer, ...func(c, recovered any))` (variadic, all callbacks)
+
+Bare panic dedup: when a file installs a gin recovery callback sink, bare
+`panic(taint)` emissions in the same file are suppressed. The callback
+PANIC finding is the canonical sink for the family, mirroring the existing
+`defer recover()` dedup precedent.
+
+Limitation: identifier-passed callbacks (`gin.CustomRecovery(myRecoveryFn)`
+where `myRecoveryFn` is a named function declared elsewhere) are NOT
+modeled. Only `*ast.FuncLit` callbacks are recognized at the source site.
+Inter-procedural propagation is deferred to Phase 26 SSA.
+
+Echo and fiber recovery middleware are Tier 2 (deferred to v0.8 follow-up).
+chi.Recoverer uses bare `recover()` and is already covered by Phase 21 V2
+D-13 propagators.
+
+The error sink catalog also recognizes `(*gin.Context).AbortWithError` as
+an HTTP-INPUT-ERROR sink alongside `c.AbortWithStatusJSON` and the
+centralized abort helpers.
+
+## Method-projector propagators (Phase 21.1)
+
+Method calls whose receiver state carries USER_INPUT taint propagate it to
+the result:
+
+- `(*bytes.Buffer).String() string` and `.Bytes() []byte`
+- `(*strings.Builder).String() string`
+- Reverse-flow: `(*bytes.Buffer).WriteString(s)` / `.Write(p)` taint the receiver when `s` / `p` are tainted; same for `(*strings.Builder)`
+
+`(*url.URL).String()` is NOT modeled (per-field state required, deferred).
+Custom user types implementing `Stringer` are NOT auto-recognized; Phase 25
+YAML user override is the path for project-specific recognition.
+
+## Format-verb-aware fmt analysis (Phase 21.1)
+
+`fmt.Errorf` and `fmt.Sprintf` with a literal format string containing
+`%s` / `%v` / `%w` invoke `Stringer.String()` semantics on Stringer-typed
+args at format time. When the Stringer's receiver carries USER_INPUT taint,
+the formatted result inherits taint.
+
+- Verbs that DO invoke Stringer: `%s`, `%v`, `%w`
+- Verbs that DO NOT: `%d`, `%x`, `%o`, `%q`, `%b`, `%t`, `%c`, `%U`, `%f`, `%g`, `%e`
+- Variable format strings (non-literal first arg) fall back to existing uniform passthrough; SSA territory.
+- Width / precision / flag modifiers are tolerated (`%+v`, `%-10s`, `%5.2f`).
+
+## io.Copy ReverseFlow propagation (Phase 21.1)
+
+`io.Copy(dst, src)` and friends propagate taint in REVERSE: when `src` is
+USER_INPUT-tainted, the underlying object referenced by `dst` becomes
+tainted. Covers:
+
+- `io.Copy(&buf, taintedReader)` taints buf
+- `io.CopyN`, `io.CopyBuffer`, `io.WriteString` follow the same shape
+
+Combined with the method-projector forward propagator above:
+`io.Copy(&buf, c.Request.Body)` ReverseFlow taints `buf`, then
+`buf.String()` forward-propagates the taint into a slog sink.
+
+The reverse-flow seeding sets a `BodyBufferChain` context flag that the
+severity-aware emission consumes: a body-source HIGH severity override now
+requires BOTH `SourceIsBodyDecoder=true` AND `BodyBufferChain=true`. Plain
+body-field reads through stdlib helpers (such as `io.ReadAll`) settle to
+MEDIUM; only the buffer/builder reverse-flow chain triggers HIGH with a
+related-reqs profile of `[3.3.1, 6.2.4]`.
+
+Limitation: only `&ident` and bare-`ident` dst shapes are modeled.
+Composite literals and function returns are SSA territory.
+
 ## Suppression
 
 - **Inline:** add `// pci-ignore: <reason>` on the line above the offending
