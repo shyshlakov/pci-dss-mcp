@@ -5,6 +5,26 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+### Changed
+
+- HTTP-INPUT-LOG severity now classified by source identifier name and sink-key literal. Three-class taxonomy: PAN/CHD keywords (pan, primaryaccountnumber, cardnumber, iban, cvv, cvc, securitycode, accountnumber) and auth-secret keywords (apikey, token, password, secret, bearer, auth) emit HIGH. Generic correlation-ID names (request_id, trace_id, widget_id, tenant_id, merchant_id, correlation_id, span_id) suppress emission entirely. Default body / header sources emit MEDIUM. Sink-side classification covers the slog variadic shape `slog.Info(msg, "api_key", val)`, the slog/zap attribute-builder shape `slog.String("api_key", val)`, and the zerolog Event-chain shape `Info().Str("api_key", val).Msg(...)`. The sink-key class overrides source-side sanitizer-clear when it signals auth-secret or PAN/CHD context. HTTP-INPUT-ERROR and HTTP-INPUT-PANIC severity policy unchanged in this release except for the Stringer-receiver type-name promotion noted below.
+- HTTP-INPUT-LOG findings on auth-secret named sources (apikey, api_key, token, password, secret, bearer, auth) now carry related PCI DSS 8.6.2 (was 3.3.1, 3.5.1 for the apikey case). BREAKING for AI triage prompt templates that referenced the old related-req mapping; update prompts to recognize 8.6.2 on the auth-secret class.
+- HTTP-INPUT-ERROR severity promotes to HIGH + related [8.6.2] when the error argument's Stringer-typed receiver type name matches the auth-secret keyword set ({token, authorization, auth}). The receiver type name is a stronger signal than path-slot literals because the developer chose to model auth-secret data as a typed struct (e.g. a `Token` struct with a `String()` method returning the raw bearer).
+
+### Added
+
+- New CRITICAL severity tier on HTTP-INPUT-LOG: fires when the sink directly receives a `validator.FieldError.Value()` invocation AND the bound struct (the JSON target of an upstream `c.ShouldBindJSON(&r)` or `Decoder.Decode(&r)`) has at least one field whose `validate` or `json` tag matches a PAN/CHD keyword. Related-reqs profile [3.4.1, 8.6.2]. The PAN-validation profile is detected by an `Identifier="pan-validator"` label on the source spec for AI triage clustering. Indirect chains (map hop between FieldError.Value() and the sink) fall back to MEDIUM.
+- Format-validator sanitizers clear USER_INPUT taint on the success branch: uuid.Parse / MustParse / ParseBytes (google/uuid), uuid.FromString / FromBytes / (*UUID).Parse (gofrs/uuid), time.Parse / ParseInLocation / ParseDuration, strconv.Atoi / ParseInt / ParseUint / ParseFloat / ParseBool, net.ParseIP / ParseCIDR, net/netip.ParseAddr / ParseAddrPort / ParsePrefix, net/mail.ParseAddress / ParseAddressList. (net/url.Parse explicitly NOT modeled - per-field state required, deferred.) Auth-secret keyword override: the sanitizer is bypassed when the downstream sink's source identifier or sink-key literal matches the auth-secret class.
+- gin.CustomRecoveryWithWriter, gin.CustomRecovery, and gin.RecoveryWithWriter callback parameter `recovered any` recognized as USER_INPUT auxiliary source (FuncLit form only). Bare panic dedup: a file installing a gin recovery callback sink suppresses bare `panic(taint)` emissions in the same file (mirrors the existing defer recover() dedup). `(*gin.Context).AbortWithError` added to the HTTP-INPUT-ERROR sink catalog.
+- Format-verb-aware fmt.Errorf / fmt.Sprintf analysis. Stringer-typed args reached through %s / %v / %w in literal format strings invoke .String() at format time, propagating receiver taint. Verbs that do NOT invoke Stringer (%d, %x, %o, %q, %b, %t, %c, %U, %f, %g, %e) skip the propagation. Width / precision / flag modifiers tolerated.
+- Method-projector propagators carry USER_INPUT taint from receiver to result: (*bytes.Buffer).String / .Bytes, (*strings.Builder).String. ((*url.URL).String NOT modeled; per-field state required, deferred.)
+- io.Copy / CopyN / CopyBuffer / WriteString and (*bytes.Buffer).WriteString / Write and (*strings.Builder).WriteString / Write taint the destination object when the source argument is USER_INPUT-tainted (ReverseFlow propagator semantics). A new `BodyBufferChain` context flag is set by the reverse-flow seeding; the body-source HIGH severity override now requires both `SourceIsBodyDecoder=true` AND `BodyBufferChain=true`. Plain body-field reads through stdlib helpers (such as io.ReadAll) settle to MEDIUM; only the buffer/builder reverse-flow chain triggers HIGH with related-reqs profile [3.3.1, 6.2.4].
+- 7 new fixture files under testdata/vulnerable-payment-service/internal/http_input/ exercise the additions: validator_pan_value_log.go, apikey_uuid_branch_log.go, stringer_token_errorf.go, bytes_buffer_body_log.go, gin_recovery_callback_log.go, uuid_post_validator_no_taint.go (NEGATIVE), request_id_log_no_taint.go (NEGATIVE).
+
+### Fixed
+
+- Server-validated correlation identifiers logged through slog (widget_id, request_id, trace_id, tenant_id, merchant_id, correlation_id, span_id, etc.) no longer emit HTTP-INPUT-LOG findings, eliminating the dominant false-positive class observed during v0.7.0 dogfood scans on real fintech services.
+
 ## [0.7.0] - 2026-04-28
 
 ### Added
