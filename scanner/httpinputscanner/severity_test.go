@@ -1,6 +1,11 @@
 package httpinputscanner
 
 import (
+	"go/ast"
+	"go/importer"
+	"go/parser"
+	"go/token"
+	"go/types"
 	"testing"
 
 	"github.com/shyshlakov/pci-dss-mcp/scanner"
@@ -26,12 +31,12 @@ func TestClassifyKeyword(t *testing.T) {
 		{name: "apikey -> auth-secret", id: "apikey", want: severityClassAuthSecret},
 		{name: "api_key -> auth-secret", id: "api_key", want: severityClassAuthSecret},
 		{name: "API_Key mixed -> auth-secret", id: "API_Key", want: severityClassAuthSecret},
-		{name: "token -> auth-secret", id: "token", want: severityClassAuthSecret},
 		{name: "password -> auth-secret", id: "password", want: severityClassAuthSecret},
 		{name: "secret -> auth-secret", id: "secret", want: severityClassAuthSecret},
 		{name: "bearer -> auth-secret", id: "bearer", want: severityClassAuthSecret},
-		{name: "auth -> auth-secret", id: "auth", want: severityClassAuthSecret},
-		{name: "Authorization -> auth-secret", id: "Authorization", want: severityClassAuthSecret},
+		{name: "token -> none on source side (Plan 21.1-09 narrowing)", id: "token", want: severityClassNone},
+		{name: "auth -> none on source side (Plan 21.1-09 narrowing)", id: "auth", want: severityClassNone},
+		{name: "Authorization -> none on source side (Plan 21.1-09 narrowing)", id: "Authorization", want: severityClassNone},
 
 		{name: "request_id -> generic-ID", id: "request_id", want: severityClassGenericID},
 		{name: "requestid -> generic-ID", id: "requestid", want: severityClassGenericID},
@@ -101,9 +106,9 @@ func TestComputeSeverity(t *testing.T) {
 			wantShouldEmit: true,
 		},
 		{
-			name:           "token keyword fires HIGH (auth-secret)",
+			name:           "token source-side fires MEDIUM (Plan 21.1-09 narrowing)",
 			ctx:            UserInputContext{Identifier: "token"},
-			wantSeverity:   scanner.SeverityHigh,
+			wantSeverity:   scanner.SeverityMedium,
 			wantShouldEmit: true,
 		},
 		{
@@ -125,9 +130,9 @@ func TestComputeSeverity(t *testing.T) {
 			wantShouldEmit: true,
 		},
 		{
-			name:           "Authorization keyword fires HIGH (auth-secret)",
+			name:           "Authorization source-side fires MEDIUM (Plan 21.1-09 narrowing)",
 			ctx:            UserInputContext{Identifier: "Authorization"},
-			wantSeverity:   scanner.SeverityHigh,
+			wantSeverity:   scanner.SeverityMedium,
 			wantShouldEmit: true,
 		},
 		{
@@ -272,10 +277,10 @@ func TestRelatedRequirementsForLog(t *testing.T) {
 			want:     []string{"8.6.2"},
 		},
 		{
-			name:     "token HIGH returns 8.6.2",
-			severity: scanner.SeverityHigh,
+			name:     "token MEDIUM returns nil after Plan 21.1-09 narrowing",
+			severity: scanner.SeverityMedium,
 			ctx:      UserInputContext{Identifier: "token"},
-			want:     []string{"8.6.2"},
+			want:     nil,
 		},
 		{
 			name:     "body-source HIGH returns nil (no canonical reqs)",
@@ -414,4 +419,204 @@ func equalStringSlices(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func TestExtractSinkFieldKeyLiteralsShapes(t *testing.T) {
+	tt := []struct {
+		name      string
+		src       string
+		findFn    string
+		findCall  func(call *ast.CallExpr, info *types.Info) bool
+		wantKeys  []string
+		wantClass []severityClass
+	}{
+		{
+			name: "slog.Info variadic kv keys",
+			src: `package main
+import "log/slog"
+func F() { slog.Info("auth", "api_key", "v") }
+`,
+			findCall: func(call *ast.CallExpr, info *types.Info) bool {
+				sel, ok := call.Fun.(*ast.SelectorExpr)
+				if !ok {
+					return false
+				}
+				return sel.Sel != nil && sel.Sel.Name == "Info"
+			},
+			wantKeys:  []string{"api_key"},
+			wantClass: []severityClass{severityClassAuthSecret},
+		},
+		{
+			name: "slog.String attr-builder key",
+			src: `package main
+import "log/slog"
+func F() { slog.String("password", "v") }
+`,
+			findCall: func(call *ast.CallExpr, info *types.Info) bool {
+				sel, ok := call.Fun.(*ast.SelectorExpr)
+				if !ok {
+					return false
+				}
+				return sel.Sel != nil && sel.Sel.Name == "String"
+			},
+			wantKeys:  []string{"password"},
+			wantClass: []severityClass{severityClassAuthSecret},
+		},
+		{
+			name: "slog.String key 'token' is NOT promoted post Plan 21.1-09 narrowing",
+			src: `package main
+import "log/slog"
+func F() { slog.String("token", "v") }
+`,
+			findCall: func(call *ast.CallExpr, info *types.Info) bool {
+				sel, ok := call.Fun.(*ast.SelectorExpr)
+				if !ok {
+					return false
+				}
+				return sel.Sel != nil && sel.Sel.Name == "String"
+			},
+			wantKeys:  []string{"token"},
+			wantClass: nil,
+		},
+		{
+			name: "slog.Info no PAN/auth key returns no classes",
+			src: `package main
+import "log/slog"
+func F() { slog.Info("ok", "request_id", "v") }
+`,
+			findCall: func(call *ast.CallExpr, info *types.Info) bool {
+				sel, ok := call.Fun.(*ast.SelectorExpr)
+				if !ok {
+					return false
+				}
+				return sel.Sel != nil && sel.Sel.Name == "Info"
+			},
+			wantKeys:  []string{"request_id"},
+			wantClass: []severityClass{severityClassGenericID},
+		},
+		{
+			name: "slog.Any attr-builder card_number key is PanCHD",
+			src: `package main
+import "log/slog"
+func F() { slog.Any("card_number", "v") }
+`,
+			findCall: func(call *ast.CallExpr, info *types.Info) bool {
+				sel, ok := call.Fun.(*ast.SelectorExpr)
+				if !ok {
+					return false
+				}
+				return sel.Sel != nil && sel.Sel.Name == "Any"
+			},
+			wantKeys:  []string{"card_number"},
+			wantClass: []severityClass{severityClassPanCHD},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "x.go", tc.src, 0)
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			conf := types.Config{Importer: importer.Default()}
+			info := &types.Info{
+				Types:      map[ast.Expr]types.TypeAndValue{},
+				Defs:       map[*ast.Ident]types.Object{},
+				Uses:       map[*ast.Ident]types.Object{},
+				Selections: map[*ast.SelectorExpr]*types.Selection{},
+			}
+			if _, err := conf.Check("x", fset, []*ast.File{f}, info); err != nil {
+				t.Skipf("typecheck (env-dependent): %v", err)
+			}
+			var found *ast.CallExpr
+			ast.Inspect(f, func(n ast.Node) bool {
+				if found != nil {
+					return false
+				}
+				call, ok := n.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				if tc.findCall(call, info) {
+					found = call
+					return false
+				}
+				return true
+			})
+			if found == nil {
+				t.Fatal("did not locate target call")
+			}
+			gotKeys := extractSinkFieldKeyLiterals(found, info)
+			if !equalStringSlices(gotKeys, tc.wantKeys) {
+				t.Fatalf("extractSinkFieldKeyLiterals = %v, want %v", gotKeys, tc.wantKeys)
+			}
+			gotClasses := classifySinkFieldKeys(found, info)
+			if !equalSeverityClasses(gotClasses, tc.wantClass) {
+				t.Fatalf("classifySinkFieldKeys = %v, want %v", gotClasses, tc.wantClass)
+			}
+		})
+	}
+}
+
+func equalSeverityClasses(a, b []severityClass) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func TestClassifySinkFieldKeysNarrowedSet(t *testing.T) {
+	t.Parallel()
+	tt := []struct {
+		key  string
+		want severityClass
+	}{
+		{key: "api_key", want: severityClassAuthSecret},
+		{key: "apikey", want: severityClassAuthSecret},
+		{key: "password", want: severityClassAuthSecret},
+		{key: "secret", want: severityClassAuthSecret},
+		{key: "bearer", want: severityClassAuthSecret},
+		{key: "token", want: severityClassNone},
+		{key: "auth", want: severityClassNone},
+		{key: "Authorization", want: severityClassNone},
+		{key: "card_number", want: severityClassPanCHD},
+		{key: "pan", want: severityClassPanCHD},
+		{key: "request_id", want: severityClassGenericID},
+		{key: "body", want: severityClassNone},
+	}
+	for _, tc := range tt {
+		t.Run(tc.key, func(t *testing.T) {
+			if got := classifyKeyword(tc.key); got != tc.want {
+				t.Fatalf("classifyKeyword(%q) = %d, want %d", tc.key, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestHasOverrideClass(t *testing.T) {
+	t.Parallel()
+	tt := []struct {
+		name string
+		in   []severityClass
+		want bool
+	}{
+		{name: "empty -> false", in: nil, want: false},
+		{name: "all none -> false", in: []severityClass{severityClassNone, severityClassNone}, want: false},
+		{name: "auth-secret -> true", in: []severityClass{severityClassAuthSecret}, want: true},
+		{name: "PanCHD -> true", in: []severityClass{severityClassPanCHD}, want: true},
+		{name: "generic-ID alone -> false", in: []severityClass{severityClassGenericID}, want: false},
+		{name: "PanCHD + GenericID -> true", in: []severityClass{severityClassGenericID, severityClassPanCHD}, want: true},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := hasOverrideClass(tc.in); got != tc.want {
+				t.Fatalf("hasOverrideClass(%v) = %v, want %v", tc.in, got, tc.want)
+			}
+		})
+	}
 }

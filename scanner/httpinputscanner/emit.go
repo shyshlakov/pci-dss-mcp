@@ -14,6 +14,10 @@ import (
 // Inner-call dedup: when both an outer slog.Info AND its inner slog.String
 // match as sinks, only the inner call emits. The outer sink would emit at the
 // chain root line, which is not the contract's preferred emission point.
+//
+// Sanitizer-override path (Plan 21.1-02): when no arg is tainted but the
+// sink kv key matches PAN/CHD or auth-secret class, the finding still fires.
+// The sink-key class drives severity selection in computeSeverityWithSink.
 func (st *fileState) emitLogFindings() []scanner.Finding {
 	if st.pkg == nil || st.pkg.Fset == nil {
 		return nil
@@ -39,8 +43,9 @@ func (st *fileState) emitLogFindings() []scanner.Finding {
 		if !ok {
 			return true
 		}
-		ctx, ok := st.anyArgTainted(sink.ArgsToCheck)
-		if !ok {
+		ctx, hasTaint := st.anyArgTainted(sink.ArgsToCheck)
+		sinkClasses := classifySinkFieldKeys(call, st.info)
+		if !hasTaint && !hasOverrideClass(sinkClasses) {
 			return true
 		}
 		if st.callInSanitizedBranch(call) {
@@ -84,13 +89,13 @@ func (st *fileState) emitLogFindings() []scanner.Finding {
 		if emittedAt[c.emitPos] {
 			continue
 		}
-		severity, shouldEmit := computeSeverity(c.ctx)
+		severity, shouldEmit, class := computeSeverityWithSink(c.ctx, c.call, st.info)
 		if !shouldEmit {
 			continue
 		}
 		emittedAt[c.emitPos] = true
 		pos := st.pkg.Fset.Position(c.emitPos)
-		related := relatedRequirementsForLog(severity, c.ctx)
+		related := relatedRequirementsForLogClass(class)
 		desc := describeLog(c.ctx, c.sink.Name)
 		f := fmtSeverityFinding(
 			"HTTP-INPUT-LOG",
