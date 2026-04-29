@@ -192,6 +192,12 @@ func computeSeverity(ctx UserInputContext) (scanner.Severity, bool) {
 // surface their promotion via dedicated upstream signals: the BodyBufferChain
 // flag set by Plan 21.1-07 reverse-flow seeding, and the validator-chain
 // CRITICAL gate added in plan 21.1-09 task 5.
+//
+// CRITICAL tier (Plan 21.1-09 RC-6): when the validator framework chain
+// surfaces fe.Value() AND the enclosing function bound a struct via a
+// body decoder AND any field of that struct carries a PAN/CHD-class json
+// tag, severity escalates to CRITICAL with related=[3.4.1, 8.6.2] and a
+// req-id of 3.3.1. The validatorPanChainDetector wraps inspectBoundStructPanTags.
 func computeSeverityWithSink(ctx UserInputContext, sinkCall *ast.CallExpr, info *types.Info) (scanner.Severity, bool, severityClass) {
 	sourceClass := classifyKeyword(ctx.Identifier)
 	if sourceClass == severityClassGenericID {

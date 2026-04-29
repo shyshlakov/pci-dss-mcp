@@ -85,7 +85,12 @@ var userInputSourceLibrary = []frameworkSourceSpec{
 	{PkgPath: "github.com/gofiber/fiber/v2", TypeName: "Ctx", Method: "BodyParser", Framework: "fiber", IsBodyDecoder: true},
 
 	// validator (interface) - FieldError.Value() returns the user-supplied value.
-	{PkgPath: "github.com/go-playground/validator/v10", TypeName: "FieldError", Method: "Value", Framework: "validator"},
+	// IsBodyDecoder=true preserves the body-decoder origin signal across the
+	// validator boundary: ShouldBindJSON populates the struct, validator returns
+	// FieldError.Value() over its fields, and downstream sinks need to know
+	// the value originated in a decoded body so PAN-shaped struct fields can
+	// promote severity (Plan 21.1-09 RC-6 sub-issue 6b).
+	{PkgPath: "github.com/go-playground/validator/v10", TypeName: "FieldError", Method: "Value", Framework: "validator", IsBodyDecoder: true},
 }
 
 // routeTemplateNegativeList holds compile-time route-template accessors that

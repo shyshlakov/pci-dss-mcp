@@ -97,13 +97,28 @@ func (st *fileState) emitLogFindings() []scanner.Finding {
 		if !shouldEmit {
 			continue
 		}
+		// Plan 21.1-09 RC-6 CRITICAL gate: validator framework chain into a
+		// PAN-shaped struct field promotes severity to CRITICAL with
+		// req=3.3.1 + related=[3.4.1, 8.6.2]. The validator FieldError.Value()
+		// source spec carries IsBodyDecoder=true so SourceIsBodyDecoder is
+		// preserved across the chain. inspectBoundStructPanTags walks the
+		// enclosing function's body decoder for the bound struct's tags.
+		requirementID := "10.2.1"
+		if c.ctx.Framework == "validator" && c.ctx.SourceIsBodyDecoder && st.inspectBoundStructPanTags(c.call) {
+			severity = scanner.SeverityCritical
+			class = severityClassPanCHD
+			requirementID = "3.3.1"
+		}
 		emittedAt[c.emitPos] = true
 		pos := st.pkg.Fset.Position(c.emitPos)
 		related := relatedRequirementsForLogClass(class)
+		if severity == scanner.SeverityCritical && class == severityClassPanCHD {
+			related = []string{"3.4.1", "8.6.2"}
+		}
 		desc := describeLog(c.ctx, c.sink.Name)
 		f := fmtSeverityFinding(
 			"HTTP-INPUT-LOG",
-			"10.2.1",
+			requirementID,
 			triageHintLog,
 			desc,
 			"Apply a sanitizer (mask, redact, sanitize) before logging or replace the value with an own-generated identifier (request_id, internal user_id).",
@@ -318,6 +333,8 @@ func (st *fileState) emitPanicFindings() []scanner.Finding {
 
 	deferSinks := st.collectDeferRecoverSinks()
 	deferRecoverFuncs := st.functionsContainingDeferRecover()
+	ginRecoverySinks := st.collectGinRecoveryPanicSinks()
+	st.fileHasGinRecoveryCallbackSink = len(ginRecoverySinks) > 0
 
 	ast.Inspect(st.file, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)
@@ -339,6 +356,15 @@ func (st *fileState) emitPanicFindings() []scanner.Finding {
 			if fn := enclosingFuncDecl(st.file, call.Pos()); fn != nil && deferRecoverFuncs[fn] {
 				return true
 			}
+			// Plan 21.1-09 RC-4 dedup extension: skip bare panic when the
+			// SAME FILE installs a gin recovery callback that re-logs the
+			// recovered value. The gin middleware catches panics in any
+			// handler routed through it; the callback finding is the
+			// canonical sink for that family. The bare panic site is the
+			// cause but the same finding family already covers it.
+			if st.fileHasGinRecoveryCallbackSink {
+				return true
+			}
 		}
 		emit(call, sink, ctx, nil)
 		return true
@@ -358,7 +384,7 @@ func (st *fileState) emitPanicFindings() []scanner.Finding {
 	// Plan 21.1-04 gin recovery callback PANIC sinks. Related-reqs include
 	// 3.3.1 because the recovered any value can carry PAN/CHD bytes from a
 	// handler that panicked while processing decoded body content.
-	for _, gs := range st.collectGinRecoveryPanicSinks() {
+	for _, gs := range ginRecoverySinks {
 		ctx := UserInputContext{Identifier: "recovered", Framework: "gin"}
 		sink := panicSinkInfo{
 			Name:        "gin recovery callback re-log",
