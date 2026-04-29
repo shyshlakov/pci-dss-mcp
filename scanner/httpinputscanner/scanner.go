@@ -281,6 +281,16 @@ func (st *fileState) collectSources() {
 					st.seedReverseFlowDest(dst, ctx)
 				}
 			}
+			// Plan 21.1-04 gin recovery callback source: seed the
+			// `recovered any` callback parameter with USER_INPUT taint when
+			// gin.CustomRecoveryWithWriter / CustomRecovery / RecoveryWithWriter
+			// is invoked with an inline FuncLit.
+			if vars := taint.RecognizeRecoveryCallback(node, st.info); len(vars) > 0 {
+				ctx := UserInputContext{Identifier: "recovered", Framework: "gin"}
+				for _, v := range vars {
+					st.taintedIdents[v] = taintMeta{source: ctx}
+				}
+			}
 			// panic(arg) site - record for D-19 emission.
 			if id, ok := node.Fun.(*ast.Ident); ok && id.Name == "panic" && len(node.Args) > 0 {
 				st.hasPanicSite = true

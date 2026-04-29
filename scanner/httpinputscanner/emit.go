@@ -39,6 +39,9 @@ func (st *fileState) emitLogFindings() []scanner.Finding {
 		if isInsideDeferRecover(st.file, call) {
 			return true
 		}
+		if isInsideRecoveryCallback(st.file, call, st.info) {
+			return true
+		}
 		sink, ok := isLogSink(call, st.info)
 		if !ok {
 			return true
@@ -276,7 +279,7 @@ func (st *fileState) emitPanicFindings() []scanner.Finding {
 	}
 	emittedAt := map[token.Pos]bool{}
 
-	emit := func(call *ast.CallExpr, sink panicSinkInfo, ctx UserInputContext) {
+	emit := func(call *ast.CallExpr, sink panicSinkInfo, ctx UserInputContext, related []string) {
 		emitPos := emissionPos(call)
 		if emittedAt[emitPos] {
 			return
@@ -291,7 +294,7 @@ func (st *fileState) emitPanicFindings() []scanner.Finding {
 			desc,
 			"Validate or sanitize input before panicking. Recovery middleware logs the panic argument; raw client input ends up in audit trails.",
 			scanner.SeverityMedium,
-			nil,
+			related,
 			pos,
 			st.codeSnippet(pos),
 		)
@@ -322,7 +325,7 @@ func (st *fileState) emitPanicFindings() []scanner.Finding {
 				return true
 			}
 		}
-		emit(call, sink, ctx)
+		emit(call, sink, ctx, nil)
 		return true
 	})
 
@@ -333,9 +336,22 @@ func (st *fileState) emitPanicFindings() []scanner.Finding {
 				continue
 			}
 			ctx := UserInputContext{Identifier: "recover", Framework: "http"}
-			emit(call, ds, ctx)
+			emit(call, ds, ctx, nil)
 		}
 	}
+
+	// Plan 21.1-04 gin recovery callback PANIC sinks. Related-reqs include
+	// 3.3.1 because the recovered any value can carry PAN/CHD bytes from a
+	// handler that panicked while processing decoded body content.
+	for _, gs := range st.collectGinRecoveryPanicSinks() {
+		ctx := UserInputContext{Identifier: "recovered", Framework: "gin"}
+		sink := panicSinkInfo{
+			Name:        "gin recovery callback re-log",
+			ArgsToCheck: gs.innerCall.Args,
+		}
+		emit(gs.innerCall, sink, ctx, []string{"3.3.1"})
+	}
+
 	return findings
 }
 

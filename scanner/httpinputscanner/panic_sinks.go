@@ -144,3 +144,160 @@ func isLoggerCallInsideRecover(call *ast.CallExpr, info *types.Info) bool {
 	}
 	return false
 }
+
+// collectGinRecoveryPanicSinks walks the file for
+// gin.CustomRecoveryWithWriter / CustomRecovery / RecoveryWithWriter
+// invocations with a FuncLit callback, then walks each FuncLit body for
+// logger calls whose args reach the `recovered any` *types.Var. Each match
+// is returned as a panicSinkInfo with the inner logger call's position.
+//
+// Plan 21.1-04 D-04 contract: recovery middleware logs the panic value;
+// the leak surface is the logger call inside the callback, not the
+// CustomRecovery installer call.
+func (st *fileState) collectGinRecoveryPanicSinks() []ginRecoveryPanicSink {
+	var sinks []ginRecoveryPanicSink
+	if st.file == nil {
+		return sinks
+	}
+	ast.Inspect(st.file, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		recoveredVars := taint.RecognizeRecoveryCallback(call, st.info)
+		if len(recoveredVars) == 0 {
+			return true
+		}
+		varSet := make(map[*types.Var]bool, len(recoveredVars))
+		for _, v := range recoveredVars {
+			varSet[v] = true
+		}
+		for _, arg := range call.Args {
+			fl, ok := arg.(*ast.FuncLit)
+			if !ok {
+				continue
+			}
+			ast.Inspect(fl.Body, func(inner ast.Node) bool {
+				innerCall, ok := inner.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				if _, isLog := isLogSink(innerCall, st.info); !isLog {
+					return true
+				}
+				if !exprReachesVar(innerCall, varSet, st.info) {
+					return true
+				}
+				sinks = append(sinks, ginRecoveryPanicSink{
+					installerCall: call,
+					innerCall:     innerCall,
+					funcLit:       fl,
+				})
+				return true
+			})
+		}
+		return true
+	})
+	return sinks
+}
+
+// ginRecoveryPanicSink describes a logger call inside a gin recovery
+// callback FuncLit body whose args reach the `recovered` *types.Var.
+type ginRecoveryPanicSink struct {
+	installerCall *ast.CallExpr
+	innerCall     *ast.CallExpr
+	funcLit       *ast.FuncLit
+}
+
+// exprReachesVar walks call args looking for an Ident or sub-expression
+// whose resolved object is in vars. Used to confirm a logger call inside
+// a recovery callback consumes the `recovered` parameter.
+func exprReachesVar(call *ast.CallExpr, vars map[*types.Var]bool, info *types.Info) bool {
+	if call == nil || info == nil {
+		return false
+	}
+	var found bool
+	for _, a := range call.Args {
+		ast.Inspect(a, func(n ast.Node) bool {
+			if found {
+				return false
+			}
+			id, ok := n.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			obj := info.ObjectOf(id)
+			if v, ok := obj.(*types.Var); ok && vars[v] {
+				found = true
+				return false
+			}
+			return true
+		})
+		if found {
+			return true
+		}
+	}
+	return false
+}
+
+// isInsideRecoveryCallback reports whether node is inside a *ast.FuncLit
+// whose enclosing CallExpr resolves to a gin recovery installer
+// (CustomRecoveryWithWriter / CustomRecovery / RecoveryWithWriter). Used
+// by emitLogFindings to skip log sinks inside recovery callback FuncLits
+// so emitPanicFindings can claim them via the dedicated PANIC shape.
+func isInsideRecoveryCallback(file *ast.File, target ast.Node, info *types.Info) bool {
+	if file == nil || target == nil || info == nil {
+		return false
+	}
+	var found bool
+	var stack []ast.Node
+	ast.Inspect(file, func(n ast.Node) bool {
+		if found {
+			return false
+		}
+		if n == nil {
+			if len(stack) > 0 {
+				stack = stack[:len(stack)-1]
+			}
+			return false
+		}
+		if n == target {
+			for i := len(stack) - 1; i >= 0; i-- {
+				fl, ok := stack[i].(*ast.FuncLit)
+				if !ok {
+					continue
+				}
+				for j := i - 1; j >= 0; j-- {
+					call, ok := stack[j].(*ast.CallExpr)
+					if !ok {
+						continue
+					}
+					if installerCallContainsFuncLit(call, fl, info) {
+						found = true
+						return false
+					}
+					break
+				}
+			}
+			return false
+		}
+		stack = append(stack, n)
+		return true
+	})
+	return found
+}
+
+// installerCallContainsFuncLit returns true if call resolves to a gin
+// recovery installer AND fl is one of its callback FuncLit args.
+func installerCallContainsFuncLit(call *ast.CallExpr, fl *ast.FuncLit, info *types.Info) bool {
+	vars := taint.RecognizeRecoveryCallback(call, info)
+	if len(vars) == 0 {
+		return false
+	}
+	for _, a := range call.Args {
+		if a == fl {
+			return true
+		}
+	}
+	return false
+}
