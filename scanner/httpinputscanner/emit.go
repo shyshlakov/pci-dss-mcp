@@ -3,6 +3,7 @@ package httpinputscanner
 import (
 	"go/ast"
 	"go/token"
+	"go/types"
 
 	"github.com/shyshlakov/pci-dss-mcp/scanner"
 )
@@ -190,14 +191,15 @@ func (st *fileState) emitErrorFindings() []scanner.Finding {
 		pos := st.pkg.Fset.Position(emitPos)
 
 		desc := describeError(ctx, sink.Name)
+		severity, related := errorSinkSeverity(sink, st.info)
 		f := fmtSeverityFinding(
 			"HTTP-INPUT-ERROR",
 			"6.2.4",
 			triageHintError,
 			desc,
 			"Do not bake raw client input into error responses or HTTP write-backs. Return a generic message and log a correlated request_id instead.",
-			scanner.SeverityMedium,
-			nil,
+			severity,
+			related,
 			pos,
 			st.codeSnippet(pos),
 		)
@@ -262,6 +264,19 @@ func (st *fileState) emitErrorFindings() []scanner.Finding {
 	})
 
 	return findings
+}
+
+// errorSinkSeverity dispatches HTTP-INPUT-ERROR severity by inspecting the
+// sink's args. When the err arg carries a Stringer-typed receiver whose
+// type name matches errorSinkAuthSecretTypeNames (e.g. `Token`,
+// `AuthHeader`, `APIKey`), promote to HIGH with related=[8.6.2]. Otherwise
+// MEDIUM with no related-reqs.
+func errorSinkSeverity(sink errorSinkInfo, info *types.Info) (scanner.Severity, []string) {
+	class := classifyErrorSinkStringerReceiver(sink.ArgsToCheck, info)
+	if class == severityClassAuthSecret {
+		return scanner.SeverityHigh, []string{"8.6.2"}
+	}
+	return scanner.SeverityMedium, nil
 }
 
 // emitPanicFindings walks the file for HTTP-INPUT-PANIC sinks.
