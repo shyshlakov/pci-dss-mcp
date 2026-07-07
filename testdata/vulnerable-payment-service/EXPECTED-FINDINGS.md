@@ -1,19 +1,19 @@
 ---
-fixture_version: 1.12
-last_updated: 2026-04-28
+fixture_version: 1.13
+last_updated: 2026-07-07
 phase: 21.1
 plan: 01
-total_intentional_violations: 162
+total_intentional_violations: 163
 total_clean_patterns: 28
 total_rules_covered: 57
 expected_summary:
  critical: 51
  high: 95
- medium: 53
+ medium: 54
  low: 0
  info: 66
-expected_active: 212
-expected_total_findings: 261
+expected_active: 213
+expected_total_findings: 262
 expected_sbom_components: 40
 expected_sbom_format: cyclonedx-json
 expected_sbom_spec_version: "1.6"
@@ -185,6 +185,7 @@ fixture files change.
 | CSP-UNSAFE-INLINE | HIGH | internal/http/handler/checkout/inline.go | 8 |  |  | script-src 'unsafe-inline' literal |
 | CSP-VALUE-UNANALYZABLE | INFO | internal/http/handler/checkout/dynamic.go | 8 |  |  | CSP value sourced from variable |
 | DEP-VULN | HIGH | go.mod | 7 |  |  | go-jose/v4 v4.1.3 advisory |
+| DEP-VULN | MEDIUM | go.mod | 9 |  |  | gofiber/fiber/v2 v2.52.13 advisory GHSA-gcfq-8gqf-4876, no fixed v2 release |
 | ERR-LEAK-DIRECT | CRITICAL | internal/http/handler/tokens/tokenize.go | 21 |  |  | http.Error(w, err.Error(), 500) |
 | ERR-LEAK-ENCODE | CRITICAL | internal/billing/encode_map.go | 22 |  |  | map-literal err leak ( fixture) |
 | ERR-LEAK-ENCODE | CRITICAL | internal/http/handler/tokens/metadata.go | 11 |  |  | json.NewEncoder(w).Encode(err) |
