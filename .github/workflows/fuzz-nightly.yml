@@ -1,6 +1,8 @@
-name: Fuzz nightly
+name: Fuzz weekly
 
 on:
+  schedule:
+    - cron: "0 3 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -8,7 +10,7 @@ permissions:
 
 jobs:
   fuzz:
-    name: fuzz-nightly (${{ matrix.target.name }})
+    name: fuzz-weekly (${{ matrix.target.name }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -35,7 +37,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.11"
 
       - name: Compute ISO week cache key
         id: cachekey
@@ -94,7 +96,7 @@ jobs:
             const target = '${{ matrix.target.name }}';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const body = [
-              `Nightly fuzz run discovered a new crash in \`${target}\`.`,
+              `Weekly fuzz run discovered a new crash in \`${target}\`.`,
               ``,
               `Run: ${runUrl}`,
               ``,

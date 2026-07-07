@@ -1,6 +1,8 @@
 name: Scorecard supply-chain security
 
 on:
+  schedule:
+    - cron: "31 4 * * 1"
   workflow_dispatch:
 
 permissions: read-all
