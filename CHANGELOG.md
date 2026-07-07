@@ -5,6 +5,16 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 ## Unreleased
 
+### Changed
+
+- Restored automatic triggers for the security workflows disabled on 2026-05-21: CodeQL and govulncheck run on pull requests plus a weekly cron, OpenSSF Scorecard on a weekly cron (keeps the README badge and scorecard.dev data fresh), fuzzing weekly instead of nightly, and Dependabot version updates re-enabled. Push-to-main triggers stay removed to keep run noise low.
+- Go toolchain bumped to go1.25.11 (was go1.25.9) in go.mod and all workflow pins. Clears the four Go stdlib vulnerabilities govulncheck reported as reachable (GO-2026-4971, GO-2026-4918, GO-2026-5039, GO-2026-5037), which had turned the scheduled govulncheck runs red.
+
+### Fixed
+
+- Golden fixture contract updated for OSV advisory GHSA-gcfq-8gqf-4876 (gofiber/fiber/v2 v2.52.13, published 2026-07-02, no fixed v2 release): EXPECTED-FINDINGS.md now expects the DEP-VULN MEDIUM finding at the fixture's go.mod line 9 (medium 53 -> 54). Unblocks CI, which failed on every branch once the advisory landed in the OSV cache.
+- macos-latest CI job now runs go test with a 25m per-package timeout via a new Makefile TEST_TIMEOUT knob (default stays 15m); degraded ARM runners load the taint engine up to 4x slower and overran the old budget.
+
 ## [0.7.1] - 2026-04-29
 
 ### Changed
