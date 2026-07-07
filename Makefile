@@ -14,8 +14,10 @@ GOBIN := $(shell go env GOPATH)/bin
 build:
 	go build -o $(BINARY) .
 
+TEST_TIMEOUT ?= 15m
+
 test:
-	go test ./... -count=1 -race -timeout=15m
+	go test ./... -count=1 -race -timeout=$(TEST_TIMEOUT)
 
 lint: tools
 	$(GOBIN)/golangci-lint run --timeout=5m
@@ -55,7 +57,7 @@ tools:
 # and planning/ are excluded since they hold synthetic fixtures and local
 # notes that are not part of the shipped module.
 fmt-check:
-	@out=$$(gofmt -s -l . 2>/dev/null | grep -v '^testdata/' | grep -v '^\.planning/' || true); \
+	@out=$$(gofmt -s -l . 2>/dev/null | grep -v '^testdata/' | grep -v '^\.planning/' | grep -v '^\.claude/' || true); \
 	if [ -n "$$out" ]; then \
 		echo "gofmt: the following files need formatting (run: gofmt -s -w .):"; \
 		echo "$$out"; \

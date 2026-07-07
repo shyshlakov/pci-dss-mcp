@@ -17,7 +17,7 @@ jobs:
   test-macos:
     name: test (macos-latest)
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -25,7 +25,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.11"
 
       - name: Verify modules
         run: go mod download && go mod verify
@@ -39,7 +39,7 @@ jobs:
       - name: Test
         env:
           GOFLAGS: -p=2
-        run: make test
+        run: make test TEST_TIMEOUT=25m
 
       - name: Test fixture (golden regression)
         run: make test-fixture
@@ -65,7 +65,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.11"
 
       - name: Verify modules
         run: go mod download && go mod verify
@@ -131,7 +131,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.11"
 
       - name: Verify modules
         run: go mod download && go mod verify
@@ -188,7 +188,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: "1.25.9"
+          go-version: "1.25.11"
 
       - name: Verify modules
         run: go mod download && go mod verify

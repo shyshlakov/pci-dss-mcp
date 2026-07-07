@@ -1229,7 +1229,7 @@ func TestReport_IncludeTaint_TriStateDefaultOn(t *testing.T) {
 
 	// Type must be *bool to support the tri-state (nil / *false / *true).
 	rt := reflectTypeOfReportInputIncludeTaint()
-	if rt.Type.Kind() != reflect.Ptr || rt.Type.Elem().Kind() != reflect.Bool {
+	if rt.Type.Kind() != reflect.Pointer || rt.Type.Elem().Kind() != reflect.Bool {
 		t.Fatalf("ReportInput.IncludeTaint must be *bool (tri-state), got %s", rt.Type)
 	}
 
