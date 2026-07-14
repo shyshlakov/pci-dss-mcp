@@ -9,6 +9,7 @@ All notable changes to pci-dss-mcp are documented in this file. The format follo
 
 - Restored automatic triggers for the security workflows disabled on 2026-05-21: CodeQL and govulncheck run on pull requests plus a weekly cron, OpenSSF Scorecard on a weekly cron (keeps the README badge and scorecard.dev data fresh), fuzzing weekly instead of nightly, and Dependabot version updates re-enabled. Push-to-main triggers stay removed to keep run noise low.
 - Go toolchain bumped to go1.25.11 (was go1.25.9) in go.mod and all workflow pins. Clears the four Go stdlib vulnerabilities govulncheck reported as reachable (GO-2026-4971, GO-2026-4918, GO-2026-5039, GO-2026-5037), which had turned the scheduled govulncheck runs red.
+- Go toolchain bumped to go1.25.12 (was go1.25.11) in go.mod and all workflow pins. Clears GO-2026-5856 (Encrypted Client Hello privacy leak in crypto/tls), which had turned the scheduled govulncheck run red.
 
 ### Fixed
 
