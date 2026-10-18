@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/shyshlakov/pci-dss-mcp/internal/taint"
 )
 
 type expectedContract struct {
@@ -44,6 +46,12 @@ type expectedFinding struct {
 func copyFixtureTree(t *testing.T, src string) string {
 	t.Helper()
 	dst := t.TempDir()
+	// Each copy is a new root; without eviction the taint engine cache keeps every loaded copy until the binary exits.
+	t.Cleanup(func() {
+		if err := taint.Evict(dst); err != nil {
+			t.Errorf("evict taint engine for %s: %v", dst, err)
+		}
+	})
 	err := filepath.WalkDir(src, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return fmt.Errorf("walk %s: %w", path, walkErr)
