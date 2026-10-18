@@ -72,7 +72,7 @@ func TestPkgMiddleware_ParentChildGroupInheritance(t *testing.T) {
 // TestPkgMiddleware_CacheHit verifies that calling hasLoggingCoverageInPackage
 // twice for the same package directory only parses once (cache hit).
 func TestPkgMiddleware_CacheHit(t *testing.T) {
-	t.Parallel()
+	// Not parallel: the parallel scans of this package reset the shared cache between the call and the lookup.
 	ResetPackageCache()
 	td := testdataDir()
 	handlerFile := filepath.Join(td, "crossfile_handler.go")
