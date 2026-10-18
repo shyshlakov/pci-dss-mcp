@@ -38,9 +38,9 @@ jobs:
 
       - name: Test
         env:
-          # reportscanner and triagescanner each peak near 5.5 GB under -race; together they swap the 7 GB runner
-          # until the 90 s taint load deadline degrades the live-path fixture scan.
-          GOFLAGS: -p=1
+          # One package and one test at a time: concurrent fixture taint loads share the 3 vCPUs and 7 GB of this
+          # runner until a load passes the 90 s deadline and the fixture scans lose their HTTP-INPUT findings.
+          GOFLAGS: -p=1 -parallel=1
         run: make test TEST_TIMEOUT=25m
 
       - name: Test fixture (golden regression)
