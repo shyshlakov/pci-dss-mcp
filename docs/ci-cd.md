@@ -43,7 +43,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: '1.26'
 
       - name: Install pci-dss-mcp
         run: go install github.com/shyshlakov/pci-dss-mcp@v0.6.2
