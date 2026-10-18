@@ -760,7 +760,7 @@ func HandleTokenize(w http.ResponseWriter, r *http.Request) {
 
 // TestResetLogFieldCache verifies that field cache is cleared properly.
 func TestResetLogFieldCache(t *testing.T) {
-	t.Parallel()
+	// Not parallel: the parallel scans of this package reset the shared cache between the insert and the checks.
 	// Populate the cache with a dummy entry.
 	logFieldMu.Lock()
 	logFieldCache["test::func"] = &logFieldCacheEntry{
@@ -792,7 +792,7 @@ func TestResetLogFieldCache(t *testing.T) {
 // TestResetLogFieldCache_CalledByScanFull verifies that ScanFull calls
 // ResetLogFieldCache (indirectly verified by checking cache is empty after scan).
 func TestResetLogFieldCache_CalledByScanFull(t *testing.T) {
-	t.Parallel()
+	// Not parallel: a parallel scan's reset would clear the stale entry and pass the test without this scan.
 	// Populate cache.
 	logFieldMu.Lock()
 	logFieldCache["stale::entry"] = &logFieldCacheEntry{
