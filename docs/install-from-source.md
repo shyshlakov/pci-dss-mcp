@@ -4,7 +4,7 @@ Docker (see [README.md#install](../README.md#install)) is the recommended instal
 
 ## Build
 
-Requires **Go 1.25+**.
+Requires **Go 1.25+**; use Go 1.26.9 or newer, because Go 1.25 is past end of life.
 
 ```bash
 # Released version

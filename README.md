@@ -30,7 +30,7 @@ pci-dss-mcp is a stdio MCP server that runs 12 scanners, an orchestrator, and an
 
 ### Go install (primary)
 
-Requires **Go 1.25+**:
+Requires **Go 1.25+**; use Go 1.26.9 or newer, because Go 1.25 is past end of life:
 
 ```bash
 go install github.com/shyshlakov/pci-dss-mcp@latest
