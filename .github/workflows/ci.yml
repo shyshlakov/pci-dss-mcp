@@ -17,7 +17,7 @@ jobs:
   test-macos:
     name: test (macos-latest)
     runs-on: macos-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
@@ -38,7 +38,9 @@ jobs:
 
       - name: Test
         env:
-          GOFLAGS: -p=2
+          # reportscanner and triagescanner each peak near 5.5 GB under -race; together they swap the 7 GB runner
+          # until the 90 s taint load deadline degrades the live-path fixture scan.
+          GOFLAGS: -p=1
         run: make test TEST_TIMEOUT=25m
 
       - name: Test fixture (golden regression)
@@ -90,6 +92,9 @@ jobs:
 
       - name: Test (scanner-heavy)
         if: matrix.group.name == 'scanner-heavy'
+        env:
+          # Run one package at a time: reportscanner (~6.5 GB) and triagescanner (~5.5 GB) together exhaust the runner's RAM.
+          GOFLAGS: -p=1
         run: go test ${{ matrix.group.packages }} -count=1 -race -timeout=15m
 
       - name: Test (rest)
@@ -113,7 +118,7 @@ jobs:
   coverage:
     name: coverage (${{ matrix.group.name }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -148,6 +153,9 @@ jobs:
 
       - name: Run tests with coverage (scanner-heavy)
         if: matrix.group.name == 'scanner-heavy'
+        env:
+          # Run one package at a time: reportscanner (~6.5 GB) and triagescanner (~5.5 GB) together exhaust the runner's RAM.
+          GOFLAGS: -p=1
         run: go test ${{ matrix.group.packages }} -race -coverprofile=coverage.out -covermode=atomic
 
       - name: Run tests with coverage (rest)
