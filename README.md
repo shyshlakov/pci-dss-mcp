@@ -2,10 +2,11 @@
 
 > Static analysis MCP server for Go payment service codebases. Every detected PCI DSS v4.0.1 violation in a Go payment service codebase is mapped to the specific requirement number before the code ships.
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/shyshlakov/pci-dss-mcp?v=2)](https://goreportcard.com/report/github.com/shyshlakov/pci-dss-mcp)
+[![CI](https://github.com/shyshlakov/pci-dss-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/shyshlakov/pci-dss-mcp/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/shyshlakov/pci-dss-mcp.svg)](https://pkg.go.dev/github.com/shyshlakov/pci-dss-mcp)
 [![License: MIT](https://img.shields.io/github/license/shyshlakov/pci-dss-mcp)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/shyshlakov/pci-dss-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/shyshlakov/pci-dss-mcp)
-[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-io.github.shyshlakov%2Fpci--dss--mcp-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=pci-dss-mcp)
+[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-io.github.shyshlakov%2Fpci--dss--mcp-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.shyshlakov/pci-dss-mcp)
 [![pci-dss-mcp MCP server](https://glama.ai/mcp/servers/shyshlakov/pci-dss-mcp/badges/score.svg)](https://glama.ai/mcp/servers/shyshlakov/pci-dss-mcp)
 
 ---
@@ -47,7 +48,7 @@ Useful for CI pipelines, QSA auditors who do not develop Go locally, or any envi
 
 ### MCP Registry
 
-Listed as `io.github.shyshlakov/pci-dss-mcp` at [registry.modelcontextprotocol.io](https://registry.modelcontextprotocol.io/v0/servers?search=pci-dss-mcp). Auto-published on every tag.
+Listed as `io.github.shyshlakov/pci-dss-mcp` at [registry.modelcontextprotocol.io](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.shyshlakov/pci-dss-mcp). Auto-published on every tag.
 
 ## Usage
 
