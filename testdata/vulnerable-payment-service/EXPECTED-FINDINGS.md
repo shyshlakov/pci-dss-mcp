@@ -63,8 +63,8 @@ fixture files change.
 | Severity | Count |
 |----------|-------|
 | CRITICAL | 51 |
-| HIGH | 95 |
-| MEDIUM | 53 |
+| HIGH | 96 |
+| MEDIUM | 54 |
 | LOW | 0 |
 | INFO | 66 |
 
