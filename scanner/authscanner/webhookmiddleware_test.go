@@ -41,8 +41,8 @@ func TestArgLooksLikeSignatureMiddleware(t *testing.T) {
 	}
 }
 
+// Not parallel: the parallel tests of this package populate the shared cache between the reset and the length check.
 func TestResetWebhookMiddlewareCache(t *testing.T) {
-	t.Parallel()
 	ResetWebhookMiddlewareCache()
 	dir := t.TempDir()
 	src := `package x
