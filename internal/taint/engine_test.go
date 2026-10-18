@@ -123,6 +123,40 @@ func TestReset(t *testing.T) {
 	}
 }
 
+func TestEvict(t *testing.T) {
+	resetAround(t)
+	root := absFixture(t, "stored_model")
+	e1 := GetOrInit(context.Background(), root)
+	if e1 == nil {
+		t.Skip("taint engine unavailable - cannot exercise Evict")
+	}
+	other := t.TempDir()
+	mustWrite(t, filepath.Join(other, "go.mod"), "module example.com/other\n\ngo 1.25\n")
+	GetOrInit(context.Background(), other)
+
+	if err := Evict(root); err != nil {
+		t.Fatalf("Evict: %v", err)
+	}
+
+	engineMu.Lock()
+	_, rootCached := engineCache[root]
+	_, otherCached := engineCache[other]
+	engineMu.Unlock()
+	if rootCached {
+		t.Fatalf("expected engineCache to drop %q after Evict", root)
+	}
+	if !otherCached {
+		t.Fatalf("expected Evict to keep the entry for %q", other)
+	}
+	e2 := GetOrInit(context.Background(), root)
+	if e2 == nil {
+		t.Fatalf("expected rebuild after Evict, got nil")
+	}
+	if e1 == e2 {
+		t.Fatalf("expected different engine pointer after Evict")
+	}
+}
+
 func TestDeferredSinks_Empty(t *testing.T) {
 	resetAround(t)
 	root := absFixture(t, "stored_model")
