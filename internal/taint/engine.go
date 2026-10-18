@@ -31,6 +31,7 @@ package taint
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"path/filepath"
 	"sync"
@@ -240,6 +241,20 @@ func Reset() {
 	engineCache = map[string]*loadEntry{}
 	warnOnce = sync.Once{}
 	engineMu.Unlock()
+}
+
+// Evict drops the cached engine of one project root so its memory can be
+// reclaimed. Unlike Reset it leaves other roots and the warn-once latch
+// alone, so parallel tests can release their own fixture copies.
+func Evict(projectRoot string) error {
+	absRoot, err := filepath.Abs(filepath.Clean(projectRoot))
+	if err != nil {
+		return fmt.Errorf("resolve project root: %w", err)
+	}
+	engineMu.Lock()
+	delete(engineCache, absRoot)
+	engineMu.Unlock()
+	return nil
 }
 
 // containsHardErrors reports whether any of the loaded root packages fail
